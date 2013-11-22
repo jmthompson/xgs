@@ -1,0 +1,164 @@
+                       The Unofficial XGS FAQ
+                     version 1.0 - April 2, 1997
+                      written by matthew conte
+                      <itsbroke@ix.netcom.com>
+
+Introduction
+============
+Well, I guess it has been a long time coming, but here's what a lot of
+new XGS users have been looking for, the XGS FAQ.  I feel there is a 
+need for this FAQ due to the fact that XGS at this point leans more 
+towards the developer side rather than the user-friendly side.  Below
+is a series of questions that have been observed over the past months 
+in comp.emulators.apple2, the xgs-list, and in personal e-mails.
+
+If you have any new information to contribute, do not hesitate to mail 
+me!
+
+General
+=======
+Q: What the heck is XGS?
+A: XGS is software written by Joshua M. Thompson <invid@optera.com> 
+that emulates an Apple IIGS on your PC.  Chances are, if you're 
+reading this FAQ, you already knew that.  =)
+
+Q: What platforms does XGS run on?
+A: Since XGS is written entirely in C for Unix systems, it is highly 
+portable, and should compile on most platforms with only a few 
+platform-specific modifications.  There are public ports for Unix, 
+Windows 95 & NT, MacOS, and MS-DOS.  Joshua maintains the Unix and 
+Win32 versions, the MacOS version is maintained by Michael Bytnar 
+<m-bytnar@uiuc.edu>, and the MS-DOS version by Gilles Tschopp 
+<tschopp@icare.ch>.
+
+Q: So like, where do I get it?
+A: From the Official XGS Home Page: 
+	http://www.optera.com/~invid/emulators/XGS/
+
+All current ports are linked from that page.
+
+Q: How well does this thing run?
+A: First of all, in Joshua's words, XGS is "very beta" software.  The 
+current version is 0.48, and though most functions of the IIGS are 
+implemented, there are still some omissions that preclude XGS from 
+running some software.  There is a compatibility list included in the 
+XGS archive, and you can find out specific software titles that 
+are/aren't currently working.  With a version number under 1/2, you'd 
+think XGS would be pretty sketchy at best, but the amount of software 
+it does run is quite staggering.  In a nutshell most 8-bit software 
+works, almost all 16-bit HD bootable games and applications run, and 
+some demos will work.
+
+Q: How do I get my IIGS software to my PC?
+A: Ahh, the biggie... =)  The fact that Apple devised a way to fit 
+800k on double density disks while most companies only got 720k 
+(angular vs. linear drive speed) precludes you from just jamming your 
+GS disks into your PC.  There are several ways you can get your GS 
+software to your computer, based on your hardware and what you have 
+available.
+
+MacOS - System 7.x handles Prodos disks, so just stick your GS disk 
+into your Mac, use DiskCopy to make an image of it.  XGS can read from 
+DiskCopy images, or you can use the Image Utility (supplied with XGS) 
+to transfer the DiskCopy image to its native 2IMG format.
+
+MS-DOS/Win32 - You have two options.  First, if you have a Mac, follow 
+the above directions to get DiskCopy images, then copy them to MS-DOS 
+disks on the Mac, bring them over to your PC and use the Image Utility 
+(available from the XGS-DOS page) or Thomas Fok's Revival (link on the 
+XGS Home Page) if you want to convert them from DiskCopy format (*.DC) 
+to 2IMG format (*.2MG).  Second, you can use a null modem cable to 
+transfer Shrinkit .SHK files from your IIGS to your PC, then use a 
+program called NULIB (available from XGS Home Page) to extract the 
+files into raw prodos dumps, and finally use the Image Utility or 
+Revival to convert the raw file into a 2IMG file.  *whew!*
+
+Bugs (as of 0.48)
+=================
+[all platforms]
+Q: Why didn't XGS recognize any disks the first time I booted up?
+A: The first time you start XGS, if you don't have an XGS.RAM (battery 
+ram) file, XGS will not be able to boot disks in any slot.  Once you 
+exit, the file will be created and you can start again with no 
+problems.
+
+Q: Why won't my 3.5" images boot in slot 5?
+A: Unfortunately, 3.5" drive emulation is one of the last big things 
+that is not implemented yet. =(  Extra-unfortunately, some games and 
+especially demos that require boot-up from slot 5 don't work under XGS 
+yet.  For now, try to boot your software from the smartport slot (7).
+
+Q: How do I switch disks while the emulator is running?
+A: You don't, yet.  Another thing that needs to be implemented.
+
+Q: Help!  My 8-bit software runs _way_ too fast!
+A: Normally, you'd go to the Control Panel CDA (control-command-esc, 
+whatever that's mapped to in your port) and change system speed to 
+Normal, and reboot.  However, this speed throttling doesn't work yet.  
+Downgrade to a 486!
+
+Q: Some of my GS/OS games don't work well with the joystick.
+A: Play 8-bit games. =)  For some reason, joystick emulation under 
+GS/OS is rather shaky.
+
+[unix]
+Q: Why won't the SVGAlib version build?
+A: The SVGAlib version isn't complete yet.  Issue a "make distclean" 
+and compile the X version.
+
+[win32]
+Q: I thought XGS 0.48+ recognized .DC, .PO, .DC, and .2MG files?
+A: It does, but the Win32 version only displays .2MG files.  Either 
+wait for a new version, or get the Image Utility or Revival and 
+convert your disks.
+
+Q: - My whole display is blank
+   - The palette is wacky
+   - GS/OS titlebar is corrupt
+   - GS/OS desktop corrupts when Control Panel NDA is open
+A: Congratulations, you've witnessed the infamous DirectX palette 
+problem!  This is one of the more quirky issues with XGS, as it only 
+happens to some people, but not to others, regardless of hardware.  
+It's pretty much been narrowed down to a software problem with the 
+DirectX drivers itself, as all documentation states that the libraries 
+are being used correctly.  I had the problem, then I reinstalled 
+windows and DirectX and it disappeared.  Jason Millard 
+<jsm174@psu.edu> has this to say: "I just suffered a HD crash, and I 
+reinstalled pretty much everything. For the heck of it, after I 
+installed DirectX, I uninstalled DirectX's certified video drivers. 
+(the ones it overwrote) Blamo! The colors were perfect.  I have a 
+Number Nine 771 and it uses S3 drivers. Using the old factory drivers 
+does the trick... "
+
+Q: When I Alt-Tab out of XGS, Alt-Tab doesn't get me back in!
+A: Dvir Cafri <cafri@netvision.net.il> says: "When you switch to 
+another application in WIN95, it seems like a double ALT-TAB is 
+pressed, the active task is the one after the next.  Kinda annoying 
+when you want switch to another application and return back to XGS.  
+You have to manually select XGS."
+
+[dos]
+Q: How come after using XGS-DOS, my XGS/Win32 doesn't work anymore?
+A: XGS-DOS uses separate BRAM files, xgs01.ram and xgs03.ram.  It loads
+from these, so if they're not in your directory, you'll have the 
+platform independent BRAM problem.  Problem is, it saves to XGS.RAM 
+instead of back to xgs01.ram and xgs03.ram.  This can cause problems 
+if XGS/Win32 and XGS-DOS are in the same directory, because XGS-DOS 
+will overwrite your Win32 BRAM!
+
+Q: I've taken some screen shots with F11, now XGS-DOS crashed!
+A: This is possibly a bug in the Allegro engine.  As Gilles put it, 
+it's a "thick mystery" which will hopefully be corrected in the next 
+revision of XGS-DOS.
+
+Conclusion
+==========
+Well, that's about it for now.  If you note any omissions or 
+inconsistencies, do not hesitate to drop me a line.
+
+late,
+matt conte
+----------
+
+Apple, IIGS, Apple IIGS, GS/OS, Mac, MacOS are registered trademarks 
+of Apple Computer, Inc.  All rights reserved.

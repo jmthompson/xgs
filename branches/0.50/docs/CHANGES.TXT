@@ -1,0 +1,799 @@
+-----------------------
+CHANGES IN VERSION 0.50
+-----------------------
+
+o Temporarily made F12 the keypad enter key in the Win32 port, just so that
+  we can change songs in Nucleus. :) Once 0.50 is out the Win32 adb-drv.c
+  will be modified to support all the keypad keys properly.
+
+-------------------------
+CHANGES IN VERSION 0.49.3
+-------------------------
+
+o Finally fixed the loading of images under the Win32 port and probably
+  a few Unix ports as well. I was assuming thet errno was always set to zero
+  on a successful call, when in fact it's only meaningful if an error
+  occured. The image opening code now only checks errno when it is sure an
+  error occured.
+
+o Added support for keypad keys to adb.c. Keypad keys are now represented by
+  entries in ski_input_buffer[] that have the high bit set.
+
+o Modified the X11 adb-drv.c to return keypad keys properly according to the
+  new adb.c modifications.
+
+-------------------------
+CHANGES IN VERSION 0.49.2
+-------------------------
+
+o The size of 3.5" tracks are now much closer to what they need to be
+  to exactly hold the number of sectors in the track. The new code also
+  correctly makes the inner tracks shorter than the outer tracks, just
+  like a real drive. This patch makes a lot more programs load from the
+  emulated 3.5" drives.
+
+o Corrected a typo in iwm.c in the array that gave the starting block
+  number for each track of a 3.5" disk. It was causing the wrong data to
+  be read and hence many images simply wouldn't load correctly.
+
+o Implemented support for writing to 3.5" disks. The only thing left is to
+  implement support for some sort of nibblized 3.5" disk images (like the
+  .NIB images used for 5.25" disks).
+
+o Loading of pre-nibblized images into the 5.25" drives is now supported.
+  Writing back to nibblized images still does not work, however.
+
+o Consolidated some of the big local buffers in the 3.5" and 5.25" drive
+  routines into shared global buffers.
+
+o Writebacks to 5.25" disks should work once again; I had screwed up the
+  initialization of the iwm_from_disk_byte[] table while I was cleaning
+  up the code.
+
+o Writebacks to DOS-ordered images should now work. Previously it would
+  write the data back in ProODS order.
+
+o .NIB images are now loaded as read-only, because my current writeback
+  code would try to write the data back in ProDOS-order format and trash
+  the image file.
+
+o I ran through a compile with -Wall passed to gcc and corrected as many
+  of the warnings as I could. Those with picky compilers should be somewhat
+  happier now. :) 
+
+-------------------------
+CHANGES IN VERSION 0.49.1
+-------------------------
+
+o Funky version because I want to save 0.50 for a stable release. :)
+
+o The Win32 port sound code is finally included in the source code
+  release thanks to David Ross.
+
+o Semi-major overhaul and cleanup of Kent's IWM code in progress.
+  Please watch your step and beware of falling code fragments. :)
+
+o Implemented read-only 3.5" hardware emulation and most of the
+  framework for full read-write emulation. Mucho thanks to
+  Neil Parker for all the info and ROM disassemblies and Ed
+  Armstrong for getting the info from Neil and pestering me to
+  get the code written. :-)
+
+o 5.25" emulation code now checks for and correctly handles
+  DOS-order images. Still no .NIB handling, though.
+
+o IWM code now dynamically allocates and deallocates track
+  nib_areas. IWM_update automatically deallocates any tracks
+  that aren't the current track as it goes through writing dirty
+  tracks to disk.
+
+o Moved nib_pos from Track structure to Disk525 structure in
+  the IWM code. Theoretically, sync'd tracks should work now.
+
+o Moved loading of drives at startup from the XXX_init routines
+  into EMUL_run().
+
+o Moved head selection for 3.5" drives into the Disk35 struct,
+  since I suppose it's theoretically possible to be using
+  different heads on both drives at once.
+  
+o Modified the XXX_loadDrive functions to do their job without
+  printing any messages, and created equivalent XXX_unloadDrive
+  functions to go with them.
+
+o Moved the emulated SmartPort back to slot 7. Boy, that was
+  a short trip...
+
+o The emulated SmartPort now makes sure it only loads images
+  of type IMAGE_IF_RAW_PO.
+
+-----------------------
+CHANGES IN VERSION 0.49
+-----------------------
+
+o Added Ian Schmidt's sound fix. The sound code _Finally_ works
+  correctly now. (Some internal variables were being reset when
+  oscillators halted themselves, but not when they were halted by
+  a program. Thus a program that halted an oscillator would often
+  be unable to get it to play correctly again.)
+
+o Moved SmartPort from slot 7 to slot 5, until the day when the
+  3.5" IWM code works. The -s5d1 and -s5d2 command line options
+  are now equivalent to -smpt0 and -smpt1, respectively.
+
+o Fixed problem found by Michael Bytnar in which VID_redrawScreen()
+  could be drawing in the wrong palette. It now forces a total
+  redraw by setting a nonsense video mode and calling VID_newMode().
+
+o Applied Frederic Devernay's endianness fix to the super.c drawing
+  code.
+
+o Fixed a few more prototypes as suggested by Michael Bytnar.
+
+-----------------------
+CHANGES IN VERSION 0.48
+-----------------------
+
+o Added DSK_readUnivImageHeader and DSK_writeUnivImageHeader to
+  disks.c. These routines read and write a 2IMG header while
+  automatically handling all thse messy byte-swapping stuff on
+  big-endian platforms. This concentrates most of the #ifdef's into
+  these two routines, making the code cleaner.
+
+o Added DSK_swapField, a universal byte order swapper, to disks.c.
+  It can swap any field that is an even number of bytes in length.
+
+o Rewrote imgutil.c and imgconv.c to use the routines in disks.c for
+  reading/writing 2IMG headers for for doing byte swapping.
+
+o Applied a patch sent to me six months ago to better handle systems
+  which don't have random(). I saved the patch in my mailbox and
+  it was lost in the mess until I cleaned things out today.
+
+o Added patch by George Ruf [ gruof@pacificnet.net ] to the
+  Win32 event loop to catch ALT-F4 and properly shut down the
+  emulator.
+
+o Rewrote all of disks.c into a set of generic image-handling
+  utilities supporting 2IMG, raw, .DSK/.DO, .PO, .NIB, and
+  DiskCopy images. Support for the old proprietary XGS image
+  format is gone and the new primary format is 2IMG.
+
+o Rewrote parts of iwm.c and smartport.c to direct all image-file
+  access through the routines in disks.c. They should now work
+  on any image types supported by disks.c.
+
+o Rewrote imageutil.c to deal with 2IMG files instead of XGS
+  image files.
+
+o Added Michael Bytnar's improved super.c that does writes to the
+  final video image in 32-bit chunks instead of 8-bit chunks.
+
+o mem-main.c now zeroes out the fast, slow, and save RAM areas at
+  emulator boot time using memset(). This seems to cure problems
+  that appear when compiling XGS for DOS under DGJPP.
+
+o Added memory deallocation at shutdown to several parts of the
+  emulator.
+
+o Consolidated mem-main.c and mem-switches.c into memory.c.
+
+o Folded vid-switches.c into video.c.
+
+o Crunched some of the filenames down to 8.3 format for DOS.
+
+o Added Michael Bytnar's DiskCopy 'unconversion' into the
+  image utilities plus the necessary changes to make it work
+  with 2IMG instead of XGS images.
+
+o The Win32 VID_outputImage() routine should now correctly handle
+  a DD_SURFACELOST error by restoring the surface and refreshing the
+  entire display. If the surface cannot be restored the video update
+  is silently aborted. This lets you run XGS applications while XGS
+  is minimized -- I often do this to listen to synthLAB songs while
+  working in another Win95 app. :-)
+
+-----------------------
+CHANGES IN VERSION 0.47
+-----------------------
+
+o We now sacrifice the border color in SHR mode so we can use
+  all 16 colors in all 16 palettes. This fixes the problem with
+  opening the Control Panel CDEV in GS/OS.
+
+o Consolidated all the font and image utilities into two
+  programs called fontutil and imageutil. The fontutil
+  is currently unfinished and is neither built nor installed
+  by the standard Makefile.
+
+o Added joystick support to the Win32 version. It works the
+  same as the Unix version (ie, uses the mouse).
+
+o Fixed keyboard support in the Win32 port and mapped the
+  F3 and F4 keys as Command and Option, respectively.
+
+o Sound data is now passed into the sound drivers as an
+  array of structs. These structs contain the raw, un-scaled
+  sound data from SND_scanOscillators organized as left,right
+  sample pairs. Thus it is possible for the sound driver to
+  output the sound in formats other than 8-bit unsigned mono.
+
+o SND_scanOscillators() now produces stereo sound.
+
+o Rewrote EMUL_doVBL() to not depend on gettimeofday(). It
+  now uses the EMUL_getCurrentTime() function and does
+  all of its calculations in milliseconds. Thus the new
+  VBL code _should_ be fully portable.
+
+o Added arch-specific EMUL_getCurrentTime(), which returns
+  the current time in milliseconds as a long integer. The
+  current time need not be the real time so long as it
+  increments 1000 times per second (ie, it can be the
+  real time, or the number of ms since boot, or whatever)
+
+o Added initial code to the SVGAlib port. However it is
+  not yet functional.
+
+o Moved vid_buffer and vid_lines[] into the arch-specific
+  video drivers.
+
+o Fixed all branch instructions to only take the 1 cycle
+  cross-page penalty if the branch is actually taken,
+  as per the GTE 65816 documentation.
+
+o Re-ordered the cycle time tables in dispatch.c. They
+  were in the wrong order and messing up the cycle
+  times; this would not have been discovered had it not
+  been for the new IWM code, which needs the cycle times
+  to be correct.
+
+o Replaced all of iwm.c with Kent Dickey's new code.
+  The new code is cycle-accurate and supports writing
+  as well as reading of 5.25" disks.
+
+o Added support for multi-platform compiles to
+  Makefile.in and configure.in [ devernay@istar.fr ]
+
+o Added ifdef'd include of sys/types.h to mem-main.c
+  for the OS/2 Warp port.
+
+o The SmartPort Format and Extended Format commands
+  now return an error code of 0 (ie, operation
+  completed). This allows images to be formatted
+  from GS/OS.
+
+o MVP/MVN now do it the real 65816 way and just keep
+  looping the same instruction, instead of using a C
+  loop. Otherwise a move instruction could mess up the
+  sound because SND_scanOscillators wasn't called often
+  enough.
+
+o snd_enable is no longer cleared when the sound
+  output device fails to initialize, because on systems
+  w/o sound drivers it is still sometimes necessary to
+  at least "go through the motions" of sound emulation
+  in order to make some programs work.
+
+o Partially implemented the SLOTC3ROM, INTCXROM,
+  and ROMBANK switches. XGS ignores them, but if you
+  change a switch and read its value back it at least
+  returns what you think it should.
+
+o Fixed behavior of the 80STORE switch in relation
+  to memory shadowing. 80STORE was always overriding
+  AUXRD/AUXWRT for hires page 1, when in fact it
+  should only do so when HIRES is set.
+
+-----------------------
+CHANGES IN VERSION 0.46
+-----------------------
+
+o Removed ENABLE_SOUND. Sound is now on by default
+  and can be disabled with the "-nosound" command
+  line option.
+
+o Added David Ross's new Win32 user interface. You
+  can now change the XGS directory path and even
+  select what images to mount before you run XGS.
+
+o SND_updateOscillator now re-enables an oscillator
+  (and its partner, if in sync mode) when bit 0 of
+  its control register is cleared. Previously this
+  was not being done, because I have at least one
+  piece of Ensoniq documentation that says it can't
+  be done, but apparently it CAN, and lots of programs
+  do in fact do this.
+
+  With this fix, the sound now works. It's slow as
+  hell (at least on Unix) but it does work. I even
+  listened to a couple of tracks in synthLAB...
+
+o SND_scanOscillators now produces correct sound
+  data. There were some glitches involving the volume
+  scaling and the byte<-->float conversions, and the
+  patched routines now scale the summed output sample
+  based on the number of oscillators with non-silent
+  samples instead of num_osc. With these patches in
+  place the sound now sounds like a real IIGS. :-)
+
+o Fixed sound routines to enable the correct number
+  of oscillators. [ irsman@iag.net ]
+
+o Added various missing function prototypes.
+
+o Added APP_shutdown to main.c. For most system this
+  routine called exit(0) (although for Win32 it does
+  ExitThread(0)).
+
+o Moved EMUL_expandPath to arch-dependant main.c file.
+
+o All functions that work with binary files now use
+  the "b" option to fopen(). Some ANSI C compilers
+  like to translate line terminators if you don't
+  do this (most Mac compilers do this).
+
+-----------------------
+CHANGES IN VERSION 0.45
+-----------------------
+
+o The OSS SND_outputWrite() now makes sure there is
+  sufficient space available in the sound driver's
+  output buffer before trying to write any data.
+  Previously XGS was blocking on sound writes a lot
+  and slowing down the emulation.
+
+o Changed EMUL_hardwareUpdate() to run 31,440 times
+  per second, making the update period a bit over
+  31 ms, which is what is needed for proper Ensoniq
+  oscillator updates.
+
+o Added EMUL_expandPath() to expand any partial
+  pathnames to include XGS_DIR. All the file loading
+  routines in XGS now use this routine on filenames
+  before using them, so the chdir(XGS_DIR) in emul.c
+  was removed.
+
+  On Unix, a path is partial if it does not begin with
+  "." or "/". On MS-DOS, a path is partial if it does
+  not begin with "\" and if the second character is not
+  a ":" (ie, the path doesn't begin with a drive letter).
+
+o Major overhaul of the Win32 port to move from WinG
+  to DirectDraw as the graphics API. It now runs in a
+  full-screen 800x600x8 mode and looks pretty cool. :-)
+
+o Moved the joystick and mouse grab keys from F1/F2 to
+  F5/F6. F1 is used as the escape key in the Win32 port
+  and I wanted the joystick and mouse keys to be
+  consistant across ports, so I moved them.
+
+o Moved the main() function out to an arch-dependant file
+  (main.c). This is primarily for the Win32 port, which
+  doesn't have a main() function (it uses WinMain()
+  instead). The startup code is now part of EMUL_init(),
+  which no longer calls EMUL_run() on its own.
+
+o Moved all of the code in VID_update() into the arch-
+  dependant VID_outputImage() routine. This allows each
+  architecture to do special things before and/or after
+  the image updates.
+
+o vid_lines[] setup now done by the arch-dependant video
+  driver.
+
+o the text and lores drawing routines no longer assume that
+  the vid_buffer is contiguous in memory (ie, line n isn't
+  necessarily right after line n-1). This allows the code to
+  work on more architectures.
+
+o Fixed the COP opcode emulation in opcodes.h. It was
+  mangling the processor status register in emulation mode.
+
+o Updated Makefile.in to remove the symlinks into the arch/
+  directory when doing a "make distclean".
+
+o Added some shell script to the end of configure.in so that
+  the appropriate stuff from arch/ is symlinked into the main
+  directory.
+
+o Sprinkled some explicit typecasts around the code to make
+  Visual C++ happy when compiling the Win32 port.
+
+o the EMUL_delay() routine has been replaced by the new, more
+  accurate EMUL_hardwareUpdate() routine. The new routine uses
+  gettimeofday() to try to provide cycle-accurate timing at the
+  scan line level. The speed display should be more accurate
+  as well since we're no longer depending on signals for the
+  timing.
+
+o It is no longer necessary to explicitly set ROM 01/03 mode.
+  The proper mode is now determined at runtime from the size
+  of the ROM file, which must be either 131,072 or 262,144
+  bytes long.
+
+o Major reorganization of the source code, particularly for
+  the video, sound, and ADB code. All platform-specific code
+  has been cut out and placed in appropriate spots in the
+  new arch/ directory (arch/x11 and arch/oss).
+
+o Changed handling of IRQ/NMI/etc in the CPU_run() routine so
+  that the generated code (at least on the x86) only performs
+  a branch when an exception needs to be handled. This helps a
+  bit on processors that favor the no-branch scenario.
+
+o Removed cpu_in_irq flag. The dispatcher now simply checks the
+  I bit in the processor status register before dispatching to
+  an IRQ. I'm not sure why I wasn't doing it this way to begin
+  with.
+
+o Optimized MEM_writeMem2. It was checking explicitly for writes
+  to banks $E0 and E1, when in fact these banks are already
+  marked with MEM_FLAG_SPECIAL. Just checking for the flag does
+  the same thing but does it faster.
+
+o Added a .s target to the Makefile that will let you generate
+  the assembler code for any of the C code files. This is
+  primarily for my benefit; it lets me easily look at the code
+  being generated so I can make optimizations.
+
+o MEM_FLAG_INVALID is now handled by MEM_writeMem2. This means
+  the MEM_readMem function is now faster since it isn't doing
+  as much flag checking. This speed things up b a few tenths of
+  a MHz.
+
+o The mem_pagestruct structure was expanded from 12 to 16 bytes
+  by adding two more flag fields which are currently unused. This
+  speeds up the emulator by allowing the offset into the array to
+  be calculated as a simple shift by four (x16) instead of the
+  more complicated x12 calculation. On the x86 for example, this
+  saves two instructions for every MEM_readMem or MEM_writeMem
+  invocation.
+
+o Added 128K of "scratch" RAM in banks $E8 and $E9. Pressing the
+  NMI key will cause banks $00 and $01 to be dumped to banks
+  $E8 and $E9. I did this so I could examine program code after
+  a reboot (which normally clears bank $00).
+
+o Mapped Ensoniq DOC RAM to bank $EA.
+
+o The beginnings of the "live" Ensoniq code are in place inside
+  the sound server. It doesn't quite work yet however.
+
+o Temporarily turned off classic Apple II sound (it never worked
+  well anyway).
+
+o Sound code has been removed from the actual emulator and moved
+  into a separate xgs-sound process. XGS spawns the sound server
+  at startup time and communicates with it via shared memory.
+  This greatly simplifies the XGS sound code because the timing
+  problems are a bit easier to handle.
+
+o The CPU emulator now correctly sets the B flag in the status
+  register for emulation mode BRKs and IRQs.
+
+o IWM emulation had the disk switched status bit inverted, making
+  the system think there was always a disk switched error. This
+  was causing Standard File dialogs to sit in an infinite loop
+  and freeze the system.
+
+o XGS now actually honors the slot register (mostly) by mapping
+  out the ROMs for any slots set to "external." The exception is
+  slot 7, which is always the emulated SmartPort device.
+
+o Added IRQ counter (number of outstanding IRQ requests remaining)
+  to the debug output. This makes it easier to tell if there is
+  a problem with clearing a previously raised interrupt.
+
+o Fixed overflow calculations in ADC/SBC _again_. The calculations
+  were correct but I wasn't doing them in the right order.
+  Mouse dragging in the Finder now works, as does BubbleGhost GS.
+
+o The Data Bank register is now zero'd when a BRK, COP, ABORT,
+  NMI, or IRQ occurs in emulation mode. I doubt this bug ever
+  caused any problems, but it does make the emulator fit the
+  behavior of a real 65816.
+
+o PLB and PLD now set the N and Z bits correctly. Credit for
+  finding this bug goes to Kent Dickey [ kentd@hpcuhe.cup.hp.com ]
+
+o MVP and MVN should now work correctly. They no longer check
+  to see if the accumulator is 8-bit, and they now copy bytes
+  until the accumulator is $FFFF instead of $0000. This fits the
+  behavior of a real 65816. The credit for finding this obscure
+  bug also goes to Kent Dickey [ kentd@hpcuhe.cup.hp.com ]
+
+-----------------------
+CHANGES IN VERSION 0.40
+-----------------------
+
+o Updated documentation to describe saving the GS ROM in 16 KB
+  pieces instead of 32 KB pieces. The 32 KB chunks must overrun
+  a BASIC.SYSTEM buffer or something because it locks the machine
+  (though it worked when I first tried it, I have no idea what
+  version I used but I must've gotten lucky).
+
+o No drawing is done if the main window isn't mapped. Thus if you
+  iconify XGS during processor-intensive programs they'll run
+  somewhat faster.  [ devernay@istar.fr ]
+
+o The code in fault.c has been removed and folded directly into
+  the MEM_readMem and MEM_writeMem functions. This provides a
+  marginal speedup (a couple percent at most).
+  [ devernay@istar.fr ]
+
+o More working of the ADB logic. The Desk Manager key sequence
+  is reported specially and does not interfere with any SKI data
+  transfers currently in progress. This _seems_ to have helped
+  smooth out some problems with accessing the control panel from
+  GS/OS on a ROM 01, and doesn't seem to have broken ROM 03
+  either.
+
+o Put skeleton code in place to trap reads to the Mega II mouse
+  registers at $C044 and $C045.
+
+o The default memory size is now 2 MB. I got sick of typing out
+  "-ram 2" to get stuff to run. :-)
+
+o Reads to the Mega II horizontal video count now return a random
+  horizontal counter value between 0 and 127. This isn't strictly
+  correct, but some programs use the horizontal count as a random
+  number seed. For example, this fix makes the FTA Nucleus demo
+  randomly place its stars as it does on a real IIgs.
+
+o Fixed problems relating to shadowing from bank $01 to $E1 when
+  the writes were made to bank $00 with AUXWRT or 80STORE enabled.
+  This fix allows the FTA Nucleus demo work.
+
+o The mouse emulation code now moves the X pointer back to the
+  center of the window after every pointer movement event. This
+  fixes the problem where the X pointer would stop at the end of
+  the window before the GS's pointer was at the edge of the
+  screen. [ devernay@istar.fr ]
+
+o Fixed overflow flag emulation in the ADC/SBC instructions
+  (I think...) BubbleGhost GS almost works now.
+
+o Fixed bug in XBA opcode emulation. It should have set the N and
+  Z flags to reflect the final state of the low byte of the
+  accumulator, but it wasn't. This fixes the problem with
+  launching P8 applications from P16 and GS/OS. Thanks to
+  Andre Horstmann [andre.horstmann@unifr.ch] for pointing this
+  one out.
+
+o Since USS is now known as OSS (Open Sound System), I changed
+  the code to reflect this. This affects the configure script
+  (--with-oss-sound) and sound.c/sound.h (the USS_SOUND define is
+  now OSS_SOUND)
+
+o Fixed ADB_readCommand() bug where the clearing of pending ADB
+  interrupts would cause the SKI emulation to lose track of the
+  number of bytes it had returned so far. This bug caused ROM 01
+  to not work.
+
+o Implemented code to accelerate applications which do page flipping
+  (text, lores/double-lores and hires/double-hires).  Only areas
+  which are actually different than the last page are redrawn now.
+  [ devernay@istar.fr ]
+
+o The window is now correctly redrawn in response to Expose events.
+
+o Rewrote IRQ emulation to support multiple pending IRQs that must
+  be cleared by the device which generated the interrupt (like on a
+  real IIgs). Previouly interrupts were lost if multiple interrupts
+  were generated at once (which happened a lot, since XGS tends to
+  only generate IRQs at defined times). For example, you can now
+  get into the Desk Manager menu from GS/OS (mouse interrupts used
+  to prevent this).
+
+o Scanline interrupts now work right. The CPU update period was
+  being mangled by the EMUL_update() procedure, causing scanline
+  interrupts to occur about once a second instead of every 64
+  emulated cycles. As a result of this, the mouse FINALLY works in
+  16-bit apps!
+
+o The 80STORE switch now only takes precedance over RAMRD/RAMWRT in
+  the $00/2000 - $3FFF range when the HIRES switch is on. Previously
+  it always took precedance, causing some programs to access the
+  wrong memory and crash.
+
+o Implemented double high resolution graphics. It's not 100% working
+  yet but it's almost there.
+
+o Made some semi-major changes throughtout all the code to allow XGS
+  to compile and run correctly on Alpha Linux (and, presumably,
+  other 64-bit operating systems).
+
+o Video code now only sends updates to the X server for the areas of
+  the screen which have actually changed. The result is a rather
+  signifigant speedup in many applications. [ devernay@istar.fr ]
+
+o X11 support more robust now; it handles all the events a basic X11
+  application should be handling (such as Expose events).
+  [ devernay@istar.fr ]
+
+o Implemented pointer grabbing for the mouse and joystick. F1 grabs/
+  ungrabs the pointer for joystick emulation, and F2 does the same
+  for mouse emulation. Only one can be active at a time.
+
+o Much more robust MIT-SHM support added. It now queries the MIT-SHM
+  extension before using shared memory, and will default back to the
+  standard XPutImage() method if shared memory is not present or not
+  fully supported. [ devernay@istar.fr ]
+
+o Makefile reorganized a bit. Should be 99% friendly to non-GNU make
+  now. [ devernay@istar.fr ]
+
+o You should now be able to to truly compile XGS without USS support
+  now (a few more #ifdef's were needed). [ devernay@istar.fr ]
+
+o Removed line in MEM_setSlotReg() that was always forcing slots 5-7 to
+  "external." This code is no longer necessary since slots 5-6 are now
+  properly emulated at the hardware level. With this code removed, the
+  3.5" BitCopy in Copy II Plus now loads and runs just fine.
+
+o Fixed some subtle bugs in the CPU emulation dealing with operand
+  address calculations. Under certain conditions data could be read from
+  random banks instead of the correct ones.
+
+o The sound GLU emulation now correctly auto-increments the address
+  registers. There's still no sound generation code, but some programs
+  would hang waiting for the address to be auto-incremented to a certain
+  point (such as Hardball GS)
+
+o Implemented the horizontal and vertical video counters. They are
+  nowhere near accurate, but they do satisfy programs which watch for
+  certain counter values.
+
+o TCD now sets the N and Z processor flags. This was the last bug that
+  prevented GS/OS System Disk 6.0.1 from booting.
+
+o MVN/MVP now loop internally instead of through the opcode dispatcher,
+  so memory moves run MUCH faster than any real 65816.
+
+o Corrected minor bug in language card emulation.
+
+-----------------------
+CHANGES IN VERSION 0.30
+-----------------------
+
+o In the interest of speed and simplicity, XGS now supports _only_ 8-bit
+  X servers. The new video code is now optimized for that bit depth, and
+  takes advantage of the palette-changing ability of that mode to handle
+  things like text color changes and super high res palette changes.
+
+o ADB mouse hardware is now emulated (accessed through $C024 and $C027)
+
+o The joystick hardware is now emulated. Currently, the joystick just follows
+  the mouse.
+
+o Wrote "raw2img" for converting raw disk dumps ("dd" output, or ProDOS-
+  ordered .PO images) into XGS image files.
+
+o Wrote "dsk2img" for converting DOS 3.3 format .DO/.DSK 5.25" images
+  into XGS image files. This utility is useful for converting all those
+  images on ftp.asimov.net into XGS images.
+
+o Slots 5 and 6 are now emulated at the hardware level using the new IWM
+  emulation code. Unfortunately it's still read-only, and slot 5 doesn't
+  work at all yet.
+
+o Slot 7 is now an Extended SmartPort device supporting up to 14 images
+  online.
+
+o Fixed a bug in the PAGE2/80STORE switch emulation that prevented some
+  128K programs (such as ShrinkIT 3.4) from loading.
+
+o That damn clock works, finally. Battery RAM emulation _seems_ to work, but
+  the control panel still won't allow any settings to be changed. Hmm.
+
+o Reverted back to the old subroutine-based CPU emulator. It turns out it's
+  faster anyway (probably because the old one can't be compiled by GCC with
+  optimization on).
+
+o Endianness problem with super high res color has been fixed.
+
+o The CPU emulator now counts cycles. It is (hopefully) an accurate count.
+
+o VBLs are now emulated using a 100 Hz interval timer, with the VBL being
+  triggered at half that frequency (50 Hz).
+
+o XGS's window now includes a couple of lines of status information, updated
+  once per second. A lot of it is for my debugging, but it does display a
+  couple of useful items: namely the target speed the emulator would like to
+  achieve (1.0 or 2.5 MHz, depending on the CYA speed register setting), and
+  the actual speed it is achieving. My P166 benches in the 2.0 - 2.7 MHz
+  range, depending on what I'm doing in XGS at the time.
+
+o Memory map handling substantially rewritten. It now subdivides _all_ memory
+  into pages, instead of just banks $00/$01/$E0/$E1. Fault handlers are gone;
+  I/O space and shadowing are the only special cases and they are handled via
+  bit flags in the memory page structures. Also I keep an array of long ints
+  which mark which bytes in the slow RAM banks have been modified; each bit
+  represents eight bytes (which is nice because then one long word = one page
+  of 256 bytes).
+
+o Shakey but sorta working support for classic Apple II sound. It sounds a bit
+  distorted, and pops a lot, but it does work.
+
+o The video code now picks the correct visual to use for the chosen display.
+  This doesn't seem to matter on XFree86 systems, but it apparently does on
+  others. XGS should now refuse to start up if it can't find a suitable visual.
+
+o The video code now only rescans the areas of video memory that have actually
+  changed since the last video update. This means that a time spent in video
+  updates has been substantially reduced.
+
+o Video updating is now done on 50 times per second instead of 4 times per
+  second, because the new video code doesn't slow the emulator down as much.
+  The result of this change is that video updates are much smoother.
+
+o The source tree has been substantially reorganized. Everything is in
+  one directory to make things a lot easier to work with, and the whole
+  thing is now configurable with GNU autoconf. There's even a real
+  Makefile now, with proper dependancies.
+
+-----------------------
+CHANGES IN VERSION 0.20
+-----------------------
+
+o Due to popular demand, 8-bit color X servers are now supported.
+
+o XGS _should_ work now if you give it a ROM 01 image padded to 256 KB.
+
+o Super high-resolution graphics supported though not fully tested. It _should_
+  work in all modes including 640x200, 320x200, and 320x200 fill mode.
+
+o Created virtual ProDOS block devices in slots 5 and 7. Each can support two
+  disk image files up to 32 MB each. This means it's now possible to _boot_
+  stuff on XGS (at least ProDOS 8 stuff). You can even write to the virtual
+  disks!
+
+o The arrow keys are now recognized by the emulator.
+
+o You can now enter the Desk Manager menu (Control-Command-Escape), though
+ it's still acting a bit flakey sometimes.
+
+o Added the utils/ subdirectory. There's lots of neat stuff here for handling
+  the XGS ".img" files and for viewing and rebuilding the XGS font files.
+
+o In all bit depths, we now open a private colormap and allocate the colors
+  using XAllocColor(). This was necessary for 8-bit mode, and for the other
+  modes it should fix the problem XGS had on X servers that specified the RGB
+  color levels in a different order than what XGS was using.
+
+o Video handling substantially overhauled. The emulator no longer traps video
+  memory accesses; instead, the video screen is simply periodically redrawn.
+  Some things run quite a bit faster as a result.
+
+o High-resolution graphics glitch fixed; the right border is no longer
+  partially overwritten.
+
+o Mixed text/graphics modes now work in 40 or 80 columns.
+
+o Fixed some of the more annoying font glitches. The mousetext 'Z' character
+  is now a right-justified vertical line as it should be, and the "1" and "l"
+  (lowercase L) characters are now centered in the font matrix instead of
+  being left-justified.
+
+o The Makefiles have been modified to work on non-GNU versions of make and ar.
+
+o Reorganized the link commands in the Makefile to specifiy the libraries last
+  on the command line. It worked fine for me the old way but not for some other
+  people.
+
+o Some key symbols specific to X11R6 were replaced with symbols present on all
+  versions of X11. This should allow XGS to compile on systems that use X11R5.
+
+o 65816 emulation should be a faster now. Also some bugs with IRQs and NMIs
+  were fixed (they weren't pushing the proper PC value onto the stack, plus
+  the RTI instruction was incorrectly incrementing the value it pulled back
+  from the stack. Used together they work fine, but some code in ProDOS 8
+  apparently sets up a fake IRQ stack frame and does an RTI, and this code
+  didn't work with the old 65816 emulation).
+
+o Skeletal support for emulating the Ensoniq DOC has been added. It doesn't
+  really _do_ anything yet other than allow reads and writes to the DOC and
+  sound RAM (basically just enough to get the darn thing to work properly).
+
+o VBL and quarter second interrupts are now supported...I think. Haven't fully
+  tested them so I can't be 100% sure.
