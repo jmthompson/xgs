@@ -1,6 +1,6 @@
 extern int	emul_period;
-extern int	emul_tick;
-extern int	emul_microtick;
+extern long emul_tick;
+extern long emul_microtick;
 extern int	emul_vbl_count;
 extern int	emul_vbl;
 extern int	emul_vblirq;
@@ -11,7 +11,7 @@ extern int	emul_speed;
 extern int	emul_speed2;
 extern int	emul_delay;
 
-extern int	emul_target_cycles;
+extern long emul_target_cycles;
 extern double	emul_target_speed;
 
 extern char	emul_path[1024];

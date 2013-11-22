@@ -50,8 +50,8 @@ int	emul_speed;
 int	emul_speed2;
 int	emul_delay;
 
-int	emul_tick;
-int	emul_microtick;
+long emul_tick;
+long emul_microtick;
 
 int	emul_vbl_count;
 
@@ -59,14 +59,14 @@ char	emul_buffer[256];
 
 word32	emul_last_cycles;
 
-int	emul_target_cycles; 
+long    emul_target_cycles; 
 double	emul_target_speed;
 
 double	emul_times[60];
 double	emul_total_time;
 
-int	emul_cycles[60];
-int	emul_total_cycles;
+long emul_cycles[60];
+long emul_total_cycles;
 
 long	emul_last_time;
 long	emul_this_time;
@@ -79,9 +79,9 @@ char	*emul_smtport[NUM_SMPT_DEVS];
 
 void EMUL_doVBL()
 {
-	int	cycles;
+	long cycles;
 	double	this_time,last_time,diff,speed;
-	int	new_period;
+	long new_period;
 
 #ifdef HAVE_GETTIMEOFDAY
 	if (emul_delay > 0) {

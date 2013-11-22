@@ -6,6 +6,8 @@ extern int	vid_mapped;
 
 extern PIXEL	*vid_lines[];
 
+extern PIXEL vid_textfg,vid_textbg,vid_border;
+
 int	VID_outputInit(void);
 void	VID_outputImage(void);
 void	VID_outputShutdown(void);

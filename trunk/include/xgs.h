@@ -50,7 +50,7 @@
 #include "cpu.h"
 #include "memory.h"
 
-#define VERSION		"XGS Version 0.50"
+#define VERSION		"XGS Version 0.60"
 
 /* Union to split a word into two bytes. Used for endianness swapping */
 
