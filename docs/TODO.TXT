@@ -1,0 +1,24 @@
+----------
+TO-DO LIST
+----------
+
+o Win32 port needs support for keypad keys. Somehow they need to be detected
+  and filtered so that they remain as WM_KEYDOWN messages; the current code
+  will turn them into WM_CHAR messages and all information about the keys
+  being keypad keys will be lost.
+o There's a hard lockup somewhere in the sound code; it must be found and
+  fixed.
+o Faster sound code would be nice.
+o Implement writing to .NIB images.
+o Make a real user interface. It should have at least the following features:
+	- controls for loading/unloading images at runtime
+	- drive lights based on the motor_on variables in iwm.c
+	- Speed readout moved out of main window
+	- Speed controls
+o Rewrite adb.c to support emulation of the actual ADB keyboard and mouse
+  hardware for programs that use the ADB directly, such as Wolf3D.
+o Serial port emulation
+o Finish the SVGAlib port
+o Put xgs.ram into $HOME/.xgs
+o Run-time configuration file, probably a global file that can be overriden
+  by a file in the user's home directory.

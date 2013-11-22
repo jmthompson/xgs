@@ -1,0 +1,48 @@
+The directories under arch/ contain code specific to a particular port
+of XGS. Currently the following ports are available:
+
+arch/generic	Contains the generic sound driver; used by any port
+		that doesn't have native sound support.
+
+		Maintainer: Joshua M. Thompson (invid@optera.com)
+		    Status: Available
+
+arch/oss	Open Sound System sound driver.
+
+		Maintainer: Joshua M. Thompson (invid@optera.com)
+		    Status: Available
+
+arch/x11	X11 display and input drivers.
+
+		Maintainer: Joshua M. Thompson (invid@optera.com)
+		    Status: Available
+
+arch/beos	BeOS display, input, and sound drivers.
+
+		Maintainer: Eric Shepard (sheppy@logicware.tstonramp.com)
+		    Status: In progress
+
+arch/warp	OS/2 Warp display, input, and sound drivers.
+
+		Maintainer: Tschopp Gilles (tschopp@icare.ch)
+		    Status: In progress
+
+arch/win32	Win32 display, input, and sound drivers.
+
+		Maintainer: David Andrew Ross (snakey@pobox.com)
+		    Status: Available
+
+arch/macos	MacOS display, input, and sound drivers.
+
+		Maintainer: Michael Bytnar (m-bytnar@uiuc.edu)
+		    Status: Available separately in binary form only
+
+arch/msdos	MS-DOS display, input, and sound drivers.
+
+		Maintainer: Tschopp Gilles (tschopp@icare.ch)
+		    Status: In progress
+
+arch/svgalib	SVGAlib display and input drivers.
+
+		Maintainer: Joshua M. Thompson (invid@optera.com)
+		    Status: In progress
