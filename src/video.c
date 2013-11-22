@@ -330,6 +330,7 @@ byte VID_setColorReg(byte val)
 	vid_textfgcolor = (val >> 4) & 0x0F;
 	vid_textbgcolor = val & 0x0F;
 	VID_outputSetTextColors();
+    VID_redrawScreen();
 	return 0;
 }
 
@@ -402,6 +403,7 @@ byte VID_setBorder(byte val)
 	if (vid_bordercolor == val) return 0;
 	vid_bordercolor = val;
 	VID_outputSetBorderColor();
+    VID_redrawScreen();
 	return 0;
 }
 

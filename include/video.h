@@ -3,9 +3,10 @@
 
 #define VID_STATUS_FONT	"8x13"
 
-#define PIXEL byte
-#define VID_DEPTH 8
-#define VID_CLASS PseudoColor
+#define PIXEL unsigned int
+
+#define VID_DEPTH 24
+#define VID_CLASS TrueColor
 
 #define VID_MODE_40TEXT1	0
 #define VID_MODE_40TEXT2	1

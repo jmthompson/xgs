@@ -38,6 +38,8 @@ word32 vid_textbases2[24] ={
 	0x0850, 0x08D0, 0x0950, 0x09D0, 0x0A50, 0x0AD0, 0x0B50, 0x0BD0 
 };
 
+#define fixer(value) ((value) == 253? vid_textbg : vid_textfg)
+
 static void
 VID_refreshText40Row (int row, word32 addr)
 {
@@ -55,20 +57,20 @@ VID_refreshText40Row (int row, word32 addr)
 		font = vid_font40[vid_altcharset] + (slow_memory[addr] * 224);
 		for (i = 0 ; i < 16 ; i++) {
 			scrn = vid_lines[row * 16 + i] + (col * 14);
-			*scrn++ = *font++;
-			*scrn++ = *font++;
-			*scrn++ = *font++;
-			*scrn++ = *font++;
-			*scrn++ = *font++;
-			*scrn++ = *font++;
-			*scrn++ = *font++;
-			*scrn++ = *font++;
-			*scrn++ = *font++;
-			*scrn++ = *font++;
-			*scrn++ = *font++;
-			*scrn++ = *font++;
-			*scrn++ = *font++;
-			*scrn++ = *font++;
+			*scrn++ = fixer(*font++);
+			*scrn++ = fixer(*font++);
+			*scrn++ = fixer(*font++);
+			*scrn++ = fixer(*font++);
+			*scrn++ = fixer(*font++);
+			*scrn++ = fixer(*font++);
+			*scrn++ = fixer(*font++);
+			*scrn++ = fixer(*font++);
+			*scrn++ = fixer(*font++);
+			*scrn++ = fixer(*font++);
+			*scrn++ = fixer(*font++);
+			*scrn++ = fixer(*font++);
+			*scrn++ = fixer(*font++);
+			*scrn++ = fixer(*font++);
 		}
 		if (vid_xmin > (col * 14))
 			vid_xmin = col*14;
@@ -132,26 +134,26 @@ VID_refreshText80Row (int row, word32 addr)
 			font = vid_font80[vid_altcharset] + (slow_memory[addr] * 112);
 			for (i = 0 ; i < 16 ; i++) {
 				scrn = vid_lines[row * 16 + i] + (col * 14 + 7);
-				*scrn++ = *font++;
-				*scrn++ = *font++;
-				*scrn++ = *font++;
-				*scrn++ = *font++;
-				*scrn++ = *font++;
-				*scrn++ = *font++;
-				*scrn++ = *font++;
+				*scrn++ = fixer(*font++);
+				*scrn++ = fixer(*font++);
+				*scrn++ = fixer(*font++);
+				*scrn++ = fixer(*font++);
+				*scrn++ = fixer(*font++);
+				*scrn++ = fixer(*font++);
+				*scrn++ = fixer(*font++);
 			}
 		}
 		if (upd1) {
 			font = vid_font80[vid_altcharset] + (slow_memory[addr + 0x10000] * 112);
 			for (i = 0 ; i < 16 ; i++) {
 				scrn = vid_lines[row * 16 + i] + (col * 14);
-				*scrn++ = *font++;
-				*scrn++ = *font++;
-				*scrn++ = *font++;
-				*scrn++ = *font++;
-				*scrn++ = *font++;
-				*scrn++ = *font++;
-				*scrn++ = *font++;
+				*scrn++ = fixer(*font++);
+				*scrn++ = fixer(*font++);
+				*scrn++ = fixer(*font++);
+				*scrn++ = fixer(*font++);
+				*scrn++ = fixer(*font++);
+				*scrn++ = fixer(*font++);
+				*scrn++ = fixer(*font++);
 			}
 		}
 		if (vid_xmin > (col * 14))

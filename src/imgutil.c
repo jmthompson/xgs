@@ -53,9 +53,7 @@ int	rawToImage(char *, char *);
 
 int getSource()
 {
-	printf("
-Enter the source filename below or press RETURN to abort.
-: ");
+	printf("\nEnter the source filename below or press RETURN to abort.\n: ");
 	fgets(sourcefile,256,stdin);
 	sourcefile[strlen(sourcefile)-1]='\0';
 	return strlen(sourcefile);
@@ -63,9 +61,7 @@ Enter the source filename below or press RETURN to abort.
 
 int getDest()
 {
-	printf("
-Enter the destination filename below or press RETURN to abort.
-: ");
+	printf("\nEnter the destination filename below or press RETURN to abort.\n: ");
 	fgets(destfile,256,stdin);
 	destfile[strlen(destfile)-1]='\0';
 	return strlen(destfile);
@@ -82,11 +78,10 @@ int getSize()
 	char	last;
 	int	size;
 
-	printf("
-Enter a size for this image in bytes. You may also specify the size in
-kilobytes or megabytes by adding a 'K' or 'M' to the end of your input.
-You may enter any size between 16K and 32M.  To abort, just press RETURN.
-: ");
+	printf("Enter a size for this image in bytes. You may also specify the size in\n");
+    printf("kilobytes or megabytes by adding a 'K' or 'M' to the end of your input.\n");
+    printf("You may enter any size between 16K and 32M.  To abort, just press RETURN.\n");
+    printf(": ");
 	fgets(buffer,256,stdin);
 	if (!strlen(buffer)) return 0;
 	size = atoi(buffer);

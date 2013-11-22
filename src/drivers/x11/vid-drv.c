@@ -20,6 +20,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #ifdef MITSHM
@@ -37,7 +38,7 @@ Visual		*vid_visual;
 XImage		*vid_image;
 Window		vid_root,vid_main_window,vid_window;
 GC		vid_gc;
-Colormap	vid_colormap;
+/*Colormap	vid_colormap;*/
 Atom		wm_delete;
 XFontStruct	*vid_fontinfo;
 #ifdef MITSHM
@@ -47,27 +48,29 @@ XShmSegmentInfo	vid_shminfo;
 PIXEL		*vid_lines[VID_WIN_HEIGHT];
 PIXEL		*vid_buffer;
 
+PIXEL   vid_textfg, vid_textbg, vid_border;
+
 int		vid_shm;
 int		vid_mapped;
 
 XColor	vid_supercolors[256];
-XColor	vid_textcolors[16] = {
-	{ 0, 0x0000, 0x0000, 0x0000, DoRed | DoGreen | DoBlue, 0 },
-	{ 0, 0xDDDD, 0x0000, 0x3333, DoRed | DoGreen | DoBlue, 0 },
-	{ 0, 0x0000, 0x0000, 0x9999, DoRed | DoGreen | DoBlue, 0 },
-	{ 0, 0xDDDD, 0x2222, 0xDDDD, DoRed | DoGreen | DoBlue, 0 },
-	{ 0, 0x0000, 0x7777, 0x2222, DoRed | DoGreen | DoBlue, 0 },
-	{ 0, 0x5555, 0x5555, 0x5555, DoRed | DoGreen | DoBlue, 0 },
-	{ 0, 0x2222, 0x2222, 0xFFFF, DoRed | DoGreen | DoBlue, 0 },
-	{ 0, 0x6666, 0xAAAA, 0xFFFF, DoRed | DoGreen | DoBlue, 0 },
-	{ 0, 0x8888, 0x5555, 0x0000, DoRed | DoGreen | DoBlue, 0 },
-	{ 0, 0xFFFF, 0x6666, 0x0000, DoRed | DoGreen | DoBlue, 0 },
-	{ 0, 0xAAAA, 0xAAAA, 0xAAAA, DoRed | DoGreen | DoBlue, 0 },
-	{ 0, 0xFFFF, 0x9999, 0x8888, DoRed | DoGreen | DoBlue, 0 },
-	{ 0, 0x0000, 0xDDDD, 0x0000, DoRed | DoGreen | DoBlue, 0 },
-	{ 0, 0xFFFF, 0xFFFF, 0x0000, DoRed | DoGreen | DoBlue, 0 },
-	{ 0, 0x5555, 0xFFFF, 0x9999, DoRed | DoGreen | DoBlue, 0 },
-	{ 0, 0xFFFF, 0xFFFF, 0xFFFF, DoRed | DoGreen | DoBlue, 0 },
+PIXEL   vid_textcolors[16] = {
+	0x000000,
+	0xDD0033,
+	0x000099,
+	0xDD22DD,
+	0x007722,
+	0x555555,
+	0x2222FF,
+	0x66AAFF,
+	0x885500,
+	0xFF6600,
+	0xAAAAAA,
+	0xFF9988,
+	0x00DD00,
+	0xFFFF00,
+	0x55FF99,
+	0xFFFFFF
 };
 
 #ifdef MITSHM
@@ -258,14 +261,16 @@ int VID_outputInit(void)
 
 	printf("    - Creating main window: ");
 	vid_root = RootWindowOfScreen(vid_screen);
+/*
 	vid_colormap = XCreateColormap(vid_display, vid_root, vid_visual, AllocAll);
-	win_attr.border_pixel = 255;
-	win_attr.background_pixel = 255;
-	win_attr.colormap = vid_colormap;
+*/
+	win_attr.border_pixel = vid_white;
+	win_attr.background_pixel = vid_white;
+	/*win_attr.colormap = vid_colormap;*/
 	vid_mapped = 0;
 	vid_main_window = XCreateWindow(vid_display, vid_root, 0, 0,
 				VID_WIN_WIDTH,VID_WIN_HEIGHT, 0, vTemplate.depth, InputOutput,
-				vid_visual, CWColormap | CWBackPixel | CWBorderPixel,
+				vid_visual, CWBackPixel | CWBorderPixel,
 				&win_attr);
 	if (!vid_main_window) {
 		printf("Failed\n");
@@ -276,11 +281,11 @@ int VID_outputInit(void)
 	printf("    - Creating display subwindow: ");
 	win_attr.border_pixel = vid_white;
 	win_attr.background_pixel = vid_black;
-	win_attr.colormap = vid_colormap;
+	/*win_attr.colormap = vid_colormap;*/
 	vid_window = XCreateWindow(vid_display, vid_main_window,
 			(VID_WIN_WIDTH - VID_WIDTH) / 2, (VID_WIN_HEIGHT - VID_HEIGHT) / 2,
 			VID_WIDTH, VID_HEIGHT, 0, vTemplate.depth, InputOutput,
-			vid_visual, CWColormap | CWBackPixel | CWBorderPixel,
+			vid_visual, CWBackPixel | CWBorderPixel,
 			&win_attr);
 	if (!vid_window) {
 		printf("Failed\n");
@@ -339,7 +344,7 @@ int VID_outputInit(void)
 		vid_image = XCreateImage(vid_display, vid_visual, VID_DEPTH,
 						ZPixmap, 0,   /* format, offset */
 						NULL, VID_WIDTH, VID_HEIGHT,
-						sizeof(PIXEL)*8, 0);  /* pad, bytes_per_line */
+						sizeof(PIXEL)*8, /*VID_WIDTH * (sizeof(PIXEL) / 8)*/ 0);  /* pad, bytes_per_line */
 		if (!vid_image) {
 			printf("Failed\n");
 			return 1;
@@ -374,6 +379,11 @@ void VID_outputImage()
 
 	(*VID_updateRoutine)();
 
+    vid_xmin = 0;
+    vid_ymin = 0;
+    vid_xmax = VID_WIDTH - 1;
+    vid_ymax = VID_HEIGHT - 1;
+
 	if ((vid_xmax > vid_xmin) && (vid_ymax > vid_ymin)) {
 #ifdef MITSHM
 		if (vid_shm) {
@@ -381,6 +391,8 @@ void VID_outputImage()
 		} else
 #endif
 		{
+		    printf("XPutImage(%d, %d, %d, %d, %d, %d, %d, %d, %d, %d)\n", vid_display, vid_window, vid_gc, vid_image, vid_xmin, vid_ymin, vid_xmin, vid_ymin, vid_xmax - vid_xmin, vid_ymax - vid_ymin);
+
 		    XPutImage(vid_display, vid_window, vid_gc, vid_image, vid_xmin, vid_ymin, vid_xmin, vid_ymin, vid_xmax - vid_xmin, vid_ymax - vid_ymin);
 		}
 		XSync(vid_display, False);
@@ -403,7 +415,7 @@ void VID_outputShutdown()
 	    vid_image = NULL;
 	}
 	printf("    - Closing display\n");
-	XFreeColormap(vid_display, vid_colormap);
+	/*XFreeColormap(vid_display, vid_colormap);*/
 	XCloseDisplay(vid_display);
 }
 
@@ -443,20 +455,28 @@ void VID_outputResize(int width, int height)
 
 void VID_outputSetTextColors()
 {
+    vid_textbg = vid_textcolors[vid_textbgcolor];
+    vid_textfg = vid_textcolors[vid_textfgcolor];
+/*
 	vid_textcolors[vid_textbgcolor].pixel = 253;
 	XStoreColor(vid_display, vid_colormap, &vid_textcolors[vid_textbgcolor]);
 	vid_textcolors[vid_textfgcolor].pixel = 254;
 	XStoreColor(vid_display, vid_colormap, &vid_textcolors[vid_textfgcolor]);
+*/
 }
 
 void VID_outputSetBorderColor()
 {
+    vid_border = vid_textcolors[vid_bordercolor];
+/*
 	vid_textcolors[vid_bordercolor].pixel = 255;
 	XStoreColor(vid_display, vid_colormap, &vid_textcolors[vid_bordercolor]);
+*/
 }
 
 void VID_outputSetStandardColors()
 {
+/*
 	int	i;
 
 	vid_textcolors[vid_textbgcolor].pixel = 253;
@@ -471,6 +491,7 @@ void VID_outputSetStandardColors()
 	XStoreColors(vid_display, vid_colormap, vid_textcolors, 16);
 	vid_black = 0;
 	vid_white = 15;
+*/
 }
 
 void VID_outputSetSuperColors()
@@ -484,8 +505,10 @@ void VID_outputSetSuperColors()
 			vid_supercolors[i].green = ((slow_memory[addr] >> 4) & 0x0F) * 4369;
 			vid_supercolors[i].red = (slow_memory[addr+1] & 0x0F) * 4369;
 			vid_supercolors[i].flags = DoRed | DoGreen | DoBlue;
+/*
 			vid_supercolors[i].pixel = i;
 			XStoreColor(vid_display, vid_colormap, &vid_supercolors[i]);
+*/
 		}
 		addr += 2;
 	}
