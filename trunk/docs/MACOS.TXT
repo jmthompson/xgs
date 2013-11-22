@@ -1,0 +1,6 @@
+The MacOS port is currently being distributed separately, in binary-only
+form for 68K and PPC Macs by Michael Bytnar (m-bytnar@uiuc.edu). You can
+obtain it from the XGS-Mac home page at:
+
+http://www.cen.uiuc.edu/~m-bytnar/XGS-Mac/
+

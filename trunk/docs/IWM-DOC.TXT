@@ -1,0 +1,177 @@
+Attached at the end of this message is my code for better 5.25" drive
+emulation.  This code does reads & writes, and updates the Unix disk
+image on writes.  It is also nearly cycle-accurate--Let me know if you
+have a program which can detect it's not a real Apple II.  There are
+a few features missing (No 1/4 or 1/2 tracks, no support for Unix nibble
+images, no disk switching), but what's there is pretty accurate.
+The low-level code support 1/4 and 1/2 tracks--it's the arm movement
+and image-handling routines which don't.  And lack of disk-switching and
+Unix nibble images are also due to lack of higher-level routines to
+make those features work.
+
+This code is from my own Apple //gs simulator, which is written in HP
+PA-RISC assembly code.  I'm considering making a C version available, but
+I'm not working on that yet.  The code posted here is usable freely
+as long as it is not used in a commercial program.
+
+How my 5.25" emulation works: The routines have a nibblized image of each
+track of each drive (2 5.25" drives supported) in memory.  The nibble
+images are declared as arrays, but it could be made to use dynamic memory
+allocation.
+
+Each track's data format is a series of two-byte pairs.  The first byte
+of the pair is the number of bits in this disk byte, and the second byte
+is the value.  So a size of 8 is normal.  A size of 10 means that there are
+2 sync bits written before this byte on the disk.  So 40 cycles need to
+pass in the simulator before providing a valid nibble.  Partial nibbles
+are correctly formed if a read happens too early (this actually makes
+things slower, but is required if you want to make nibble copiers work).
+Similarly, writing to the disk watches timing carefully to write out the
+correct number of bits per disk byte.  These routines will definitely
+test out your emulators cycle counting ability.
+
+If a long delay occurs between a read (or a write) the routines skip
+the correct number of bits to return the correctly formed disk byte.
+After a long delay, for efficiency, I always return a full disk byte,
+instead of a partial one, even if the timing would put it in the middle
+of a disk byte.
+
+The arm stepping is really lame.  I will clean it up after I make disk
+switching work.
+
+3.5" support is good enough to claim there are two 3.5" drives, but there
+are no disks in them.  :-)
+
+Smartport support is sufficient to claim that there are no smartport
+devices.
+
+I tested my 5.25" drive routines on EDD, which could correctly measure
+drive speed and other disk factors.  I also nibble-copied some disks,
+which also worked fine.
+
+
+Code description:
+
+Code only supports DOS3.3 ordered images now.  Well, the code supports
+ProDOS-order also, but has no mechanism to tell it an image is
+prodos-order yet.  :-)
+
+Iwm state is encoded in the Iwm structure.
+
+	motor_on:  True if IWM motor_on signal is asserted.  Some drive is on.
+	motor_off: True if motor has been turned off in software, but the
+			1 second timeout has not expired yet.
+	motor_on35: True if 3.5" motor is on (controlled differently than
+			5.25").
+	motor_off_vbl_count:  VBL count to turn motor off.
+	head35, step_direction35: 3.5" controls, useless.
+	iwm_phase[4]: Has '1' for each phase that is on.
+	iwm_mode:	IWM mode register.
+	drive_select: 0 = drive 1, 1 = drive 2.
+	q6, q7:	IWM q6, q7 registers.
+	enable2:	Smartport /ENABLE2 asserted.
+	reset:		Smartport /RESET asserted.
+
+Each 5.25" disk is encoded in the Disk525 struct:
+	fd:	Unix file descriptor.  If < 0, no disk.
+	name:	Unix file name.  Always DISK_6_[12] now.
+	cur_qtr_track:	Current qtr track.  So track 1 == qtr_track 4.
+	prodos_order:	True if Unix image is ProDOS order.
+	vol_num:	DOS3.3 volume number to use.  Always 254.
+	write_prot:	True if disk is write protected.
+	write_through_to_unix: True if writes should be passed through to
+			the unix image.  If this is false, you can write
+			to the image in memory, but it won't get reflected
+			into the Unix file.  If you create a non-DOS3.3
+			format image, it automatically sets this false.
+	disk_dirty:	Some track has dirty data that need to be flushed.
+	time_last_read:	Cycle count of last disk data register access.
+	last_phase:	Phase number last accessed.
+	track[35*4]:	nibble image of all possible quarter-tracks.
+
+Each track consits of:
+	track_valid:	Is this a valid track?
+	track_dirty:	Contains data that needs to be written back to
+			the Unix image file.
+	nib_pos:	Current pos in nib_area[].
+	overflow_size:	Count of overflow bits, used in writing.
+	track_len:	Number of nibbles on this track.
+	nib_area[]:	pairs of [size,data], encoding disk data bytes.
+
+
+Externally callable routines:
+iwm_init():	Init various data structures at simulation start.
+iwm_reset():	Called at reset time.
+iwm_vbl_update():	Called every VBL period.  Used to turn motor off,
+			and flush out dirty data.
+			g_vbl_count is the count of VBL ticks (so it counts
+			at 60 times a second).
+read_iwm(loc, diff_cycles):
+		Read from 0xc0e0 + loc.  diff_cycles is an artifact from
+		my simulator.  Real time in cycles is total_time + diff_cycles
+		is my simulator.  You can ignore this for XGS.
+
+
+Tricky routines:
+
+iwm_read_data525():	called by read_iwm if q6,q7 = 0,0.
+		Returns next disk byte.
+		Calculates bits_read which is the number of bits that
+		have passed under the head since the last read.
+		Computes new disk index, and returns correct data reg value.
+		Some complexity since the data reg needs to stay valid
+		for two bit-times (to give software time to read the disk
+		byte).  Again, nib_area[] is an array of bytes, which are
+		treated as pairs.  Byte 0 = size, byte 1 = disk nibble.
+
+iwm_write_data525():	called by write_iwm if q6,q7 = 1,1.
+		Similar to above.  Calculates "bits_read" as bits that
+		have traveled under the head since the last access.
+		Uses disk525_nib_out to write into image.  disk525_nib_out
+		is also used when nibblizing the Unix image into memory.
+
+disk525_nib_out():	called by iwm_write_data525() and disk525_unix_to_nib().
+		Writes byte into nib_area[].  If size > 10, makes it 10.
+		If high order bit not set, it sets it (makes certain routines
+		in EDD happy).
+
+overflow_size:
+		Writing to the disk creates some problems.  I need to
+		maintain 2 things at all times on the track:	
+			1) Constant number of bits for the entire track.
+			2) know where each synchronized byte starts on
+				the track.
+		If the track was just stored as raw bits, then correctly
+		simulating a delay of 300*4 cycles is tough, since it has to
+		be done by reading through all 300 bits on the track,
+		so that we keep in sync with where bytes really start.
+		But if you just store the bytes themselves, then sync
+		bytes look like every other byte.  And if you now add
+		the size field, you have a situation where a track could
+		gain or lose bits when rewritten.  Here's the case:
+		Assume the track contains:  10,ff 10,ff 10,ff 10,ff.
+		(That is 4 self-sync disk bytes of 10 bits each).
+		If we rewrite that area of the track with 'D5 AA 96 FF',
+		where each byte is 8 bits, we would have:
+		8,D5 8,AA, 8,96, 8,FF.
+		Looks OK, but we just lost 8 bits!  The original 4 nibbles
+		were using 40 bits of space on the disk.  Our new 4 nibbles
+		are using 32 bits.  8 bits are lost.
+		Solution: log these missing bits via overflow_size.
+		When writing, if overflow_size gets > 8, force out a 0,0
+		nibble.  So sync bytes get written as:
+		10,FF 10,FF 10,FF 10,FF 0,0 10,FF 10,FF 10,FF 10,FF, 0,0.
+		So when they get re-written with 8,xx, we don't lose any
+		bytes on the disk.
+
+		Unfortunately, it doesn't quite work that easily, and bits
+		can still be lost when sync fields are partially overwritten.
+		This happens when all the 0,0's end up in a place on the
+		track where few overwrites occur, but other sync bytes
+		are being turned into 8,xx.  So overflow_size goes negative,
+		saying we're got too much on the track.
+		The code prints an error when it gains more than 64 bits.
+		If someone can come up with a better scheme, I'd love to
+		hear it.  A partial solution would be to have a routine
+		re-space the track to spread the needed 0,0's around
+		a little better when overflow_size gets too negative.

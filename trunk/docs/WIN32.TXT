@@ -1,0 +1,35 @@
+You will need to have DirectX 2 installed in order to use this
+port of XGS. Your monitor and video card must be able to run at
+an 800x600 resolution with 8-bit pixels.
+
+The Win32 port requires that the C:\XGS directory exist for storage
+of the preferences file. Eventually this will be changed.
+
+At startup, you will be given a dialog box with the ability to
+change the path of the XGS directory (C:\XGS by default). This
+directory is where XGS looks for the XGS.ROM, XGS.RAM, XGS40.FNT,
+and XGS80.FNT files. You will also be able to select image files
+to mount on each of the IIGS drives. The list of available images is
+built by looking for all *.XGS files in the XGS directory, so you
+should store your image files in this directory.
+
+Keyboard support is mostly the same as the Unix version, with three
+exceptions: the Escape key is mapped as F1, the Command key is mapped
+as F3 and the Option key is mapped as F4. This is because Windows makes
+it difficult to use the Alt and Escape keys (you can't easily tell Left
+Alt from Right Alt, and many Alt and Escape key sequences are trapped
+by the system).
+
+Mouse support works just like the Unix version. That is, you toggle
+between the Windows mouse and the IIGS mouse by pressing F6. While
+in Windows mouse mode XGS does not pass through mouse movements or
+button presses to the IIGS mouse.
+
+Joystick support also works like the Unix version, with F5 toggling
+between Windows mouse mode and the IIGS joystick. As with the mouse
+emulation, while in Windows mouse mode XGS will not pass through
+mouse movements or button presses to the IIGS joystick.
+
+If you run into any problems, you can check the file BOOTLOG.TXT in the
+same directory as the XGS.EXE executable. It contains all the startup
+and shutdown messages produced by the emulator.
