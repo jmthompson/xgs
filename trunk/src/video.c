@@ -23,7 +23,7 @@
 #include <string.h>
 #include "emul.h"
 #include "video.h"
-#include "vid-drv.h"
+#include "video-output.h"
 
 PIXEL		vid_black, vid_white;
 

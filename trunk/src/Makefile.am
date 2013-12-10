@@ -1,4 +1,34 @@
 ## Process this file with automake to produce Makefile.in
 
-bin_PROGRAMS = xgs
-hello_SOURCES = adb.c clock.c cpu.c debugger.c disks.c dispatch.c emul.c fontutil.c hires.c imgconv.c imgutil.c iwm.c lores.c memory.c opcodes1.c opcodes2.c opcodes3.c opcodes4.c opcodes5.c rw.c smtport.c sound.c super.c table.c test.c text.c video.c
+AM_CFLAGS = -D DATA_DIR=\"$(datadir)\" -I ../include
+AM_LDFLAGS =
+
+bin_PROGRAMS = xgs imgconv imgutil
+imgconv_SOURCES = disks.c imgconv.c
+imgutil_SOURCES = disks.c imgutil.c
+xgs_SOURCES = adb.c clock.c cpu.c debugger.c disks.c dispatch.c emul.c fontutil.c hires.c iwm.c lores.c memory.c opcodes1.c opcodes2.c opcodes3.c opcodes4.c opcodes5.c rw.c smtport.c sound.c super.c table.c text.c video.c
+
+if WITH_POSIX
+xgs_SOURCES += app-posix.c
+endif
+
+if WITH_PULSEAUDIO
+xgs_SOURCES += sound-pulseaudio.c
+endif
+
+if WITH_OSS
+xgs_SOURCES += sound-oss.c
+endif
+
+if WITH_SPARCAUDIO
+xgs_SOURCES += sound-sparc.c
+endif
+
+if WITH_X11
+xgs_SOURCES += input-x11.c video-x11.c
+AM_CFLAGS   += $(x_includes)
+AM_LDFLAGS  += $(x_libraries) -lX11 -lXext
+endif
+
+xgs_LDADD = $(APP_POSIX) $(INPUT_X11) $(SOUND_NONE) $(SOUND_OSS) $(SOUND_PULSEAUDIO) $(SOUND_SPARC) $(VIDEO_X11)
+xgs_DEPENDNCIES = $(APP_POSIX) $(INPUT_X11) $(SOUND_NONE) $(SOUND_OSS) $(SOUND_PULSEAUDIO) $(SOUND_SPARC) $(VIDEO_X11)

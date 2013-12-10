@@ -20,7 +20,7 @@
 
 #include "xgs.h"
 #include "video.h"
-#include "vid-drv.h"
+#include "video-output.h"
 
 /* Base address table for text/lores pages 1. */
 

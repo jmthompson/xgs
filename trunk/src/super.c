@@ -20,7 +20,7 @@
 
 #include "xgs.h"
 #include "video.h"
-#include "vid-drv.h"
+#include "video-output.h"
 
 void VID_refreshSuperHires()
 {

@@ -11,9 +11,9 @@
  *********************************************************************/
 
 /*
- * File: arch/svgalib/adb-drv.c
+ * File: arch/x11/adb-drv.c
  *
- * SVGAlib ADB driver.
+ * X11 ADB driver.
  */
 
 #include "xgs.h"
@@ -22,23 +22,40 @@
 #ifdef HAVE_FCNTL_H
 #include <fcntl.h>
 #endif
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
+#include <X11/keysym.h>
 
 #include "adb.h"
-#include "adb-drv.h"
 #include "emul.h"
 #include "video.h"
-#include "vid-drv.h"
+#include "video-output.h"
+
+extern Display	*vid_display;
+extern Window	vid_window, vid_main_window;
+extern Atom	wm_delete;
+
+static Cursor	adb_cursor;
+	
+static XColor	adb_black = { 0, 0x0000, 0x0000, 0x0000, DoRed | DoGreen | DoBlue, 0 };
+static XColor	adb_white = { 0, 0xFFFF, 0xFFFF, 0xFFFF, DoRed | DoGreen | DoBlue, 0 };
 
 int ADB_inputInit()
 {
+	printf("    - Creating cursor: ");
+	adb_cursor = XCreatePixmapCursor(vid_display,
+					 XCreatePixmap(vid_display, vid_window, 1, 1, 1),
+					 XCreatePixmap(vid_display, vid_window, 1, 1, 1),
+					 &adb_black, &adb_white, 0, 0);
+	XDefineCursor(vid_display, vid_window, adb_cursor);
+	printf("Done\n");
 	return 0;
 }
 
 void ADB_inputUpdate()
 {
-#if 0
 	XEvent	event;
-	int 	count,i,len;
+	int 	count,len;
 	word16	key;
 	char	buffer[4];
   
@@ -105,17 +122,68 @@ void ADB_inputUpdate()
  				ski_modifier_reg |= 0x40;
  				continue;
  			case XK_Left:
- 				buffer[0] = 0x88;
+ 				buffer[0] = 0x08;
  				break;
  			case XK_Right:
- 				buffer[0] = 0x95;
+ 				buffer[0] = 0x15;
  				break;
  			case XK_Up:
- 				buffer[0] = 0x8B;
+ 				buffer[0] = 0x0B;
  				break;
  			case XK_Down:
- 				buffer[0] = 0x8A;
+ 				buffer[0] = 0x0A;
  				break;
+			case XK_KP_Enter:
+				buffer[0] = 0x8D;
+				break;
+			case XK_KP_0:
+				buffer[0] = 0xB0;
+				break;
+			case XK_KP_1:
+				buffer[0] = 0xB1;
+				break;
+			case XK_KP_2:
+				buffer[0] = 0xB2;
+				break;
+			case XK_KP_3:
+				buffer[0] = 0xB3;
+				break;
+			case XK_KP_4:
+				buffer[0] = 0xB4;
+				break;
+			case XK_KP_5:
+				buffer[0] = 0xB5;
+				break;
+			case XK_KP_6:
+				buffer[0] = 0xB6;
+				break;
+			case XK_KP_7:
+				buffer[0] = 0xB7;
+				break;
+			case XK_KP_8:
+				buffer[0] = 0xB8;
+				break;
+			case XK_KP_9:
+				buffer[0] = 0xB9;
+				break;
+			case XK_KP_Multiply:
+				buffer[0] = 0xAA;
+				break;
+			case XK_KP_Add:
+				buffer[0] = 0xAB;
+				break;
+			case XK_KP_Subtract:
+				buffer[0] = 0xAD;
+				break;
+			case XK_KP_Decimal:
+				buffer[0] = 0xAE;
+				break;
+			case XK_KP_Divide:
+				buffer[0] = 0xAF;
+				break;
+			case XK_KP_Equal:
+				buffer[0] = 0xBD;
+				break;
  			case XK_Escape:
  				if ((ski_modifier_reg & 0x82) == 0x82) {
 					if (!ski_status_irq) {
@@ -131,9 +199,10 @@ void ADB_inputUpdate()
  				len = XLookupString((XKeyEvent *) &event,buffer,4,NULL,NULL);
  				if (!len)
  					continue;
+				buffer[0] &= 0x7F;
  				break;
  			}
- 			ski_input_buffer[ski_input_index++] = buffer[0] & 0x7F;
+ 			ski_input_buffer[ski_input_index++] = buffer[0];
  			if (ski_input_index == ADB_INPUT_BUFFER) ski_input_index = 0;
  			break;
  		case KeyRelease:
@@ -263,7 +332,6 @@ void ADB_inputUpdate()
  			break;
 		}
 	}
-#endif
 }
 
 void ADB_inputShutdown()

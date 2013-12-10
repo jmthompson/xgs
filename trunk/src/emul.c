@@ -27,15 +27,15 @@
 #endif
 
 #include "adb.h"
+#include "app.h"
 #include "clock.h"
 #include "disks.h"
 #include "emul.h"
 #include "iwm.h"
-#include "main.h"
 #include "smtport.h"
 #include "sound.h"
 #include "video.h"
-#include "vid-drv.h"
+#include "video-output.h"
 #include "cpu.h"
 
 int	emul_period;
@@ -71,8 +71,7 @@ long emul_total_cycles;
 long	emul_last_time;
 long	emul_this_time;
 
-char	emul_path[1024];
-
+char	*emul_path;
 char	*emul_s5d1,*emul_s5d2;
 char	*emul_s6d1,*emul_s6d2;
 char	*emul_smtport[NUM_SMPT_DEVS];
@@ -235,8 +234,9 @@ int EMUL_init(int argc, char *argv[])
 		} else EMUL_displayUsage(argv[0]);
 	}
 
-	printf("%s\n",VERSION);
-	printf("Written and (C) 1996 by Joshua M. Thompson\n");
+	printf("XGS Version %s\n", VERSION);
+	printf("Written and (C) 1996 by Joshua M. Thompson\n\n");
+    printf("Data directory = %s\n\n", emul_path);
 
 	if ((err = MEM_init())) return err;
 	if ((err = VID_init())) {

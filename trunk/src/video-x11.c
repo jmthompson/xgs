@@ -23,14 +23,17 @@
 #include <string.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
-#ifdef MITSHM
+#ifdef HAVE_X11_EXTENSIONS_XSHM_H
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <X11/extensions/XShm.h>
 #endif
 
 #include "video.h"
-#include "vid-drv.h"
+#include "video-output.h"
+
+#define VID_WIN_WIDTH	720
+#define VID_WIN_HEIGHT	480
 
 Screen		*vid_screen;
 Display		*vid_display;
@@ -41,7 +44,7 @@ GC		vid_gc;
 /*Colormap	vid_colormap;*/
 Atom		wm_delete;
 XFontStruct	*vid_fontinfo;
-#ifdef MITSHM
+#ifdef HAVE_X11_EXTENSIONS_XSHM_H
 XShmSegmentInfo	vid_shminfo;
 #endif
 
@@ -73,7 +76,7 @@ PIXEL   vid_textcolors[16] = {
 	0xFFFFFF
 };
 
-#ifdef MITSHM
+#ifdef HAVE_X11_EXTENSIONS_XSHM_H
 /*
  * Error handling.
  */
@@ -95,7 +98,7 @@ int VID_handleXError(Display *dpy, XErrorEvent *event)
  */
 int VID_checkForSHM(Display *display)
 {
-#ifdef MITSHM
+#ifdef HAVE_X11_EXTENSIONS_XSHM_H
 	int	major, minor, ignore;
 	Bool	pixmaps;
 
@@ -120,7 +123,7 @@ int VID_checkForSHM(Display *display)
 
 int VID_allocShmImage(void)
 {
-#ifdef MITSHM
+#ifdef HAVE_X11_EXTENSIONS_XSHM_H
    /*
     * We have to do a _lot_ of error checking here to be sure we can
     * really use the XSHM extension.  It seems different servers trigger
@@ -293,7 +296,7 @@ int VID_outputInit(void)
 	}
 	printf("Done\n");
 
-	XStoreName(vid_display, vid_main_window, VERSION);
+	XStoreName(vid_display, vid_main_window, "XGS");
 	size_hints.flags = PSize | PMinSize | PMaxSize;
 	size_hints.base_width = VID_WIN_WIDTH;
 	size_hints.min_width = VID_WIN_WIDTH;
@@ -322,7 +325,7 @@ int VID_outputInit(void)
 	XChangeGC(vid_display, vid_gc, GCFillStyle | GCFont, &gcvals);
 	printf("Done\n");
 
-#ifdef MITSHM
+#ifdef HAVE_X11_EXTENSIONS_XSHM_H
 	printf("    - Checking for MIT-SHM support: ");
 	vid_shm = VID_checkForSHM(vid_display);
 	if (vid_shm) {
@@ -385,7 +388,7 @@ void VID_outputImage()
     vid_ymax = VID_HEIGHT - 1;
 
 	if ((vid_xmax > vid_xmin) && (vid_ymax > vid_ymin)) {
-#ifdef MITSHM
+#ifdef HAVE_X11_EXTENSIONS_XSHM_H
 		if (vid_shm) {
 		    XShmPutImage(vid_display, vid_window, vid_gc, vid_image, vid_xmin, vid_ymin, vid_xmin, vid_ymin, vid_xmax - vid_xmin, vid_ymax - vid_ymin, False);
 		} else
@@ -402,7 +405,7 @@ void VID_outputImage()
 void VID_outputShutdown()
 {
 	printf("    - Destroying image\n");
-#ifdef MITSHM
+#ifdef HAVE_X11_EXTENSIONS_XSHM_H
 	if (vid_shm) {
 	    XShmDetach(vid_display, &vid_shminfo);
 	    XDestroyImage(vid_image);

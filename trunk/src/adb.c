@@ -22,7 +22,6 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include "adb.h"
-#include "adb-drv.h"
 #include "emul.h"
 #include "video.h"
 #include "cpu.h"

@@ -19,7 +19,7 @@
 
 #include "xgs.h"
 #include "video.h"
-#include "vid-drv.h"
+#include "video-output.h"
 
 /* No use duplicating this when we can borrow it from	*/
 /* the text mode drivers!				*/

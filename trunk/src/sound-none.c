@@ -28,7 +28,6 @@
 #include <fcntl.h>
 #endif
 #include "sound.h"
-#include "snd-drv.h"
 
 int SND_outputInit(int rate)
 {

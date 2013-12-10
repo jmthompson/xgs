@@ -3,7 +3,7 @@
 
 AC_PREREQ([2.69])
 AC_INIT([xgs], [0.60], [joshua.thompson@gmail.com])
-AC_INIT([FULL-PACKAGE-NAME], [VERSION], [BUG-REPORT-ADDRESS])
+AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 AC_CONFIG_HEADERS([config.h])
 
 # Checks for programs.
@@ -14,7 +14,15 @@ AC_PROG_CC
 # Checks for header files.
 AC_PATH_X
 AC_HEADER_STDC
-AC_CHECK_HEADERS([fcntl.h limits.h malloc.h stdlib.h string.h sys/file.h sys/ioctl.h sys/time.h unistd.h])
+AC_CHECK_HEADERS([fcntl.h limits.h malloc.h sys/file.h sys/ioctl.h sys/time.h X11/extensions/XShm.h],,, [
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
+])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_HEADER_TIME
@@ -36,10 +44,35 @@ AC_FUNC_MALLOC
 AC_CHECK_FUNCS([bzero gettimeofday memmove memset random lrand48 select strdup strrchr])
 
 dnl Check for optional features
-AC_ARG_WITH(pulseaudio, [  --with-pulseaudio       enable support for the PulseAudio driver], AC_DEFINE(WITH_PULSEAUDIO))
-AC_ARG_WITH(mit-shm,    [  --with-mit-shm          enable MIT Shared Memory extension support], AC_DEFINE(WITH_MITSHM))
-AC_ARG_WITH(debug,      [  --with-debug            enable debugging support], AC_DEFINE(DEBUG))
+AC_ARG_WITH(debug,
+    AS_HELP_STRING([--with-debug],      [enable debugging support]),
+    AC_DEFINE(DEBUG,           [], [Define to enable support for 65816 debugging])
+)
+AC_ARG_WITH(oss,
+    AS_HELP_STRING([--with-oss], [enable support for the OSS driver]),
+    AC_DEFINE(WITH_OSS, [], [Define to enable OSS support])
+)
+AC_ARG_WITH(pulseaudio,
+    AS_HELP_STRING([--with-pulseaudio], [enable support for the PulseAudio driver]),
+    AC_DEFINE(WITH_PULSEAUDIO, [], [Define to enable PulseAudio support])
+)
+AC_ARG_WITH(sparcaudio,
+    AS_HELP_STRING([--with-sparcaudio], [enable support for the Sparc audio driver]),
+    AC_DEFINE(WITH_SPARCAUDIO, [], [Define to enable Sparc audio support])
+)
 
-AC_CONFIG_FILES([Makefile
-                 src/Makefile])
+AS_IF([ test "x$no_x" != xyes ],
+    AC_DEFINE(WITH_X11, [], [Define to enable X11 video support])
+)
+
+with_posix=yes
+
+dnl Automake conditonals
+AM_CONDITIONAL([WITH_OSS],        [test "x$with_oss" = xyes])
+AM_CONDITIONAL([WITH_POSIX],      [test "x$with_posix" = xyes])
+AM_CONDITIONAL([WITH_PULSEAUDIO], [test "x$with_pulseaudio" = xyes])
+AM_CONDITIONAL([WITH_SPARCAUDIO], [test "x$with_sparcaudio" = xyes])
+AM_CONDITIONAL([WITH_X11],        [test "x$no_x" != xyes])
+
+AC_CONFIG_FILES([Makefile src/Makefile])
 AC_OUTPUT

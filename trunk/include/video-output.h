@@ -1,6 +1,3 @@
-#define VID_WIN_WIDTH	720
-#define VID_WIN_HEIGHT	480
-
 extern int	vid_shm;
 extern int	vid_mapped;
 

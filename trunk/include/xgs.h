@@ -40,6 +40,9 @@
 # endif /* !HAVE_RANDOM */
 #endif /* !RAND_BITS */
 
+// Name of the XGS folder in DATA_DIR
+#define XGS_DATA_DIR "xgs"
+
 #define ROM_FILE	"xgs.rom"
 #define BRAM_FILE	"xgs.ram"
 #define FONT40_FILE	"xgs40.fnt"
@@ -49,8 +52,6 @@
 
 #include "cpu.h"
 #include "memory.h"
-
-#define VERSION		"XGS Version 0.60"
 
 /* Union to split a word into two bytes. Used for endianness swapping */
 

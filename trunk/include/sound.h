@@ -32,3 +32,11 @@ void SND_enableOscillators(void);
 void SND_updateOscillator(int);
 void SND_scanOscillators(snd_sample_struct *);
 void SND_updateClassicSound(snd_sample_struct *);
+
+/*
+ * Provided by the configured sound driver
+ */
+
+int SND_outputInit(int);
+void SND_outputShutdown(void);
+size_t SND_outputWrite(snd_sample_struct *, size_t);

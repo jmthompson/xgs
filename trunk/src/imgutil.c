@@ -647,7 +647,7 @@ int main(int argc, char *argv[]) {
 \n   DiskCopy format.\
 \n\
 \nQ. Quit the Image Utility\n"
-		,VERSION);
+		, VERSION);
 		valid = 0;
 		while(!valid) {
 			printf("\nSelection [ 1-7, Q ]: ");
