@@ -320,6 +320,10 @@ int VID_outputInit(void)
 	printf("    - Setting status font: ");
 	vid_gc = XCreateGC(vid_display, vid_main_window, 0, NULL);
 	vid_fontinfo = XLoadQueryFont(vid_display,VID_STATUS_FONT);
+    if (!vid_fontinfo) {
+        printf("Failed to set font \"%s\"\n", VID_STATUS_FONT);
+        return 1;
+    }
 	gcvals.font = vid_fontinfo->fid;
 	gcvals.fill_style = FillSolid;
 	XChangeGC(vid_display, vid_gc, GCFillStyle | GCFont, &gcvals);

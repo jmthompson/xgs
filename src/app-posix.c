@@ -43,7 +43,7 @@ void main(int argc, char *argv[])
         exit(-1);
     }
 
-    snprintf(emul_path, len, "%s/%s", XGS_DATA_DIR, DATA_DIR);
+    snprintf(emul_path, len, "%s/%s", DATA_DIR, XGS_DATA_DIR);
 
     chdir(emul_path);
 
