@@ -27,7 +27,11 @@ endif
 if WITH_X11
 xgs_SOURCES += input-x11.c video-x11.c
 AM_CFLAGS   += $(x_includes)
-AM_LDFLAGS  += $(x_libraries) -lX11 -lXext
+AM_LDFLAGS  += $(x_libraries) -lX11
+endif
+
+if HAVE_MITSHM
+AM_LDFLAGS  += $(x_libraries) -lXext
 endif
 
 xgs_LDADD = $(APP_POSIX) $(INPUT_X11) $(SOUND_NONE) $(SOUND_OSS) $(SOUND_PULSEAUDIO) $(SOUND_SPARC) $(VIDEO_X11)

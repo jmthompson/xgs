@@ -13,16 +13,7 @@ AC_PROG_CC
 
 # Checks for header files.
 AC_PATH_X
-AC_HEADER_STDC
-AC_CHECK_HEADERS([fcntl.h limits.h malloc.h sys/file.h sys/ioctl.h sys/time.h X11/extensions/XShm.h],,, [
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <X11/Xlib.h>
-#include <X11/Xutil.h>
-#include <sys/ipc.h>
-#include <sys/shm.h>
-])
+AC_CHECK_HEADERS([fcntl.h limits.h malloc.h sys/file.h sys/ioctl.h sys/time.h X11/extensions/XShm.h],,, [ AC_INCLUDES_DEFAULT ])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_HEADER_TIME
@@ -63,6 +54,17 @@ AC_ARG_WITH(sparcaudio,
 
 AS_IF([ test "x$no_x" != xyes ],
     AC_DEFINE(WITH_X11, [], [Define to enable X11 video support])
+
+    AC_CHECK_LIB([Xext],
+        [ XShmAttach ],
+        [
+            AC_DEFINE([HAVE_MITSHM], [], [Define if your system supports the MIT-SHM extension])
+            AM_CONDITIONAL([HAVE_MITSHM], [true])
+        ],
+        [
+            AM_CONDITIONAL([HAVE_MITSHM], [false])
+        ]
+    )
 )
 
 with_posix=yes
