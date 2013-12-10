@@ -23,7 +23,7 @@
 #include <string.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
-#ifdef HAVE_X11_EXTENSIONS_XSHM_H
+#ifdef HAVE_MITSHM
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <X11/extensions/XShm.h>
@@ -44,7 +44,7 @@ GC		vid_gc;
 /*Colormap	vid_colormap;*/
 Atom		wm_delete;
 XFontStruct	*vid_fontinfo;
-#ifdef HAVE_X11_EXTENSIONS_XSHM_H
+#ifdef HAVE_MITSHM
 XShmSegmentInfo	vid_shminfo;
 #endif
 
@@ -76,7 +76,7 @@ PIXEL   vid_textcolors[16] = {
 	0xFFFFFF
 };
 
-#ifdef HAVE_X11_EXTENSIONS_XSHM_H
+#ifdef HAVE_MITSHM
 /*
  * Error handling.
  */
@@ -98,7 +98,7 @@ int VID_handleXError(Display *dpy, XErrorEvent *event)
  */
 int VID_checkForSHM(Display *display)
 {
-#ifdef HAVE_X11_EXTENSIONS_XSHM_H
+#ifdef HAVE_MITSHM
 	int	major, minor, ignore;
 	Bool	pixmaps;
 
@@ -123,7 +123,7 @@ int VID_checkForSHM(Display *display)
 
 int VID_allocShmImage(void)
 {
-#ifdef HAVE_X11_EXTENSIONS_XSHM_H
+#ifdef HAVE_MITSHM
    /*
     * We have to do a _lot_ of error checking here to be sure we can
     * really use the XSHM extension.  It seems different servers trigger
@@ -325,7 +325,7 @@ int VID_outputInit(void)
 	XChangeGC(vid_display, vid_gc, GCFillStyle | GCFont, &gcvals);
 	printf("Done\n");
 
-#ifdef HAVE_X11_EXTENSIONS_XSHM_H
+#ifdef HAVE_MITSHM
 	printf("    - Checking for MIT-SHM support: ");
 	vid_shm = VID_checkForSHM(vid_display);
 	if (vid_shm) {
@@ -388,7 +388,7 @@ void VID_outputImage()
     vid_ymax = VID_HEIGHT - 1;
 
 	if ((vid_xmax > vid_xmin) && (vid_ymax > vid_ymin)) {
-#ifdef HAVE_X11_EXTENSIONS_XSHM_H
+#ifdef HAVE_MITSHM
 		if (vid_shm) {
 		    XShmPutImage(vid_display, vid_window, vid_gc, vid_image, vid_xmin, vid_ymin, vid_xmin, vid_ymin, vid_xmax - vid_xmin, vid_ymax - vid_ymin, False);
 		} else
@@ -405,7 +405,7 @@ void VID_outputImage()
 void VID_outputShutdown()
 {
 	printf("    - Destroying image\n");
-#ifdef HAVE_X11_EXTENSIONS_XSHM_H
+#ifdef HAVE_MITSHM
 	if (vid_shm) {
 	    XShmDetach(vid_display, &vid_shminfo);
 	    XDestroyImage(vid_image);
