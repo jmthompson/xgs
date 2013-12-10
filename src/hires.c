@@ -19,7 +19,7 @@
 
 #include "xgs.h"
 #include "video.h"
-#include "vid-drv.h"
+#include "video-output.h"
 
 word32 vid_hiresbases1[192] = {
 	0x2000, 0x2400, 0x2800, 0x2C00, 0x3000, 0x3400, 0x3800, 0x3C00,

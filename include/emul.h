@@ -14,7 +14,7 @@ extern int	emul_delay;
 extern long emul_target_cycles;
 extern double	emul_target_speed;
 
-extern char	emul_path[1024];
+extern char	*emul_path;
 
 long EMUL_getCurrentTime(void);
 char *EMUL_expandPath(const char *);

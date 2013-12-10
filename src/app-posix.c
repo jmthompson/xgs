@@ -22,15 +22,31 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
 #endif
+#include <unistd.h>
 
+#include "app.h"
 #include "emul.h"
-#include "main.h"
 
 void main(int argc, char *argv[])
 {
+    size_t len = strlen(XGS_DATA_DIR) + strlen(DATA_DIR) + 2;
+
+    emul_path = malloc(len);
+
+    if (emul_path == NULL) {
+        perror("Unable to allocate memory for emul_path");
+
+        exit(-1);
+    }
+
+    snprintf(emul_path, len, "%s/%s", XGS_DATA_DIR, DATA_DIR);
+
+    chdir(emul_path);
+
 	EMUL_init(argc, argv);
 	EMUL_run();
 }
@@ -52,12 +68,8 @@ long EMUL_getCurrentTime()
 #endif
 }
 
+// TODO: remove this
 char *EMUL_expandPath(const char *path)
 {
-	if ((path[0] == '.') || (path[0] == '/')) {
-		strcpy(emul_path,path);
-	} else {
-		sprintf(emul_path,"%s/%s",XGS_DIR,path);
-	}
-	return emul_path;
+    return path;
 }

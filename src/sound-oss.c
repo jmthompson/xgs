@@ -30,7 +30,6 @@
 #include <fcntl.h>
 #endif
 #include "sound.h"
-#include "snd-drv.h"
 
 /*
  * File: arch/oss/sound-output.c

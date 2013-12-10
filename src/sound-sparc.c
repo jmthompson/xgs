@@ -45,7 +45,6 @@
 #include <sys/stat.h>
 
 #include "sound.h"
-#include "snd-drv.h"
 
 #ifndef SVR4
 /******** START OF FIX SUN **********************************/

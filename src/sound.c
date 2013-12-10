@@ -30,7 +30,6 @@
 #include <limits.h>
 #include "emul.h"
 #include "sound.h"
-#include "snd-drv.h"
 
 int	snd_enable;
 
