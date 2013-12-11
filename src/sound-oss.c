@@ -11,7 +11,7 @@
  *********************************************************************/
 
 /*
- * File: arch/oss/snd-drv.c
+ * File: sound-oss.c
  *
  * The Open Sound System (OSS) sound driver.
  */
@@ -31,12 +31,6 @@
 #endif
 #include "sound.h"
 
-/*
- * File: arch/oss/sound-output.c
- *
- * OSS-specific routines for sound output
- */
-
 #if 0
 #define OSS_DEVICE_NAME		"/usr/src/emulators/xgs/sound.out"
 #define IS_FILE
@@ -46,7 +40,58 @@
 #endif
 
 int	sound_fd;
-byte	snd_out_buffer[OUTPUT_BUFFER_SIZE*2];
+byte *sample_buffer;
+
+size_t SND_outputWrite(snd_sample_struct *, size_t);
+
+void SND_update()
+{
+	snd_sample_struct	sample;
+#if 0
+	static int noisy = 0;
+#endif
+	if (!snd_enable) return;
+	if (output_index == output_buffer_size) {
+		if (!SND_outputWrite(output_buffer, output_index)) return;
+		output_index = 0;
+#if 0
+		size_t nsamples = SND_outputWrite(output_buffer,output_index);
+		if (nsamples != output_index) {
+		  if (nsamples == 0) {
+		    /* we're really late! */
+		    /* it's better to throw out this sound chunk, then... */
+		    fprintf(stderr,"sound chunk lost...\n");
+		    output_index = 0;
+		    return;
+		  } else {
+		    output_index -= nsamples;
+		    memmove(output_buffer,output_buffer+nsamples,output_index*sizeof(snd_sample_struct));
+		  }
+		} else {
+		  output_index = 0;
+		}
+		noisy=0;
+		/* reset snd_click_sample to avoid sample overflows */
+		snd_click_sample = 0;
+#endif
+	}
+	SND_scanOscillators(&sample);
+	output_buffer[output_index].left = sample.left + snd_click_sample;
+	output_buffer[output_index].right = sample.right + snd_click_sample;
+	output_index++;
+#if 0
+	if (noisy) {
+	  output_index++;
+	} else {
+	  if (output_buffer[output_index].left != 0
+	      || output_buffer[output_index].right != 0) {
+	    /* some noise appeared */
+	    noisy = 1;
+	    output_index++;
+	  }
+	}
+#endif
+}
 
 int SND_outputInit(int rate)
 {
@@ -54,8 +99,15 @@ int SND_outputInit(int rate)
 
 	sound_fd = -1;
 
+    if (!(sample_buffer = malloc(output_buffer_size * 2))) {
+        sound_fd = -1;
+
+        return 0;
+    }
+
 	if ((sound_fd = open(OSS_DEVICE_NAME, O_WRONLY, 0)) == -1) {
 		close(sound_fd);
+        free(sample_buffer);
 		sound_fd = -1;
 		return 0;
 	}
@@ -65,18 +117,21 @@ int SND_outputInit(int rate)
 	parm = 0x00200009;
 	if (ioctl(sound_fd,SNDCTL_DSP_SETFRAGMENT,&parm) == -1) {
 		close(sound_fd);
+        free(sample_buffer);
 		sound_fd = -1;
 		return 0;
 	}
 	parm = AFMT_U8;
 	if ((ioctl(sound_fd,SNDCTL_DSP_SETFMT,&parm) == -1) || (parm != AFMT_U8)) {
 		close(sound_fd);
+        free(sample_buffer);
 		sound_fd = -1;
 		return 0;
 	}
 	parm = 2;
 	if ((ioctl(sound_fd,SNDCTL_DSP_CHANNELS,&parm) == -1) || (parm != 2)) {
 		close(sound_fd);
+        free(sample_buffer);
 		sound_fd = -1;
 		return 0;
 	}
@@ -88,6 +143,7 @@ int SND_outputInit(int rate)
 
 void SND_outputShutdown(void)
 {
+    free(sample_buffer);
 	close(sound_fd);
 	sound_fd = -1;
 }
@@ -100,10 +156,9 @@ size_t SND_outputWrite(snd_sample_struct *buffer, size_t len)
 	if (sound_fd == -1) return 0;
 	ioctl(sound_fd,SNDCTL_DSP_GETOSPACE,&sndbuff);
 	if (sndbuff.bytes < (len*2)) return 0;
-	for (i = 0 ; i < len ; i++) {
-		snd_out_buffer[i*2] = (byte) ((buffer[i].left >> 10) + 128);
-		snd_out_buffer[i*2+1] = (byte) ((buffer[i].right >> 10) + 128);
-	}
-	write(sound_fd,(char *) snd_out_buffer, len*2);
+
+    SND_generateSamples(buffer, sample_buffer, len);
+
+	write(sound_fd,(char *) sample_buffer, len*2);
 	return len;
 }
