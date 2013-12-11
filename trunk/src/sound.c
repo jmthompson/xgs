@@ -40,8 +40,6 @@ static int	sample_rate;
 
 static int	sr,num_osc;
 
-static int	snd_click_sample;
-
 const static int	wp_masks[8] = { 0xFF, 0xFE, 0xFC, 0xF8, 0xF0, 0xE0, 0xC0, 0x80 };
 const static int	acc_masks[8] = { 0x00FF, 0x01FF, 0x03FF, 0x07FF, 0x0FFF, 0x1FFF, 0x3FFF, 0x7FFF };
 
@@ -71,15 +69,20 @@ static int	osc_shift[32];
 static int	osc_accmask[32];
 static byte	*osc_addrbase[32];
 
-static snd_sample_struct output_buffer[OUTPUT_BUFFER_SIZE];
-static int	output_index;
-
 static int	irq_stack[IRQ_STACK_SIZE];
 static int	irq_index;
+
+int	snd_click_sample;
+
+snd_sample_struct *output_buffer;
+int output_index;
+int output_buffer_size;
 
 int SND_init()
 {
 	int	i;
+
+    output_buffer_size = OUTPUT_BUFFER_SIZE;
 
 	printf("\nInitializing sound system\n");
 
@@ -87,6 +90,17 @@ int SND_init()
 		mem_pages[i].readPtr = mem_pages[i].writePtr = doc_ram+((i-0xEA00) * 256);
 		mem_pages[i].readFlags = mem_pages[i].writeFlags = 0;
 	}
+
+    printf("     - Allocating output buffer: ");
+
+    if (output_buffer = malloc(output_buffer_size * sizeof(snd_sample_struct))) {
+        printf("Done.\n");
+    }
+    else {
+        printf("FAILED\n");
+
+        return 1;
+    }
 
 	if (snd_enable) {
 		printf("    - Initialzing sound driver: ");
@@ -104,55 +118,6 @@ int SND_init()
 		sample_rate = 0;
 	}
 	return 0;
-}
-
-void SND_update()
-{
-	snd_sample_struct	sample;
-#if 0
-	static int noisy = 0;
-#endif
-	if (!snd_enable) return;
-	if (output_index == OUTPUT_BUFFER_SIZE) {
-		if (!SND_outputWrite(output_buffer,output_index)) return;
-		output_index = 0;
-#if 0
-		size_t nsamples = SND_outputWrite(output_buffer,output_index);
-		if (nsamples != output_index) {
-		  if (nsamples == 0) {
-		    /* we're really late! */
-		    /* it's better to throw out this sound chunk, then... */
-		    fprintf(stderr,"sound chunk lost...\n");
-		    output_index = 0;
-		    return;
-		  } else {
-		    output_index -= nsamples;
-		    memmove(output_buffer,output_buffer+nsamples,output_index*sizeof(snd_sample_struct));
-		  }
-		} else {
-		  output_index = 0;
-		}
-		noisy=0;
-		/* reset snd_click_sample to avoid sample overflows */
-		snd_click_sample = 0;
-#endif
-	}
-	SND_scanOscillators(&sample);
-	output_buffer[output_index].left = sample.left + snd_click_sample;
-	output_buffer[output_index].right = sample.right + snd_click_sample;
-	output_index++;
-#if 0
-	if (noisy) {
-	  output_index++;
-	} else {
-	  if (output_buffer[output_index].left != 0
-	      || output_buffer[output_index].right != 0) {
-	    /* some noise appeared */
-	    noisy = 1;
-	    output_index++;
-	  }
-	}
-#endif
 }
 
 void SND_reset()
@@ -192,6 +157,15 @@ byte SND_clickSpeaker(byte val)
 {
 	snd_click_sample ^= SHRT_MAX;
 	return 0;
+}
+
+void SND_generateSamples(snd_sample_struct *input, byte *output, int len) {
+    int  i;
+
+    for (i = 0 ; i < len ; i++) {
+        output[i*2] = (byte) ((input[i].left >> 10) + 128);
+        output[i*2+1] = (byte) ((input[i].right >> 10) + 128);
+    }
 }
 
 byte SND_readSoundCtl(byte val)
