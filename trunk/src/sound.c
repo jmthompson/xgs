@@ -72,7 +72,7 @@ static byte	*osc_addrbase[32];
 static int	irq_stack[IRQ_STACK_SIZE];
 static int	irq_index;
 
-int	snd_click_sample;
+word32 snd_click_sample;
 
 snd_sample_struct *output_buffer;
 int output_index;

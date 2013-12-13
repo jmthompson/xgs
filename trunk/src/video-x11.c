@@ -51,30 +51,8 @@ XShmSegmentInfo	vid_shminfo;
 PIXEL		*vid_lines[VID_WIN_HEIGHT];
 PIXEL		*vid_buffer;
 
-PIXEL   vid_textfg, vid_textbg, vid_border;
-
 int		vid_shm;
 int		vid_mapped;
-
-XColor	vid_supercolors[256];
-PIXEL   vid_textcolors[16] = {
-	0x000000,
-	0xDD0033,
-	0x000099,
-	0xDD22DD,
-	0x007722,
-	0x555555,
-	0x2222FF,
-	0x66AAFF,
-	0x885500,
-	0xFF6600,
-	0xAAAAAA,
-	0xFF9988,
-	0x00DD00,
-	0xFFFF00,
-	0x55FF99,
-	0xFFFFFF
-};
 
 #ifdef HAVE_MITSHM
 /*
@@ -380,28 +358,15 @@ void VID_outputImage()
 {
 	if (!vid_mapped) return;
 
-	vid_xmin = VID_WIDTH;
-	vid_ymin = VID_HEIGHT;
-	vid_xmax = vid_ymax = 0;
-
 	(*VID_updateRoutine)();
 
-    vid_xmin = 0;
-    vid_ymin = 0;
-    vid_xmax = VID_WIDTH - 1;
-    vid_ymax = VID_HEIGHT - 1;
-
-	if ((vid_xmax > vid_xmin) && (vid_ymax > vid_ymin)) {
 #ifdef HAVE_MITSHM
-		if (vid_shm) {
-		    XShmPutImage(vid_display, vid_window, vid_gc, vid_image, vid_xmin, vid_ymin, vid_xmin, vid_ymin, vid_xmax - vid_xmin, vid_ymax - vid_ymin, False);
-		} else
+	if (vid_shm) {
+	    XShmPutImage(vid_display, vid_window, vid_gc, vid_image, 0, 0, 0, 0, VID_WIDTH, VID_HEIGHT, False);
+	} else
 #endif
-		{
-		    printf("XPutImage(%d, %d, %d, %d, %d, %d, %d, %d, %d, %d)\n", vid_display, vid_window, vid_gc, vid_image, vid_xmin, vid_ymin, vid_xmin, vid_ymin, vid_xmax - vid_xmin, vid_ymax - vid_ymin);
-
-		    XPutImage(vid_display, vid_window, vid_gc, vid_image, vid_xmin, vid_ymin, vid_xmin, vid_ymin, vid_xmax - vid_xmin, vid_ymax - vid_ymin);
-		}
+	{
+	    XPutImage(vid_display, vid_window, vid_gc, vid_image, 0, 0, 0, 0, VID_WIDTH, VID_HEIGHT);
 		XSync(vid_display, False);
 	}
 }
@@ -462,22 +427,22 @@ void VID_outputResize(int width, int height)
 
 void VID_outputSetTextColors()
 {
-    vid_textbg = vid_textcolors[vid_textbgcolor];
-    vid_textfg = vid_textcolors[vid_textfgcolor];
+    vid_textbg = vid_stdcolors[vid_textbgcolor];
+    vid_textfg = vid_stdcolors[vid_textfgcolor];
 /*
-	vid_textcolors[vid_textbgcolor].pixel = 253;
-	XStoreColor(vid_display, vid_colormap, &vid_textcolors[vid_textbgcolor]);
-	vid_textcolors[vid_textfgcolor].pixel = 254;
-	XStoreColor(vid_display, vid_colormap, &vid_textcolors[vid_textfgcolor]);
+	vid_stdcolors[vid_textbgcolor].pixel = 253;
+	XStoreColor(vid_display, vid_colormap, &vid_stdcolors[vid_textbgcolor]);
+	vid_stdcolors[vid_textfgcolor].pixel = 254;
+	XStoreColor(vid_display, vid_colormap, &vid_stdcolors[vid_textfgcolor]);
 */
 }
 
 void VID_outputSetBorderColor()
 {
-    vid_border = vid_textcolors[vid_bordercolor];
+    vid_border = vid_stdcolors[vid_bordercolor];
 /*
-	vid_textcolors[vid_bordercolor].pixel = 255;
-	XStoreColor(vid_display, vid_colormap, &vid_textcolors[vid_bordercolor]);
+	vid_stdcolors[vid_bordercolor].pixel = 255;
+	XStoreColor(vid_display, vid_colormap, &vid_stdcolors[vid_bordercolor]);
 */
 }
 
@@ -486,16 +451,16 @@ void VID_outputSetStandardColors()
 /*
 	int	i;
 
-	vid_textcolors[vid_textbgcolor].pixel = 253;
-	XStoreColor(vid_display, vid_colormap, &vid_textcolors[vid_textbgcolor]);
-	vid_textcolors[vid_textfgcolor].pixel = 254;
-	XStoreColor(vid_display, vid_colormap, &vid_textcolors[vid_textfgcolor]);
-	vid_textcolors[vid_bordercolor].pixel = 255;
-	XStoreColor(vid_display, vid_colormap, &vid_textcolors[vid_bordercolor]);
+	vid_stdcolors[vid_textbgcolor].pixel = 253;
+	XStoreColor(vid_display, vid_colormap, &vid_stdcolors[vid_textbgcolor]);
+	vid_stdcolors[vid_textfgcolor].pixel = 254;
+	XStoreColor(vid_display, vid_colormap, &vid_stdcolors[vid_textfgcolor]);
+	vid_stdcolors[vid_bordercolor].pixel = 255;
+	XStoreColor(vid_display, vid_colormap, &vid_stdcolors[vid_bordercolor]);
 	for (i = 0 ; i <= 15 ; i++) {
-		vid_textcolors[i].pixel = i;
+		vid_stdcolors[i].pixel = i;
 	}
-	XStoreColors(vid_display, vid_colormap, vid_textcolors, 16);
+	XStoreColors(vid_display, vid_colormap, vid_stdcolors, 16);
 	vid_black = 0;
 	vid_white = 15;
 */
@@ -504,19 +469,17 @@ void VID_outputSetStandardColors()
 void VID_outputSetSuperColors()
 {
 	int	addr,i;
+    int r,g,b;
 
 	addr = 0x019E00;
 	for (i = 0 ; i < 256 ; i++) {
-		if (mem_slowram_changed[addr >> 8] & mem_change_masks[addr & 0xFF]) {
-			vid_supercolors[i].blue = (slow_memory[addr] & 0x0F) * 4369;
-			vid_supercolors[i].green = ((slow_memory[addr] >> 4) & 0x0F) * 4369;
-			vid_supercolors[i].red = (slow_memory[addr+1] & 0x0F) * 4369;
-			vid_supercolors[i].flags = DoRed | DoGreen | DoBlue;
-/*
-			vid_supercolors[i].pixel = i;
-			XStoreColor(vid_display, vid_colormap, &vid_supercolors[i]);
-*/
-		}
+		r = (slow_memory[addr+1] & 0x0F) * 17;
+		g = ((slow_memory[addr] >> 4) & 0x0F) * 17;
+		b = (slow_memory[addr] & 0x0F) * 17;
+	    vid_supercolors[i] = (r << 16) | (g << 8) | b;
+
+        //printf("color #%d = %06X\n", i, (int) vid_supercolors[i]);
+
 		addr += 2;
 	}
 	mem_slowram_changed[0x019E] = 0;

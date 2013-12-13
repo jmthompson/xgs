@@ -82,6 +82,7 @@ void EMUL_doVBL()
 	double	this_time,last_time,diff,speed;
 	long new_period;
 
+    emul_delay = 0;
 #ifdef HAVE_GETTIMEOFDAY
 	if (emul_delay > 0) {
 #ifdef EMX_HAVE_SLEEP2        
@@ -235,7 +236,7 @@ int EMUL_init(int argc, char *argv[])
 	}
 
 	printf("XGS Version %s\n", VERSION);
-	printf("Written and (C) 1996 by Joshua M. Thompson\n\n");
+	printf("(c) 2013 by Joshua M. Thompson\n\n");
     printf("Data directory = %s\n\n", emul_path);
 
 	if ((err = MEM_init())) return err;

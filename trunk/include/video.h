@@ -3,7 +3,7 @@
 
 #define VID_STATUS_FONT	"8x13"
 
-#define PIXEL unsigned int
+#define PIXEL word32
 
 #define VID_DEPTH 24
 #define VID_CLASS TrueColor
@@ -38,6 +38,10 @@ extern int	vid_bordercolor;
 extern int	vid_textfgcolor;
 extern int	vid_textbgcolor;
 
+extern PIXEL	*vid_lines[];
+
+extern PIXEL vid_textfg,vid_textbg,vid_border,vid_stdcolors[16],vid_supercolors[256];
+
 extern int	vid_80col;
 extern int	vid_altcharset;
 
@@ -53,8 +57,6 @@ extern int	vid_vert_cnt;
 extern int	vid_horiz_cnt;
 
 extern void	(*VID_updateRoutine)(void);
-
-extern int	vid_xmin, vid_ymin, vid_xmax, vid_ymax;
 
 int VID_init(void);
 void VID_update(void);

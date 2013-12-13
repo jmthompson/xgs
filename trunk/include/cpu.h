@@ -68,7 +68,7 @@ extern byte	DB;	/* Data Bank Register        */
 #if defined ( __sparc__ ) && defined ( __GNUC__ )
 register word32	cpu_cycle_count asm ("g5");
 #else
-extern word32	cpu_cycle_count;
+extern int cpu_cycle_count;
 #endif
 
 #ifndef CPU_DISPATCH

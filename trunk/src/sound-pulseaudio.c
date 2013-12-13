@@ -41,35 +41,28 @@ static pa_sample_spec sample_spec;
 char *server = NULL;
 char *device = NULL;
 
-byte *sample_buffer;
+//byte *sample_buffer;
 
 size_t SND_outputWrite(snd_sample_struct *, size_t);
 
 void SND_update()
 {
-	snd_sample_struct sample;
+    snd_sample_struct sample;
 
     //pa_mainloop_iterate(mainloop, 0, NULL);
 
-	if (output_index == OUTPUT_BUFFER_SIZE) {
-		if (!SND_outputWrite(output_buffer, output_index)) return;
+    if (output_index == OUTPUT_BUFFER_SIZE) {
+        if (!SND_outputWrite(output_buffer, output_index)) return;
 
-		output_index = 0;
-/*
         output_index = 0;
+    }
+    SND_scanOscillators(&sample);
 
-		snd_click_sample = 0;
+    if (snd_enable) {
+        output_buffer[output_index].left = sample.left + snd_click_sample;
+        output_buffer[output_index].right = sample.right + snd_click_sample;
 
-        fprintf(stderr,"sound chunk lost...\n");
-*/
-	}
-	SND_scanOscillators(&sample);
-
-	if (snd_enable) {
-	    output_buffer[output_index].left = sample.left + snd_click_sample;
-	    output_buffer[output_index].right = sample.right + snd_click_sample;
-
-	    output_index++;
+        output_index++;
     }
 }
 
@@ -83,16 +76,24 @@ static void SND_outputStateCallback(pa_context *c, void *userdata) {
 
         case PA_CONTEXT_READY: {
             pa_cvolume cv;
-
-            pa_threaded_mainloop_lock(mainloop);
+            pa_buffer_attr ba;
 
             stream = pa_stream_new(c, "Audio", &sample_spec, NULL);
             assert(stream);
 
-            //pa_stream_set_write_callback(stream, SND_outputWrite, NULL);
-            pa_stream_connect_playback(stream, device, NULL, 0, pa_cvolume_set(&cv, sample_spec.channels, PA_VOLUME_NORM), NULL);
+            ba.maxlength = output_buffer_size * 4; // double size buffer for two 8-bit channels
+            ba.minreq    = output_buffer_size * 2;
+            ba.tlength   = output_buffer_size * 2;
+            ba.prebuf    = 0;
 
-            pa_threaded_mainloop_unlock(mainloop);
+            pa_stream_connect_playback(
+                stream,
+                device,
+                &ba,
+                PA_STREAM_ADJUST_LATENCY,
+                pa_cvolume_set(&cv, sample_spec.channels, PA_VOLUME_NORM),
+                NULL
+            );
 
             break;
         }
@@ -111,19 +112,13 @@ static void SND_outputStateCallback(pa_context *c, void *userdata) {
 
 int SND_outputInit(int rate)
 {
-	int	parm;
+    int    parm;
 
-    sample_spec.format = PA_SAMPLE_U8;
+    sample_spec.format   = PA_SAMPLE_U8;
     sample_spec.channels = 2;
-    sample_spec.rate = rate;
-
-    if (!(sample_buffer = malloc(output_buffer_size * 2))) {
-        return 0;
-    }
+    sample_spec.rate     = rate;
 
     if (!(mainloop = pa_threaded_mainloop_new())) {
-        free(sample_buffer);
-
         return 0;
     }
 
@@ -132,7 +127,6 @@ int SND_outputInit(int rate)
 
     if (!(context = pa_context_new(mainloop_api, "xgs"))) {
         pa_threaded_mainloop_free(mainloop);
-        free(sample_buffer);
 
         return 0;
     }
@@ -140,8 +134,8 @@ int SND_outputInit(int rate)
     pa_context_set_state_callback(context, SND_outputStateCallback, NULL);
 
     if (pa_context_connect(context, server, 0, NULL) < 0) {
+        pa_context_unref(context);
         pa_threaded_mainloop_free(mainloop);
-        free(sample_buffer);
 
         return 0;
     }
@@ -155,34 +149,30 @@ void SND_outputShutdown(void)
 {
     pa_threaded_mainloop_stop(mainloop);
 
-    free(sample_buffer);
-    // TODO: disconnect PA
+    pa_stream_unref(stream);
+    pa_context_unref(context);
+    pa_threaded_mainloop_free(mainloop);
 }
 
-size_t SND_outputWrite(snd_sample_struct *buffer, size_t len)
+size_t SND_outputWrite(snd_sample_struct *sampleBuffer, size_t nsamples)
 {
-    int space, nsamples;
+    size_t bufferSize,bufferSamples;
+    void *outputBuffer;
 
     pa_threaded_mainloop_lock(mainloop);
 
-    space    = pa_stream_writable_size(stream);
-    nsamples = len * 2;
+    pa_stream_begin_write(stream, &outputBuffer, &bufferSize);
+    bufferSamples = bufferSize / 2;
 
-    size_t SND_outputWrite(snd_sample_struct *, size_t);
+    if (nsamples > bufferSamples) nsamples = bufferSamples;
 
-    //printf("pa_strem_writeable_size returned %d (need at least %d)\n", space, nsamples);
+    printf("writing %d samples\n", nsamples);
 
-    if (nsamples > space) nsamples = space;
+    SND_generateSamples(sampleBuffer, outputBuffer, nsamples);
 
-    if (nsamples > 0) {
-        SND_generateSamples(buffer, sample_buffer, len);
-
-        //printf("writing %d samples\n", nsamples);
-
-        pa_stream_write(stream, sample_buffer, nsamples, NULL, 0, PA_SEEK_RELATIVE);
-    }
+    pa_stream_write(stream, outputBuffer, nsamples * 2, NULL, 0, PA_SEEK_RELATIVE);
 
     pa_threaded_mainloop_unlock(mainloop);
 
-	return len;
+    return nsamples * 2;
 }
