@@ -32,8 +32,6 @@ byte		*vid_font80[2];
 
 void		(*VID_updateRoutine)(void);
 
-int		vid_xmin, vid_ymin, vid_xmax, vid_ymax;
-
 int		vid_bordercolor;
 int		vid_textfgcolor;
 int		vid_textbgcolor;
@@ -56,6 +54,28 @@ int		vid_vgcint;
 
 int		vid_vert_cnt;
 int		vid_horiz_cnt;
+
+PIXEL   vid_textfg, vid_textbg, vid_border;
+
+PIXEL   vid_supercolors[256];
+PIXEL   vid_stdcolors[16] = {
+	0x000000,
+	0xDD0033,
+	0x000099,
+	0xDD22DD,
+	0x007722,
+	0x555555,
+	0x2222FF,
+	0x66AAFF,
+	0x885500,
+	0xFF6600,
+	0xAAAAAA,
+	0xFF9988,
+	0x00DD00,
+	0xFFFF00,
+	0x55FF99,
+	0xFFFFFF
+};
 
 int VID_init(void)
 {

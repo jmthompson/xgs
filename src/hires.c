@@ -82,32 +82,19 @@ PIXEL	vid_dhires_colors[4][16] = {
 	{ 0, 1, 2,  3, 4,  5,  6,  7, 8,  9, 10, 11, 12, 13, 14, 15 }                      
 };
 
-PIXEL	vid_hires_pattern[280];
+int vid_hires_pattern[280];
 
 static void
 VID_refreshHiresRow (int row, word32 addr)
 {
-	int	i,col,addrhi,addrlo;
+	int	i,col,addrhi,addrlo,*pattern,color1,color2;
 	byte	val;
-	PIXEL	*scrn,*scrn2,*pattern,color1,color2;
-	word32  mem_changed, row_changed_mask;
+	PIXEL	*scrn,*scrn2;
 
 	addrhi = addr >> 8;
 	addrlo = addr & 0xFF;
-	row_changed_mask = (mem_change_masks[addrlo]
-			    | mem_change_masks[addrlo+8]
-			    | mem_change_masks[addrlo+16]
-			    | mem_change_masks[addrlo+24]
-			    | mem_change_masks[addrlo+32]);
-	mem_changed = mem_slowram_changed[addrhi] & row_changed_mask;
-	if (!mem_changed)
-		return;
 	
 	for (col = 0 ; col < 40 ; col++, addr++) {
-#if 0
-		if (!(mem_changed & mem_change_masks[addr & 0xFF]))
-			continue;
-#endif
 		val = slow_memory[addr];
 		pattern = vid_hires_pattern + (col * 7);
 
@@ -173,15 +160,9 @@ VID_refreshHiresRow (int row, word32 addr)
 	scrn2 = vid_lines[row * 2 + 1];
 
 	for (i = 0 ; i < 280 ; i++) {
-		*scrn++ = *scrn2++ = vid_hires_pattern[i];
-		*scrn++ = *scrn2++ = vid_hires_pattern[i];
+		*scrn++ = *scrn2++ = vid_stdcolors[vid_hires_pattern[i]];
+		*scrn++ = *scrn2++ = vid_stdcolors[vid_hires_pattern[i]];
 	}
-	vid_xmin = 0;
-	vid_xmax = 560;
-	if (vid_ymin > (row * 2))
-		vid_ymin = row*2;
-	if (vid_ymax < ((row+1)*2))
-		vid_ymax = (row+1)*2;
 }
 
 void VID_refreshHiresPage1()
@@ -224,26 +205,13 @@ VID_refreshDHiresRow (int row, word32 addr)
 	int	i,col,addrhi,addrlo;
 	word32	val,val2;
 	PIXEL	*scrn,*scrn2;
-	word32  mem_changed0, mem_changed1, row_changed_mask;
 
 	scrn = vid_lines[row * 2];
 	scrn2 = vid_lines[row * 2 + 1];
 	addrhi = addr >> 8;
 	addrlo = addr & 0xFF;
-	row_changed_mask = (mem_change_masks[addrlo]
-			    | mem_change_masks[addrlo+8]
-			    | mem_change_masks[addrlo+16]
-			    | mem_change_masks[addrlo+24]
-			    | mem_change_masks[addrlo+32]);
-	mem_changed0 = mem_slowram_changed[addrhi] & row_changed_mask;
-	mem_changed1 = mem_slowram_changed[addrhi+0x100] & row_changed_mask;
-	if (!mem_changed0 && !mem_changed1)
-		return;
+
 	for (col = 0 ; col < 20 ; col++, addr+=2) {
-#if 0
-		if (!(mem_changed0 & mem_change_masks[addr & 0xFF]) && !(mem_changed1 & mem_change_masks[addr & 0xFF]))
-			continue;
-#endif
 		val = slow_memory[addr + 0x010000] & 0x7F;
 		val |= ((slow_memory[addr] & 0x7F) << 7);
 		val |= ((slow_memory[addr + 0x010001] & 0x7F) << 14);
@@ -261,19 +229,12 @@ VID_refreshDHiresRow (int row, word32 addr)
 			}
 		} else {
 			for (i = 0; i < 28 ; i++) {
-				*scrn++ = *scrn2++ = vid_dhires_colors[i & 0x03][val & 0x0F];
+				*scrn++ = *scrn2++ = vid_stdcolors[vid_dhires_colors[i & 0x03][val & 0x0F]];
 				val = val >> 1;
 				if (i == 24) val |= val2;
 			}
 		}
 	}
-
-	vid_xmin = 0;
-	vid_xmax = 560;
-	if (vid_ymin > (row * 2))
-		vid_ymin = row*2;
-	if (vid_ymax < ((row+1)*2))
-		vid_ymax = (row+1)*2;
 }
 
 void VID_refreshDHiresPage1()

@@ -28,7 +28,7 @@ int	cpu_update_period;
 #if defined( __sparc__ ) && defined( __GNUC__ )
 register word32	cpu_cycle_count asm ("g5");
 #else
-word32	cpu_cycle_count;
+int cpu_cycle_count;
 #endif
 
 void CPU_setUpdatePeriod(int period)

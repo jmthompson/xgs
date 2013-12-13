@@ -35,7 +35,7 @@ void SND_updateClassicSound(snd_sample_struct *);
 
 void SND_generateSamples(snd_sample_struct *, byte *, int);
 
-extern int snd_click_sample;
+extern word32 snd_click_sample;
 
 extern snd_sample_struct *output_buffer;
 extern int output_index;
