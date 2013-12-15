@@ -8,8 +8,10 @@ AC_CONFIG_HEADERS([config.h])
 
 # Checks for programs.
 AC_PROG_CC
+AM_PROG_AR
 
 # Checks for libraries.
+LT_INIT
 
 # Checks for header files.
 AC_PATH_X
@@ -76,5 +78,5 @@ AM_CONDITIONAL([WITH_PULSEAUDIO], [test "x$with_pulseaudio" = xyes])
 AM_CONDITIONAL([WITH_SPARCAUDIO], [test "x$with_sparcaudio" = xyes])
 AM_CONDITIONAL([WITH_X11],        [test "x$no_x" != xyes])
 
-AC_CONFIG_FILES([Makefile src/Makefile])
+AC_CONFIG_FILES([Makefile m65816/Makefile src/Makefile])
 AC_OUTPUT

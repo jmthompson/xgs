@@ -50,7 +50,7 @@
 
 /* These two are needed everywhere to get vital definitions */
 
-#include "cpu.h"
+#include "m65816.h"
 #include "memory.h"
 
 /* Union to split a word into two bytes. Used for endianness swapping */

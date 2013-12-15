@@ -15,7 +15,7 @@
 #ifdef DEBUG
 
 #include <stdio.h>
-#include "cpu.h"
+#include "m65816.h"
 #include "cpumicro.h"
 #include "memory.h"
 #include "emul.h"
@@ -78,7 +78,7 @@ int addrmodes[256] = {
 
 extern int cpu_irq;
 
-void CPU_debug(void) {
+void m65816_debug(void) {
 	int	opcode;
 	int	mode;
 	int	operand;

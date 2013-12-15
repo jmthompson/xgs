@@ -372,11 +372,11 @@ byte VID_setVGCIntReg(byte val)
 byte VID_clearVGCInt(byte val)
 {
 	if (!(val & 0x40)) {
-		if (vid_vgcint & 0x40) CPU_clearIRQ();
+		if (vid_vgcint & 0x40) m65816_clearIRQ();
 		vid_vgcint &= ~0x40;
 	}
 	if (!(val & 0x20)) {
-		if (vid_vgcint & 0x20) CPU_clearIRQ();
+		if (vid_vgcint & 0x20) m65816_clearIRQ();
 		vid_vgcint &= ~0x20;
 	}
 	if (!(vid_vgcint & 0x60)) vid_vgcint &= ~0x80;

@@ -11,11 +11,9 @@
  *********************************************************************/
 
 #include "config.h"
-#include "cpu.h"
+#include "m65816.h"
 #include "cpumacro.h"
 #include "cpumicro.h"
-#include "memory.h"
-#include "emul.h"
 #include "cycles.h"
 
 extern byte	opcode;
@@ -308,7 +306,7 @@ END_CPU_FUNC
 
 BEGIN_CPU_FUNC(opcode_0x28)
 	S_PULL(P);					/* PLP s */
-	CPU_modeSwitch();
+	m65816_modeSwitch();
 END_CPU_FUNC
 
 BEGIN_CPU_FUNC(opcode_0x29)
@@ -451,7 +449,7 @@ BEGIN_CPU_FUNC(opcode_0x40)
 	P |= 0x30;
 	cpu_cycle_count--;
 #endif
-	CPU_modeSwitch();
+	m65816_modeSwitch();
 END_CPU_FUNC
 
 BEGIN_CPU_FUNC(opcode_0x41)
@@ -1232,7 +1230,7 @@ END_CPU_FUNC
 BEGIN_CPU_FUNC(opcode_0xC2)
 	O_i8(operand);					/* REP # */
 	P &= ~operand.B.L;
-	CPU_modeSwitch();
+	m65816_modeSwitch();
 END_CPU_FUNC
 
 BEGIN_CPU_FUNC(opcode_0xC3)
@@ -1419,7 +1417,7 @@ END_CPU_FUNC
 BEGIN_CPU_FUNC(opcode_0xE2)
 	O_i8(operand);					/* SEP # */
 	P |= operand.B.L;
-	CPU_modeSwitch();
+	m65816_modeSwitch();
 END_CPU_FUNC
 
 BEGIN_CPU_FUNC(opcode_0xE3)
@@ -1575,7 +1573,7 @@ BEGIN_CPU_FUNC(opcode_0xFB)
 		X.B.H = 0x00;
 		Y.B.H = 0x00;
 	}
-	CPU_modeSwitch();
+	m65816_modeSwitch();
 END_CPU_FUNC
 
 BEGIN_CPU_FUNC(opcode_0xFC)
@@ -1619,7 +1617,7 @@ BEGIN_CPU_FUNC(reset)
 	Y.W = 0;
 	PC.B.L = M_READ(0xFFFFFC);
 	PC.B.H = M_READ(0xFFFFFD);
-	CPU_modeSwitch();
+	m65816_modeSwitch();
 END_CPU_FUNC
 
 BEGIN_CPU_FUNC(abort)

@@ -36,7 +36,6 @@
 #include "sound.h"
 #include "video.h"
 #include "video-output.h"
-#include "cpu.h"
 
 int	emul_period;
 
@@ -102,7 +101,7 @@ void EMUL_doVBL()
 		if (emul_vblirq) {
 			if (!(mem_diagtype & 0x08)) {
 				mem_diagtype |= 0x08;
-				CPU_addIRQ();
+				m65816_addIRQ();
 			}
 		}
 		VID_update();
@@ -117,7 +116,7 @@ void EMUL_doVBL()
 		if (emul_qtrsecirq) {
 			if (!(mem_diagtype & 0x10)) {
 				mem_diagtype |= 0x10;
-				CPU_addIRQ();
+				m65816_addIRQ();
 			}
 		}
 	}
@@ -125,7 +124,7 @@ void EMUL_doVBL()
 	if (emul_onesecirq && !emul_tick) {
 		if (!(vid_vgcint & 0x40)) {
 			vid_vgcint |= 0xC0;
-			CPU_addIRQ();
+			m65816_addIRQ();
 		}
 	}
 
@@ -153,7 +152,7 @@ void EMUL_doVBL()
 	if (new_period < 15) new_period = 15;
 
 	emul_period = new_period;
-	CPU_setUpdatePeriod(new_period);
+	m65816_setUpdatePeriod(new_period);
 
 	if ((speed > emul_target_speed) && emul_target_cycles) {
 		emul_delay = ((emul_total_cycles - emul_target_cycles) * 1000000) / emul_total_cycles;
@@ -188,7 +187,7 @@ void EMUL_hardwareUpdate(word32 cycles)
 	if (emul_scanirq && (vid_vert_cnt < 200) && (slow_memory[0x019D00 + vid_vert_cnt] & 0x40)) {
 		if (!(vid_vgcint & 0x20)) {
 			vid_vgcint |= 0xA0;
-			CPU_addIRQ();
+			m65816_addIRQ();
 		}
 	}
 }
@@ -371,8 +370,8 @@ void EMUL_run()
 	printf("\n*** EMULATOR IS RUNNING ***\n");
 
 	emul_period = 64;
-	CPU_setUpdatePeriod(64);
-	CPU_run();
+	m65816_setUpdatePeriod(64);
+	m65816_run();
 }
 
 void EMUL_reset()
@@ -386,7 +385,7 @@ void EMUL_reset()
 	CLK_reset();
 	IWM_reset();
 	SMPT_reset();
-	CPU_reset();
+	m65816_reset();
 }
 
 void EMUL_shutdown()
@@ -403,7 +402,7 @@ void EMUL_shutdown()
 
 void EMUL_trace(int parm)
 {
-	CPU_setTrace(parm);
+	m65816_setTrace(parm);
 }
 
 void EMUL_nmi()
@@ -414,7 +413,7 @@ void EMUL_nmi()
 		if (!mem_pages[i].readPtr) continue;
 		memcpy(mem_pages[0xE800+i].writePtr,mem_pages[i].readPtr,256);
 	}
- 	CPU_nmi();
+ 	m65816_nmi();
 }
 
 void EMUL_handleWDM(byte parm)
@@ -424,9 +423,9 @@ void EMUL_handleWDM(byte parm)
 				break;
 		case 0xC8 :	SMPT_smartportEntry();
 				break;
-		case 0xFD :	CPU_setTrace(0);
+		case 0xFD :	m65816_setTrace(0);
 				break;
-		case 0xFE :	CPU_setTrace(1);
+		case 0xFE :	m65816_setTrace(1);
 				break;
 		case 0xFF :	EMUL_shutdown();
 				break;
