@@ -13,14 +13,6 @@
 #define M_READ(a)	MEM_readMem(a)
 #define M_WRITE(a,v)	MEM_writeMem(a,v)
 
-/* Set this macro to your emulator's "update" routine. Your update */
-/* routine would probably do things like update hardware sprites,  */
-/* and check for user keypresses. m65816_run() calls this routine     */
-/* periodically to make sure the rest of your emulator gets time   */
-/* to run.                                                         */
-
-#define E_UPDATE(v)	EMUL_hardwareUpdate(v)
-
 /* Set this macro to your emulator's routine for handling the WDM	*/
 /* pseudo-opcode. Useful for trapping certain emulated machine		*/
 /* functions and emulating them in fast C code.				*/

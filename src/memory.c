@@ -644,14 +644,11 @@ byte MEM_setCYAReg(byte val)
 	if (emul_speed) {
         emul_speed2 = 0;
 		if (emul_speed2) {
-			emul_target_cycles = 0;
 			emul_target_speed = 0.0;
 		} else {
-			emul_target_cycles = 2500000;
 			emul_target_speed = 2.5;
 		}
 	} else {
-		emul_target_cycles = 1000000;
 		emul_target_speed = 1.0;
 	}
 	return 0;

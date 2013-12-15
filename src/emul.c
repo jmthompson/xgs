@@ -21,7 +21,9 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <signal.h>
 #include <string.h>
+#include <time.h>
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
@@ -44,6 +46,8 @@ int	emul_vblirq;
 int	emul_qtrsecirq;
 int	emul_onesecirq;
 int	emul_scanirq;
+
+int cpu_cycle_count;
 
 int	emul_speed;
 int	emul_speed2;
@@ -152,7 +156,7 @@ void EMUL_doVBL()
 	if (new_period < 15) new_period = 15;
 
 	emul_period = new_period;
-	m65816_setUpdatePeriod(new_period);
+	//m65816_setUpdatePeriod(new_period);
 
 	if ((speed > emul_target_speed) && emul_target_cycles) {
 		emul_delay = ((emul_total_cycles - emul_target_cycles) * 1000000) / emul_total_cycles;
@@ -168,7 +172,7 @@ void EMUL_doVBL()
 	if (++emul_tick == 60) emul_tick = 0;
 }
 
-void EMUL_hardwareUpdate(word32 cycles)
+void EMUL_hardwareUpdate(int cycles)
 {
 	SND_update();
 	emul_microtick++;
@@ -305,6 +309,7 @@ int EMUL_init(int argc, char *argv[])
 	emul_target_cycles = 2500000;
 	emul_target_speed = 2.5;
 
+    m65816_init();
 	EMUL_reset();
 
 	return 0;
@@ -369,9 +374,15 @@ void EMUL_run()
 	}
 	printf("\n*** EMULATOR IS RUNNING ***\n");
 
-	emul_period = 64;
-	m65816_setUpdatePeriod(64);
-	m65816_run();
+    emul_period = 64;
+
+    while(1) {
+	    int num_cycles = m65816_run(emul_period);
+
+        cpu_cycle_count += num_cycles;
+
+        EMUL_hardwareUpdate(num_cycles);
+    }
 }
 
 void EMUL_reset()
