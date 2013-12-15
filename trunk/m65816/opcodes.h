@@ -23,20 +23,17 @@ extern dualw	wtmp,otmp,operand;
 extern int	a1,a2,a3,a4,o1,o2,o3,o4;
 
 extern int	cpu_reset,cpu_abort,cpu_nmi,cpu_irq,cpu_stop,cpu_wait,cpu_trace;
-extern int	cpu_update_period;
 
 #define BEGIN_CPU_FUNC(command) XCPU(CPUMODE,command)
 #define XCPU(mode,command) XXCPU(mode,command)
-#ifdef OLDCYCLES
-#define XXCPU(mode,command) void mode ## _ ## command (void); \
-			    void mode ## _ ## command (void) {
-#else
-#define XXCPU(mode,command) void mode ## _ ## command (void); \
-			    void mode ## _ ## command (void) { \
-	cpu_cycle_count += mode ## _ ## command ## _cycles;
-#endif
+#define XXCPU(mode,command) \
+int mode ## _ ## command (void); \
+int mode ## _ ## command (void) { \
+	int num_cycles = mode ## _ ## command ## _cycles;
 
-#define END_CPU_FUNC }
+#define END_CPU_FUNC \
+    return num_cycles;\
+}
 
 /* This file contains all 260 of the opcode subroutines */
 
@@ -170,10 +167,10 @@ BEGIN_CPU_FUNC(opcode_0x10)
 	O_pcr(opaddr);					/* BPL r */
 	if (!F_getN) {
 #ifndef NATIVE_MODE
-		if (PC.B.H != opaddr.B.H) cpu_cycle_count++;
+		if (PC.B.H != opaddr.B.H) num_cycles++;
 #endif
 		PC.W.PC = opaddr.W.L;
-		cpu_cycle_count++;
+		num_cycles++;
 	}
 END_CPU_FUNC
 
@@ -356,10 +353,10 @@ BEGIN_CPU_FUNC(opcode_0x30)
 	O_pcr(opaddr);					/* BMI r */
 	if (F_getN) {
 #ifndef NATIVE_MODE
-		if (PC.B.H != opaddr.B.H) cpu_cycle_count++;
+		if (PC.B.H != opaddr.B.H) num_cycles++;
 #endif
 		PC.W.PC = opaddr.W.L;
-		cpu_cycle_count++;
+		num_cycles++;
 	}
 END_CPU_FUNC
 
@@ -447,7 +444,7 @@ BEGIN_CPU_FUNC(opcode_0x40)
 	S_PULL(PC.B.PB);
 #else
 	P |= 0x30;
-	cpu_cycle_count--;
+	num_cycles--;
 #endif
 	m65816_modeSwitch();
 END_CPU_FUNC
@@ -551,10 +548,10 @@ BEGIN_CPU_FUNC(opcode_0x50)
 	O_pcr(opaddr);					/* BVC r */
 	if (!F_getV) {
 #ifndef NATIVE_MODE
-		if (PC.B.H != opaddr.B.H) cpu_cycle_count++;
+		if (PC.B.H != opaddr.B.H) num_cycles++;
 #endif
 		PC.W.PC = opaddr.W.L;
-		cpu_cycle_count++;
+		num_cycles++;
 	}
 END_CPU_FUNC
 
@@ -747,10 +744,10 @@ BEGIN_CPU_FUNC(opcode_0x70)
 	O_pcr(opaddr);					/* BVS r */
 	if (F_getV) {
 #ifndef NATIVE_MODE
-		if (PC.B.H != opaddr.B.H) cpu_cycle_count++;
+		if (PC.B.H != opaddr.B.H) num_cycles++;
 #endif
 		PC.W.PC = opaddr.W.L;
-		cpu_cycle_count++;
+		num_cycles++;
 	}
 END_CPU_FUNC
 
@@ -836,7 +833,7 @@ END_CPU_FUNC
 BEGIN_CPU_FUNC(opcode_0x80)
 	O_pcr(opaddr);					/* BRA r */
 #ifndef NATIVE_MODE
-	if (PC.B.H != opaddr.B.H) cpu_cycle_count++;
+	if (PC.B.H != opaddr.B.H) num_cycles++;
 #endif
 	PC.W.PC = opaddr.W.L;
 END_CPU_FUNC
@@ -930,10 +927,10 @@ BEGIN_CPU_FUNC(opcode_0x90)
 	O_pcr(opaddr);					/* BCC r */
 	if (!F_getC) {
 #ifndef NATIVE_MODE
-		if (PC.B.H != opaddr.B.H) cpu_cycle_count++;
+		if (PC.B.H != opaddr.B.H) num_cycles++;
 #endif
 		PC.W.PC = opaddr.W.L;
-		cpu_cycle_count++;
+		num_cycles++;
 	}
 END_CPU_FUNC
 
@@ -1126,10 +1123,10 @@ BEGIN_CPU_FUNC(opcode_0xB0)
 	O_pcr(opaddr);					/* BCS r */
 	if (F_getC) {
 #ifndef NATIVE_MODE
-		if (PC.B.H != opaddr.B.H) cpu_cycle_count++;
+		if (PC.B.H != opaddr.B.H) num_cycles++;
 #endif
 		PC.W.PC = opaddr.W.L;
-		cpu_cycle_count++;
+		num_cycles++;
 	}
 END_CPU_FUNC
 
@@ -1312,10 +1309,10 @@ BEGIN_CPU_FUNC(opcode_0xD0)
 	O_pcr(opaddr);					/* BNE r */
 	if (!F_getZ) {
 #ifndef NATIVE_MODE
-		if (PC.B.H != opaddr.B.H) cpu_cycle_count++;
+		if (PC.B.H != opaddr.B.H) num_cycles++;
 #endif
 		PC.W.PC = opaddr.W.L;
-		cpu_cycle_count++;
+		num_cycles++;
 	}
 END_CPU_FUNC
 
@@ -1497,10 +1494,10 @@ BEGIN_CPU_FUNC(opcode_0xF0)
 	O_pcr(opaddr);					/* BEQ r */
 	if (F_getZ) {
 #ifndef NATIVE_MODE
-		if (PC.B.H != opaddr.B.H) cpu_cycle_count++;
+		if (PC.B.H != opaddr.B.H) num_cycles++;
 #endif
 		PC.W.PC = opaddr.W.L;
-		cpu_cycle_count++;
+		num_cycles++;
 	}
 END_CPU_FUNC
 
@@ -1632,7 +1629,7 @@ BEGIN_CPU_FUNC(abort)
 	PC.B.PB = 0;
 	PC.B.L = M_READ(0xFFFFE8);
 	PC.B.H = M_READ(0xFFFFE9);
-	cpu_cycle_count += 8;
+	num_cycles += 8;
 #else
 	S_PUSH(PC.B.H);
 	S_PUSH(PC.B.L);
@@ -1643,7 +1640,7 @@ BEGIN_CPU_FUNC(abort)
 	PC.B.PB = 0;
 	PC.B.L = M_READ(0xFFFFF8);
 	PC.B.H = M_READ(0xFFFFF9);
-	cpu_cycle_count += 7;
+	num_cycles += 7;
 #endif
 END_CPU_FUNC
 
@@ -1660,7 +1657,7 @@ BEGIN_CPU_FUNC(nmi)
 	PC.B.PB = 0x00;
 	PC.B.L = M_READ(0xFFFFEA);
 	PC.B.H = M_READ(0xFFFFEB);
-	cpu_cycle_count += 8;
+	num_cycles += 8;
 #else
 	S_PUSH(PC.B.H);
 	S_PUSH(PC.B.L);
@@ -1671,7 +1668,7 @@ BEGIN_CPU_FUNC(nmi)
 	PC.B.PB = 0x00;
 	PC.B.L = M_READ(0xFFFFFA);
 	PC.B.H = M_READ(0xFFFFFB);
-	cpu_cycle_count += 7;
+	num_cycles += 7;
 #endif
 END_CPU_FUNC
 
@@ -1687,7 +1684,7 @@ BEGIN_CPU_FUNC(irq)
 	PC.B.PB = 0x00;
 	PC.B.L = M_READ(0xFFFFEE);
 	PC.B.H = M_READ(0xFFFFEF);
-	cpu_cycle_count += 8;
+	num_cycles += 8;
 #else
 	S_PUSH(PC.B.H);
 	S_PUSH(PC.B.L);
@@ -1699,6 +1696,6 @@ BEGIN_CPU_FUNC(irq)
 	PC.B.PB = 0x00;
 	PC.B.L = M_READ(0xFFFFFE);
 	PC.B.H = M_READ(0xFFFFFF);
-	cpu_cycle_count += 7;
+	num_cycles += 7;
 #endif
 END_CPU_FUNC

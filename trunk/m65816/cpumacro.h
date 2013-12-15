@@ -310,54 +310,54 @@
 
 #define O_al(a)		a.B.L = M_READ(PC.A); a.B.H = M_READ(PC.A+1); a.B.B = M_READ(PC.A+2); PC.W.PC += 3
 
-#define O_d(a)		if (D.B.L) cpu_cycle_count++;			\
+#define O_d(a)		if (D.B.L) num_cycles++;			\
 			a.A = D.W + M_READ(PC.A); a.B.B = 0; PC.W.PC++
 
 #ifdef SHORT_X
 
-#define O_dix(a)	if (D.B.L) cpu_cycle_count++;					\
+#define O_dix(a)	if (D.B.L) num_cycles++;					\
 			atmp.A = D.W + M_READ(PC.A); atmp.B.B = 0; PC.W.PC++;		\
 			a.B.L = M_READ(atmp.A); a.B.H = M_READ(atmp.A+1); a.B.B = DB;	\
 			atmp.A = a.A;							\
 			a.A += Y.W;							\
-			if (atmp.B.H != a.B.H) cpu_cycle_count++;
+			if (atmp.B.H != a.B.H) num_cycles++;
 
 #else
 
-#define O_dix(a)	if (D.B.L) cpu_cycle_count++;					\
+#define O_dix(a)	if (D.B.L) num_cycles++;					\
 			atmp.A = D.W + M_READ(PC.A); atmp.B.B = 0; PC.W.PC++;		\
 			a.B.L = M_READ(atmp.A); a.B.H = M_READ(atmp.A+1); a.B.B = DB;	\
 			a.A += Y.W;
 
 #endif
 
-#define O_dixl(a)	if (D.B.L) cpu_cycle_count++;							\
+#define O_dixl(a)	if (D.B.L) num_cycles++;							\
 			atmp.A = D.W + M_READ(PC.A); atmp.B.B = 0; PC.W.PC++;				\
 			a.B.L = M_READ(atmp.A); a.B.H = M_READ(atmp.A+1); a.B.B = M_READ(atmp.A+2);	\
 			a.A += Y.W
 			
-#define O_dxi(a)	if (D.B.L) cpu_cycle_count++;					\
+#define O_dxi(a)	if (D.B.L) num_cycles++;					\
 			atmp.A = D.W + M_READ(PC.A) + X.W; atmp.B.B = 0; PC.W.PC++;	\
 			a.B.L = M_READ(atmp.A); a.B.H = M_READ(atmp.A+1); a.B.B = DB
 
 #ifdef NATIVE_MODE
 
-#define O_dxx(a)	if (D.B.L) cpu_cycle_count++;				\
+#define O_dxx(a)	if (D.B.L) num_cycles++;				\
 			a.W.L = (M_READ(PC.A) + D.W + X.W); a.B.B = 0; PC.W.PC++
 
-#define O_dxy(a)	if (D.B.L) cpu_cycle_count++;				\
+#define O_dxy(a)	if (D.B.L) num_cycles++;				\
 			a.W.L = (M_READ(PC.A) + D.W + Y.W); a.B.B = 0; PC.W.PC++
 
 #ifdef SHORT_X
 
 #define O_axx(a)	a.B.L = M_READ(PC.A); a.B.H = M_READ(PC.A+1); a.B.B = DB;	\
 			atmp.A = a.A; a.A += X.W;					\
-			if (atmp.B.H != a.B.H) cpu_cycle_count++;			\
+			if (atmp.B.H != a.B.H) num_cycles++;			\
 			PC.W.PC+=2
 
 #define O_axy(a)	a.B.L = M_READ(PC.A); a.B.H = M_READ(PC.A+1); a.B.B = DB;	\
 			atmp.A = a.A; a.A += Y.W;					\
-			if (atmp.B.H != a.B.H) cpu_cycle_count++;			\
+			if (atmp.B.H != a.B.H) num_cycles++;			\
 			PC.W.PC+=2
 #else
 
@@ -372,20 +372,20 @@
 
 #else
 
-#define O_dxx(a)	if (D.B.L) cpu_cycle_count++;					\
+#define O_dxx(a)	if (D.B.L) num_cycles++;					\
 			a.W.L = (M_READ(PC.A) + D.W + X.W); a.B.H = 0; a.B.B = 0; PC.W.PC++;
 
-#define O_dxy(a)	if (D.B.L) cpu_cycle_count++;					\
+#define O_dxy(a)	if (D.B.L) num_cycles++;					\
 			a.W.L = (M_READ(PC.A) + D.W + Y.W); a.B.H = 0; a.B.B = 0; PC.W.PC++;
 
 #define O_axx(a)	a.B.L = M_READ(PC.A); a.B.H = M_READ(PC.A+1); a.B.B = DB;	\
 			atmp.A = a.A; a.W.L += X.W;					\
-			if (atmp.B.H != a.B.H) cpu_cycle_count++;			\
+			if (atmp.B.H != a.B.H) num_cycles++;			\
 			PC.W.PC+=2
 
 #define O_axy(a)	a.B.L = M_READ(PC.A); a.B.H = M_READ(PC.A+1); a.B.B = DB;	\
 			atmp.A = a.A; a.W.L += Y.W;					\
-			if (atmp.B.H != a.B.H) cpu_cycle_count++;			\
+			if (atmp.B.H != a.B.H) num_cycles++;			\
 			PC.W.PC+=2
 
 #endif
@@ -405,11 +405,11 @@
 #define O_ail(a)	atmp.B.L = M_READ(PC.A); atmp.B.H = M_READ(PC.A+1); atmp.B.B = 0; PC.W.PC += 2;	\
 			a.B.L = M_READ(atmp.A); a.B.H = M_READ(atmp.A+1); a.B.B = M_READ(atmp.A+2)
 
-#define O_di(a)		if (D.B.L) cpu_cycle_count++;					\
+#define O_di(a)		if (D.B.L) num_cycles++;					\
 			atmp.A = M_READ(PC.A) + D.W; PC.W.PC++;				\
 			a.B.L = M_READ(atmp.A); a.B.H = M_READ(atmp.A+1); a.B.B = DB
 
-#define O_dil(a)	if (D.B.L) cpu_cycle_count++;							\
+#define O_dil(a)	if (D.B.L) num_cycles++;							\
 			atmp.A = M_READ(PC.A) + D.W; PC.W.PC++;						\
 			a.B.L = M_READ(atmp.A); a.B.H = M_READ(atmp.A+1); a.B.B = M_READ(atmp.A+2)
 

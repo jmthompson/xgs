@@ -21,23 +21,6 @@ int	cpu_stop;
 int	cpu_wait;
 int	cpu_trace;
 
-int	cpu_update_period;
-#if defined( __sparc__ ) && defined( __GNUC__ )
-register word32	cpu_cycle_count asm ("g5");
-#else
-int cpu_cycle_count;
-#endif
-
-byte (*m65816_readMem)(word32);
-void (*m65816_writeMem)(word32, byte);
-void (*m65816_hardwareUpdate)(int);
-void (*m65816_handleWDM)(byte);
-
-void m65816_setUpdatePeriod(int period)
-{
-	cpu_update_period = period;
-}
-
 void m65816_setTrace(int mode)
 {
 	cpu_trace = mode;
