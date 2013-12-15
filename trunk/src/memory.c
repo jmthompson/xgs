@@ -685,8 +685,8 @@ byte MEM_getDiagType(byte val)
 
 byte MEM_setVBLClear(byte val)
 {
-	if (mem_diagtype & 0x10) CPU_clearIRQ();
-	if (mem_diagtype & 0x08) CPU_clearIRQ();
+	if (mem_diagtype & 0x10) m65816_clearIRQ();
+	if (mem_diagtype & 0x08) m65816_clearIRQ();
 	mem_diagtype &= ~0x18;
 	return 0;
 }

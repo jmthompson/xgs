@@ -189,7 +189,7 @@ void ADB_inputUpdate()
 					if (!ski_status_irq) {
 						ski_status_irq = 0x20;
  						buffer[0] = 0x1B;
- 						CPU_addIRQ();
+ 						m65816_addIRQ();
 					}
  				} else {
  					buffer[0] = 0x1B;
@@ -264,7 +264,7 @@ void ADB_inputUpdate()
  				}
  				ski_xdelta = 0;
  				ski_ydelta = 0;
- 				if (ski_status_reg & 0x40) CPU_addIRQ();
+ 				if (ski_status_reg & 0x40) m65816_addIRQ();
  				ski_status_reg |= 0x80;
  				ski_status_reg &= ~0x02;
 			}
@@ -289,7 +289,7 @@ void ADB_inputUpdate()
  				}
  				ski_xdelta = 0;
  				ski_ydelta = 0;
- 				if (ski_status_reg & 0x40) CPU_addIRQ();
+ 				if (ski_status_reg & 0x40) m65816_addIRQ();
  				ski_status_reg |= 0x80;
  				ski_status_reg &= ~0x02;
 			}
@@ -321,7 +321,7 @@ void ADB_inputUpdate()
 					XWarpPointer(vid_display, None, vid_window, 0, 0, 0, 0, ski_lastx, ski_lasty);
  				ski_button0 = (event.xmotion.state & Button1Mask)? 1 : 0;
  				ski_button1 = (event.xmotion.state & Button3Mask)? 1 : 0;
- 				if (ski_status_reg & 0x40) CPU_addIRQ();
+ 				if (ski_status_reg & 0x40) m65816_addIRQ();
  				ski_status_reg |= 0x80;
  				ski_status_reg &= ~0x02;
 			}

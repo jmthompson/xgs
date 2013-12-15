@@ -10,14 +10,11 @@
  *                                                                   *
  *********************************************************************/
 
-#define CPU_DISPATCH
+#define M65816_DISPATCH
 
 #include "config.h"
-
-#include "cpu.h"
+#include "m65816.h"
 #include "cpumicro.h"
-#include "memory.h"
-#include "emul.h"
 
 dualw	A;	/* Accumulator               */
 dualw	D;	/* Direct Page Register      */
@@ -152,7 +149,7 @@ byte	cpu_cycle_table[1300] =
 };
 #endif
 
-void CPU_run(void)
+void m65816_run(void)
 {
 	word32	last_update,next_update;
 	int	opcode;
@@ -163,7 +160,7 @@ void CPU_run(void)
 	E = 1;
 	F_setM(1);
 	F_setX(1);
-	CPU_modeSwitch();
+	m65816_modeSwitch();
 
 dispatch:
 #ifdef	E_UPDATE
@@ -205,7 +202,7 @@ update:
 #endif
 #ifdef DEBUG
 debug:
-	CPU_debug();
+	m65816_debug();
 	goto debug_resume;
 #endif
 reset:
@@ -226,7 +223,7 @@ irq:
 
 /* Recalculate opcode_offset based on the new processor mode */
 
-void CPU_modeSwitch(void) {
+void m65816_modeSwitch(void) {
 
 	int	opcode_offset;
 

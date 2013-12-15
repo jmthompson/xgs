@@ -11,10 +11,7 @@
  *********************************************************************/
 
 #include "config.h"
-
-#include "cpu.h"
-#include "memory.h"
-#include "emul.h"
+#include "m65816.h"
 
 int	cpu_reset;
 int	cpu_abort;
@@ -31,32 +28,37 @@ register word32	cpu_cycle_count asm ("g5");
 int cpu_cycle_count;
 #endif
 
-void CPU_setUpdatePeriod(int period)
+byte (*m65816_readMem)(word32);
+void (*m65816_writeMem)(word32, byte);
+void (*m65816_hardwareUpdate)(int);
+void (*m65816_handleWDM)(byte);
+
+void m65816_setUpdatePeriod(int period)
 {
 	cpu_update_period = period;
 }
 
-void CPU_setTrace(int mode)
+void m65816_setTrace(int mode)
 {
 	cpu_trace = mode;
 }
 
-void CPU_reset(void)
+void m65816_reset(void)
 {
 	cpu_reset = 1;
 }
 
-void CPU_abort(void)
+void m65816_abort(void)
 {
 	cpu_abort = 1;
 }
 
-void CPU_nmi(void)
+void m65816_nmi(void)
 {
 	cpu_nmi = 1;
 }
 
-void CPU_addIRQ(void)
+void m65816_addIRQ(void)
 {
 	cpu_irq++;
 #if 0
@@ -64,7 +66,7 @@ void CPU_addIRQ(void)
 #endif
 }
 
-void CPU_clearIRQ(void)
+void m65816_clearIRQ(void)
 {
 	if (cpu_irq) cpu_irq--;
 #if 0

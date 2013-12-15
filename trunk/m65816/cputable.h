@@ -1,5 +1,5 @@
-#ifndef _GSCPU_TABLE_H_
-#define _GSCPU_TABLE_H_
+#ifndef _M65816_CPUTABLE_H_
+#define _M65816_CPUTABLE_H_
 
 extern void e0m1x1_opcode_0x00(void);
 extern void e0m1x1_opcode_0x01(void);
@@ -1302,4 +1302,4 @@ extern void e1m1x1_abort(void);
 extern void e1m1x1_nmi(void);
 extern void e1m1x1_irq(void);
 
-#endif /* _GSCPU_TABLE_H */
+#endif /* _M65816_CPUTABLE_H */

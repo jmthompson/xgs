@@ -24,7 +24,6 @@
 #include "adb.h"
 #include "emul.h"
 #include "video.h"
-#include "cpu.h"
 
 byte	adb_m2mouseenable;
 byte	adb_m2mousemvirq;
@@ -165,7 +164,7 @@ byte ADB_readMouse(byte val)
 		delta = ski_ydelta;
 		button = ski_button0;
 		ski_status_reg &= ~0x82;
-		if (ski_status_reg & 0x40) CPU_clearIRQ();
+		if (ski_status_reg & 0x40) m65816_clearIRQ();
 	} else {
 		delta = ski_xdelta;
 		button = ski_button1;
@@ -198,7 +197,7 @@ byte ADB_readCommand(byte val)
 	if (ski_status_irq) {
 		v = ski_status_irq;
 		ski_status_irq = 0;
-		CPU_clearIRQ();
+		m65816_clearIRQ();
 		return v;
 	}
 	v = ski_data_reg;

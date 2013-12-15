@@ -76,8 +76,8 @@ void SND_update()
 #endif
 	}
 	SND_scanOscillators(&sample);
-	output_buffer[output_index].left = sample.left + snd_click_sample;
-	output_buffer[output_index].right = sample.right + snd_click_sample;
+	//output_buffer[output_index].left = sample.left + snd_click_sample;
+	//output_buffer[output_index].right = sample.right + snd_click_sample;
 	output_index++;
 #if 0
 	if (noisy) {

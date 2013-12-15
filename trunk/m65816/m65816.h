@@ -1,5 +1,5 @@
-#ifndef _GSCPU_H_
-#define _GSCPU_H_
+#ifndef _M65816_H_
+#define _M65816_H_
 
 typedef unsigned char	byte;
 typedef signed char	sbyte;
@@ -71,7 +71,7 @@ register word32	cpu_cycle_count asm ("g5");
 extern int cpu_cycle_count;
 #endif
 
-#ifndef CPU_DISPATCH
+#ifndef M65816_DISPATCH
 
 extern union {		/* Program Counter	     */
 #ifdef WORDS_BIGENDIAN
@@ -86,70 +86,52 @@ extern union {		/* Program Counter	     */
 
 #endif
 
-/* These are the core memory access macros used in the 65816 emulator. */
-/* Set these to point to routines which handle your emulated machine's */
-/* memory access (generally these routines will check for access to    */
-/* memory-mapped I/O and things of that nature.)                       */
+/* This include file defines the M_READ, M_WRITE, E_UPDATE and E_WDM macros. */
 
-#define M_READ(a)	MEM_readMem(a)
-#define M_WRITE(a,v)	MEM_writeMem(a,v)
-
-/* Set this macro to your emulator's "update" routine. Your update */
-/* routine would probably do things like update hardware sprites,  */
-/* and check for user keypresses. CPU_run() calls this routine     */
-/* periodically to make sure the rest of your emulator gets time   */
-/* to run.                                                         */
-
-#define E_UPDATE(v)	EMUL_hardwareUpdate(v)
-
-/* Set this macro to your emulator's routine for handling the WDM	*/
-/* pseudo-opcode. Useful for trapping certain emulated machine		*/
-/* functions and emulating them in fast C code.				*/
-
-#define E_WDM(v)	EMUL_handleWDM(v)
+#include "m65816_hw.h"
 
 /* Set the 65816 emulator's update period (the number of instructions	*/
 /* executed between calls to the E_UPDATE routine.)			*/
 
-void CPU_setUpdatePeriod(int period);
+void m65816_setUpdatePeriod(int period);
 
 /* Set the 65816 emulator's trace mode to off (0) or on (nonzero) */
 
-void CPU_setTrace(int mode);
+void m65816_setTrace(int mode);
 
 /* Send a reset to the 65816 emulator. You should do this at	*/
-/* startup before you call CPU_run().				*/
+/* startup before you call m65816_run().				*/
 
-void CPU_reset(void);
+void m65816_reset(void);
 
 /* Send an abort to the 65816 emulator. */
 
-void CPU_abort(void);
+void m65816_abort(void);
 
 /* Send aa non-maskable interrupt to the 65816 emulator */
 
-void CPU_nmi(void);
+void m65816_nmi(void);
 
 /* Send a standard (maskable) interrupt to the 65816 emulator */
 
-void CPU_addIRQ(void);
+void m65816_addIRQ(void);
 
 /* Clear a previously sent interrupt (if one is still pending) */
 
-void CPU_clearIRQ(void);
+void m65816_clearIRQ(void);
 
 /* This routine never returns; it sits in a loop processing opcodes */
 /* until the emulator exits. Periodic calls to the emulator update  */
 /* macro are made to allow the rest of the emulator to function.    */
 
-void CPU_run(void);
+void m65816_run(void);
 
 /* Internal routine called when the mode bits (e/m/x) change */
 
-void CPU_modeSwitch(void);
+void m65816_modeSwitch(void);
 
 /* Internal routine to print the next instruction in trace mode */
 
-void CPU_debug(void);
+void m65816_debug(void);
 
-#endif /* _GSCPU_H_ */
+#endif /* _M65816_H_ */
