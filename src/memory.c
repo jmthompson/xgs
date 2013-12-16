@@ -642,12 +642,7 @@ byte MEM_setCYAReg(byte val)
 	iwm_slot5_motor = (val & 0x02)? 1 : 0;
 	iwm_slot4_motor = (val & 0x01)? 1 : 0;
 	if (emul_speed) {
-        emul_speed2 = 0;
-		if (emul_speed2) {
-			emul_target_speed = 0.0;
-		} else {
-			emul_target_speed = 2.5;
-		}
+		emul_target_speed = 2.5;
 	} else {
 		emul_target_speed = 1.0;
 	}

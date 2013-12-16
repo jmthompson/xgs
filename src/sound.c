@@ -159,17 +159,11 @@ byte SND_clickSpeaker(byte val)
 }
 
 void SND_generateSamples(snd_sample_struct *input, byte *output, int len) {
-    int  i,j;
+    int  i;
 
     for (i = 0 ; i < len ; i++) {
-        for (j = 0 ; j < 32 ; j++) {
-            byte sample = ((input->sample[i] * input->volume[i]) >> 10) + 128;
-
-            output[input->channel[i] & 0x01] += sample;
-        }
-
-        output += 2;
-        input++;
+        output[i*2] = (byte) ((input[i].left >> 10) + 128);
+        output[i*2+1] = (byte) ((input[i].right >> 10) + 128);
     }
 }
 
@@ -341,11 +335,12 @@ void SND_updateOscillator(int osc_num)
 
 void SND_scanOscillators(snd_sample_struct *out_sample)
 {
-    int            addr,this_sample;
-    register int   osc_num;
+    int addr,this_sample;
+    int osc_num;
+    snd_sample_struct sample;
 
-    bzero(out_sample, sizeof(snd_sample_struct));
-
+    sample.left = 0;
+    sample.right = 0;
     for (osc_num = 0 ; osc_num < num_osc; osc_num++) {
         if (!osc_enable[osc_num]) continue;
 
@@ -402,8 +397,14 @@ void SND_scanOscillators(snd_sample_struct *out_sample)
             continue;
         }
 
-        out_sample->sample[osc_num]  = (int) this_sample - 128;
-        out_sample->channel[osc_num] = osc_chan[osc_num];
-        out_sample->volume[osc_num]  = osc_vol[osc_num];
+        /* Add the sample into the output "supersample" */
+
+        if (osc_chan[osc_num] & 0x01) {
+            sample.right += ((int) this_sample - 128) * osc_vol[osc_num];
+        } else {
+            sample.left += ((int) this_sample - 128) * osc_vol[osc_num];
+        }
     }
+    out_sample->left = sample.left;
+    out_sample->right = sample.right;
 }
