@@ -45,8 +45,6 @@ void main(int argc, char *argv[])
 
     snprintf(emul_path, len, "%s/%s", DATA_DIR, XGS_DATA_DIR);
 
-    chdir(emul_path);
-
 	EMUL_init(argc, argv);
 	EMUL_run();
 }
@@ -68,8 +66,12 @@ long EMUL_getCurrentTime()
 #endif
 }
 
-// TODO: remove this
 char *EMUL_expandPath(const char *path)
 {
-    return path;
+    int len = strlen(path) + strlen(emul_path) + 2;
+    char *output = malloc(len);
+
+    snprintf(output, len, "%s/%s", emul_path, path);
+
+    return output;
 }

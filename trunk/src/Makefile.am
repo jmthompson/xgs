@@ -14,7 +14,7 @@ endif
 
 if WITH_PULSEAUDIO
 xgs_SOURCES += sound-pulseaudio.c
-AM_LDFLAGS  += -lpulse
+AM_LDFLAGS  += -lpulse -lpulse-simple
 endif
 
 if WITH_OSS

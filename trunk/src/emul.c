@@ -325,15 +325,13 @@ int EMUL_init(int argc, char *argv[])
 
 void EMUL_run()
 {
-    char    *path;
-    int    i,err;
+    int i, err;
 
     printf("\nLoading startup drives\n");
     for (i = 0 ; i < NUM_SMPT_DEVS ; i++) {
         if (!emul_smtport[i]) continue;
-        path = EMUL_expandPath(emul_smtport[i]);
-        printf("    - Loading SmartPort device %d from \"%s\": ", i, path);
-        err = SMPT_loadDrive(i, path);
+        printf("    - Loading SmartPort device %d from \"%s\": ", i, emul_smtport[i]);
+        err = SMPT_loadDrive(i, emul_smtport[i]);
         if (err) {
             printf("Failed (err #%d)\n",err);
         } else {
@@ -341,9 +339,8 @@ void EMUL_run()
         }
     }
     if (emul_s5d1) {
-        path = EMUL_expandPath(emul_s5d1);
-        printf("    - Loading S5, D1 from \"%s\": ", path);
-        err = IWM_loadDrive(5, 1, path);
+        printf("    - Loading S5, D1 from \"%s\": ", emul_s5d1);
+        err = IWM_loadDrive(5, 1, emul_s5d1);
         if (err) {
             printf("Failed (err #%d)\n",err);
         } else {
@@ -351,9 +348,8 @@ void EMUL_run()
         }
     }
     if (emul_s5d2) {
-        path = EMUL_expandPath(emul_s5d2);
-        printf("    - Loading S5, D2 from \"%s\": ", path);
-        err = IWM_loadDrive(5, 2, path);
+        printf("    - Loading S5, D2 from \"%s\": ", emul_s5d2);
+        err = IWM_loadDrive(5, 2, emul_s5d2);
         if (err) {
             printf("Failed (err #%d)\n",err);
         } else {
@@ -361,9 +357,8 @@ void EMUL_run()
         }
     }
     if (emul_s6d1) {
-        path = EMUL_expandPath(emul_s6d1);
-        printf("    - Loading S6, D1 from \"%s\": ", path);
-        err = IWM_loadDrive(6, 1, path);
+        printf("    - Loading S6, D1 from \"%s\": ", emul_s6d1);
+        err = IWM_loadDrive(6, 1, emul_s6d1);
         if (err) {
             printf("Failed (err #%d)\n",err);
         } else {
@@ -371,9 +366,8 @@ void EMUL_run()
         }
     }
     if (emul_s6d2) {
-        path = EMUL_expandPath(emul_s6d2);
-        printf("    - Loading S6, D2 from \"%s\": ", path);
-        err = IWM_loadDrive(6, 2, path);
+        printf("    - Loading S6, D2 from \"%s\": ", emul_s6d2);
+        err = IWM_loadDrive(6, 2, emul_s6d2);
         if (err) {
             printf("Failed (err #%d)\n",err);
         } else {
