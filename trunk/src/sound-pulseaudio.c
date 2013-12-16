@@ -166,8 +166,6 @@ size_t SND_outputWrite(snd_sample_struct *sampleBuffer, size_t nsamples)
 
     if (nsamples > bufferSamples) nsamples = bufferSamples;
 
-    printf("writing %d samples\n", nsamples);
-
     SND_generateSamples(sampleBuffer, outputBuffer, nsamples);
 
     pa_stream_write(stream, outputBuffer, nsamples * 2, NULL, 0, PA_SEEK_RELATIVE);

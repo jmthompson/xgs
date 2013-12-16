@@ -5,9 +5,7 @@
 extern int snd_enable;
 
 typedef struct {
-    int sample[32];
-    int channel[32];
-    int volume[32];
+	int	left,right;
 } snd_sample_struct;
 
 /* Function prototypes */

@@ -8,7 +8,6 @@ extern int emul_qtrsecirq;
 extern int emul_onesecirq;
 extern int emul_scanirq;
 extern int emul_speed;
-extern int emul_speed2;
 extern int emul_delay;
 
 extern int cpu_cycle_count;
