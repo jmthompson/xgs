@@ -278,8 +278,6 @@ void SND_enableOscillators(void)
 
     num_osc = ((doc_registers[0xE1] >> 1) & 0x1F) + 1;
 
-    printf("num_osc = %d (%02X)\n", (int) num_osc, (int) doc_registers[0xE1]);
-
     last_mode = -1;
     for (i = 0 ; i < num_osc ; i++) {
         mode = (doc_registers[0xA0 + i] >> 1) & 0x03;
