@@ -14,14 +14,15 @@ endif
 
 if WITH_PULSEAUDIO
 xgs_SOURCES += sound-pulseaudio.c
-AM_LDFLAGS  += -lpulse -lpulse-simple
+AM_LDFLAGS  += -lpulse-simple
 endif
 
 if WITH_OSS
 xgs_SOURCES += sound-oss.c
+AM_LDFLAGS  += @OSS_LIBS@
 endif
 
-if WITH_SPARCAUDIO
+if WITH_SUNAUDIO
 xgs_SOURCES += sound-sparc.c
 endif
 
@@ -35,5 +36,5 @@ if HAVE_MITSHM
 AM_LDFLAGS  += $(x_libraries) -lXext
 endif
 
-xgs_LDADD = $(APP_POSIX) $(INPUT_X11) $(SOUND_NONE) $(SOUND_OSS) $(SOUND_PULSEAUDIO) $(SOUND_SPARC) $(VIDEO_X11) ../m65816/libm65816.la
-xgs_DEPENDNCIES = $(APP_POSIX) $(INPUT_X11) $(SOUND_NONE) $(SOUND_OSS) $(SOUND_PULSEAUDIO) $(SOUND_SPARC) $(VIDEO_X11) ../m65816/libm65816.la
+xgs_LDADD = ../m65816/libm65816.la
+xgs_DEPENDNCIES = ../m65816/libm65816.la
