@@ -60,7 +60,7 @@ char    emul_buffer[256];
 
 word32    emul_last_cycles;
 
-long    emul_target_cycles; 
+long    emul_target_cycles;
 double    emul_target_speed;
 
 double    emul_times[60];
@@ -77,8 +77,13 @@ char    *emul_s5d1,*emul_s5d2;
 char    *emul_s6d1,*emul_s6d2;
 char    *emul_smtport[NUM_SMPT_DEVS];
 
+#ifdef HAVE_TIMERFD
+static int master_timer;
+#else
 static timer_t master_timer;
+#endif
 
+#ifndef HAVE_TIMERFD
 void EMUL_microtick(int val)
 {
     int num_cycles = m65816_run(emul_target_speed * 32);
@@ -87,6 +92,7 @@ void EMUL_microtick(int val)
 
     EMUL_hardwareUpdate(num_cycles);
 }
+#endif
 
 void EMUL_doVBL()
 {
@@ -294,17 +300,22 @@ int EMUL_init(int argc, char *argv[])
     emul_target_cycles = 2500000;
     emul_target_speed = 2.5;
 
+#ifndef HAVE_TIMERFD
     struct sigevent   sev;
     sev.sigev_notify = SIGEV_SIGNAL;
     sev.sigev_signo  = SIGUSR1;
-
+#endif
     struct timespec ts;
 
     clock_getres(CLOCK_MONOTONIC, &ts);
 
     printf("clock resolution = %d/%d\n", ts.tv_sec, ts.tv_nsec);
 
+#ifdef HAVE_TIMERFD
+    if ((master_timer = timerfd_create(CLOCK_MONOTONIC, 0)) < 0) {
+#else
     if (timer_create(CLOCK_MONOTONIC, &sev, &master_timer) < 0) {
+#endif
         printf("Failed to initialize timer.\n");
 
         IWM_shutdown();
@@ -376,14 +387,17 @@ void EMUL_run()
     }
     printf("\n*** EMULATOR IS RUNNING ***\n");
 
+#ifndef HAVE_TIMERFD
     struct sigaction  sa;
-    struct itimerspec ts;
 
     sa.sa_handler = &EMUL_microtick;
     sa.sa_flags   = 0;
     sigemptyset(&sa.sa_mask);
 
     sigaction(SIGUSR1, &sa, NULL);
+#endif
+
+    struct itimerspec ts;
 
     bzero(&ts, sizeof(ts));
 
@@ -392,13 +406,30 @@ void EMUL_run()
 
     printf("Setting timer to %.3f microseconds\n", (float) ts.it_interval.tv_nsec / 1000);
 
+#ifdef HAVE_TIMERFD
+    if (timerfd_settime(master_timer, 0, &ts, NULL) < 0) {
+#else
     if (timer_settime(master_timer, 0, &ts, NULL) < 0) {
+#endif
         printf("failed to set timer: %s\n", strerror(errno));
         exit(-1);
     }
 
     while(1) {
+#ifdef HAVE_TIMERFD
+        long long num_overflows;
+        int num_cycles;
+
+        read(master_timer, &num_overflows, sizeof(num_overflows));
+
+        num_cycles = m65816_run(emul_target_speed * 32);
+
+        cpu_cycle_count += num_cycles;
+
+        EMUL_hardwareUpdate(num_cycles);
+#else
         sleep(10000);
+#endif
     }
 }
 
@@ -482,7 +513,7 @@ int     usleep( unsigned int microSeconds )
 
     nfds = readfds = writefds = exceptfds = 0;
 
-    if( (microSeconds == (unsigned long) 0) 
+    if( (microSeconds == (unsigned long) 0)
         || microSeconds > (unsigned long) 4000000 )
     {
         errno = ERANGE;     /* value out of range */
