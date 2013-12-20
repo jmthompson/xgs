@@ -56,8 +56,21 @@ static char *data_dir;
 static char *user_dir;
 static int max_path;    // MAX(strlen(data_dir), strlen(user_dir))
 
+static char *s5d1_image;
+static char *s5d2_image;
+static char *s6d1_image;
+static char *s6d2_image;
+static char *smtport_images[NUM_SMPT_DEVS];
+
+static void displayUsage(const char *myname)
+{
+    fprintf(stderr,"\nUsage: %s [-s5d1 filename ] [-s5d2 filename ] [-s6d1 filename ] [-s6d2 filename ] [-smpt# filename ] [-ram # ] [-trace]\n",myname);
+    exit(1);
+}
+
 int main(int argc, char **argv) {
     char *homedir;
+    int i, err, unit;
     size_t len;
 
     len = strlen(XGS_DATA_DIR) + strlen(DATA_DIR) + 2;
@@ -101,7 +114,100 @@ int main(int argc, char **argv) {
     g_fast_mhz = 2.5;
     g_ram_size = 2;
 
-    hardwareInit();
+    s5d1_image = NULL;
+    s5d2_image = NULL;
+    s6d1_image = NULL;
+    s6d2_image = NULL;
+
+    for (i = 0 ; i < NUM_SMPT_DEVS ; i++) smtport_images[i] = NULL;
+
+    i = 0;
+    while (++i < argc) {
+        if (!strcmp(argv[i],"-trace")) {
+            EMUL_trace(1);
+        } else if (!strcmp(argv[i],"-ram")) {
+            if (++i >= argc) displayUsage(argv[0]);
+            g_ram_size = atoi(argv[i]);
+        } else if (!strcmp(argv[i],"-mhz")) {
+            if (++i >= argc) displayUsage(argv[0]);
+            g_fast_mhz = (float) atof(argv[i]);
+        } else if (!strcmp(argv[i],"-s5d1")) {
+            if (++i >= argc) displayUsage(argv[0]);
+            s5d1_image = argv[i];
+        } else if (!strcmp(argv[i],"-s5d2")) {
+            if (++i >= argc) displayUsage(argv[0]);
+            s5d2_image = argv[i];
+        } else if (!strcmp(argv[i],"-s6d1")) {
+            if (++i >= argc) displayUsage(argv[0]);
+            s6d1_image = argv[i];
+        } else if (!strcmp(argv[i],"-s6d2")) {
+            if (++i >= argc) displayUsage(argv[0]);
+            s6d2_image = argv[i];
+        } else if (!strncmp(argv[i],"-smpt",5)) {
+            unit = atoi(argv[i] + 5);
+            if ((unit < 0) || (unit >= NUM_SMPT_DEVS)) displayUsage(argv[0]);
+            if (++i >= argc) displayUsage(argv[0]);
+            smtport_images[unit] = argv[i];
+        } else displayUsage(argv[0]);
+    }
+
+    printf("Starting XGS Version %s\n\n", VERSION);
+
+    if (hardwareInit() != 0) {
+        return -1;
+    }
+
+    printf("\nLoading startup drives\n");
+
+    for (i = 0 ; i < NUM_SMPT_DEVS ; i++) {
+        if (!smtport_images[i]) continue;
+        printf("    - Loading SmartPort device %d from \"%s\": ", i, smtport_images[i]);
+        err = SMPT_loadDrive(i, smtport_images[i]);
+        if (err) {
+            printf("Failed (err #%d)\n",err);
+        } else {
+            printf("Done\n");
+        }
+    }
+    if (s5d1_image) {
+        printf("    - Loading S5, D1 from \"%s\": ", s5d1_image);
+        err = IWM_loadDrive(5, 1, s5d1_image);
+        if (err) {
+            printf("Failed (err #%d)\n",err);
+        } else {
+            printf("Done\n");
+        }
+    }
+    if (s5d2_image) {
+        printf("    - Loading S5, D2 from \"%s\": ", s5d2_image);
+        err = IWM_loadDrive(5, 2, s5d2_image);
+        if (err) {
+            printf("Failed (err #%d)\n",err);
+        } else {
+            printf("Done\n");
+        }
+    }
+    if (s6d1_image) {
+        printf("    - Loading S6, D1 from \"%s\": ", s6d1_image);
+        err = IWM_loadDrive(6, 1, s6d1_image);
+        if (err) {
+            printf("Failed (err #%d)\n",err);
+        } else {
+            printf("Done\n");
+        }
+    }
+    if (s6d2_image) {
+        printf("    - Loading S6, D2 from \"%s\": ", s6d2_image);
+        err = IWM_loadDrive(6, 2, s6d2_image);
+        if (err) {
+            printf("Failed (err #%d)\n",err);
+        } else {
+            printf("Done\n");
+        }
+    }
+    printf("\n*** EMULATOR IS RUNNING ***\n");
+
+    schedulerStart();
 }
 
 void globalShutdown()
@@ -113,12 +219,6 @@ void globalShutdown()
     SND_shutdown();
     VID_shutdown();
     MEM_shutdown();
-}
-
-static void displayUsage(char *myname)
-{
-    fprintf(stderr,"\nUsage: %s [-s5d1 filename ] [-s5d2 filename ] [-s6d1 filename ] [-s6d2 filename ] [-smpt# filename ] [-ram # ] [-trace]\n",myname);
-    exit(1);
 }
 
 /*
