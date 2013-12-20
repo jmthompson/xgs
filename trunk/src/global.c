@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <fcntl.h>
 
 #include "xgs.h"
 
@@ -53,6 +54,7 @@ int g_vbl_count;
 
 static char *data_dir;
 static char *user_dir;
+static int max_path;    // MAX(strlen(data_dir), strlen(user_dir))
 
 int main(int argc, char **argv) {
     char *homedir;
@@ -66,8 +68,10 @@ int main(int argc, char **argv) {
         return(-1);
     }
 
-    snprintf(data_dir, "%s/%s", DATA_DIR, XGS_DATA_DIR);
+    snprintf(data_dir, len, "%s/%s", DATA_DIR, XGS_DATA_DIR);
     
+    max_path = len;
+
     homedir = getenv("HOME");
 
     if (!homedir || !strlen(homedir)) {
@@ -82,8 +86,18 @@ int main(int argc, char **argv) {
         return(-1);
     }
 
-    snprintf(user_dir, "%s/%s", homedir, XGS_USER_DIR);
+    snprintf(user_dir, len, "%s/%s", homedir, XGS_USER_DIR);
     
+    if (mkdir(user_dir, 0700) < 0) {
+        if (errno != EEXIST) {
+            fprintf(stderr, "Unable to create %s: %s", user_dir, strerror(errno));
+        }
+    }
+
+    if (len > max_path) {
+        max_path = len;
+    }
+
     g_fast_mhz = 2.5;
     g_ram_size = 2;
 
@@ -101,39 +115,6 @@ void globalShutdown()
     MEM_shutdown();
 }
 
-void EMUL_trace(int parm)
-{
-    m65816_setTrace(parm);
-}
-
-void EMUL_nmi()
-{
-    int    i;
-
-    for (i = 0x0000 ; i < 0x0200 ; i++) {
-        if (!mem_pages[i].readPtr) continue;
-        memcpy(mem_pages[0xE800+i].writePtr,mem_pages[i].readPtr,256);
-    }
-     m65816_nmi();
-}
-
-void EMUL_handleWDM(byte parm)
-{
-    switch(parm) {
-        case 0xC7 :    SMPT_prodosEntry();
-                break;
-        case 0xC8 :    SMPT_smartportEntry();
-                break;
-        case 0xFD :    m65816_setTrace(0);
-                break;
-        case 0xFE :    m65816_setTrace(1);
-                break;
-        case 0xFF :    schedulerStop(0);
-                break;
-        default :    break;
-    }
-}
-
 static void displayUsage(char *myname)
 {
     fprintf(stderr,"\nUsage: %s [-s5d1 filename ] [-s5d2 filename ] [-s6d1 filename ] [-s6d2 filename ] [-smpt# filename ] [-ram # ] [-trace]\n",myname);
@@ -141,33 +122,63 @@ static void displayUsage(char *myname)
 }
 
 /*
- *
- * Returns the full path to a resource file. Searches xgs_user_dir first, and then xgs_data_dir.
+ * Tries to find a file in the user_dir first, and then the data_dir.
+ * If found, opens it read-only and returns the file descriptor.
  */
 
-char *globalGetResource(const char *filename) {
-    int len;
+int openDataFile(const char *filename) {
+    int fd,  len;
     char *path;
 
-    len = strlen(filename) + strlen(data_dir) + 2;
+    len = strlen(filename) + max_path + 2;
     path = malloc(len);
 
-    return path;
+    if (!path) {
+        fprintf(stderr, "openDataFile() unable to allocate %d bytes: %s\n", len, strerror(errno));
+
+        return -1;
+    }
+
+    snprintf(path, len, "%s/%s", user_dir, filename);
+    fd = open(path, O_RDONLY);
+
+    if ((fd < 0) && (errno != ENOENT)) {
+        free(path);
+
+        return fd;
+    }
+
+    snprintf(path, len, "%s/%s", data_dir, filename);
+    fd = open(path, O_RDONLY);
+
+    free(path);
+
+    return fd;
 }
 
 /*
- * Returns the full path to a user file.
+ * Opens a user file (in user_dir) with the specified flags,
+ * and return the file descriptor.
  */
 
-char *globalGetData(const char *filename) {
+int openUserFile(const char *filename, const int flags) {
+    int fd,  len;
+    char *path;
+
+    len = strlen(filename) + max_path + 2;
+    path = malloc(len);
+
+    if (!path) {
+        fprintf(stderr, "openUserFile() unable to allocate %d bytes: %s\n", len, strerror(errno));
+
+        return -1;
+    }
+
+    snprintf(path, len, "%s/%s", user_dir, filename);
+
+    fd = open(path, flags);
+
+    free(path);
+
+    return fd;
 }
-
-/*
-char *EMUL_expandPath(const char *path)
-{
-
-    snprintf(output, len, "%s/%s", emul_path, path);
-
-    return output;
-}
-*/

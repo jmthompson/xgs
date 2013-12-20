@@ -21,6 +21,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
 #include "emul.h"
 #include "video.h"
 #include "video-output.h"
@@ -79,64 +83,85 @@ PIXEL   vid_stdcolors[16] = {
 
 int VID_init(void)
 {
-	char	*path;
-	FILE	*fp;
+    int fd;
 
 	printf("\nInitializing emulator console\n");
 	if (VID_outputInit()) return 1;
 
 	printf("    - Loading 40-column font: ");
 	if (!(vid_font40[0] = malloc(57344))) {
-		printf("Failed\n");
+		printf("Failed: %s\n", strerror(errno));
+
 		return 1;
 	}
 	if (!(vid_font40[1] = malloc(57344))) {
-		printf("Failed\n");
+		printf("Failed: %s\n", strerror(errno));
+
 		return 1;
 	}
-	path = EMUL_expandPath(FONT40_FILE);
-	if ((fp = fopen(path,"rb")) == NULL) {
-		printf("Failed\n");
+
+    fd = openDataFile(FONT40_FILE);
+
+    if (fd < 0) {
+		printf("Failed: %s\n", strerror(errno));
+
 		return 1;
 	}
-	if (fread(vid_font40[0],1,57344,fp) != 57344) {
-		printf("Failed\n");
-		fclose(fp);
+	if (read(fd, vid_font40[0], 57344) != 57344) {
+		printf("Failed: %s\n", strerror(errno));
+
+		close(fd);
+
 		return 1;
 	}
-	if (fread(vid_font40[1],1,57344,fp) != 57344) {
-		printf("Failed\n");
-		fclose(fp);
+	if (read(fd, vid_font40[1], 57344) != 57344) {
+		printf("Failed: %s\n", strerror(errno));
+
+		close(fd);
+
 		return 1;
 	}
-	fclose(fp);
+
+	close(fd);
+
 	printf("Done\n");
 
 	printf("    - Loading 80-column font: ");
 	if (!(vid_font80[0] = malloc(28672))) {
-		printf("Failed\n");
+		printf("Failed: %s\n", strerror(errno));
+
 		return 1;
 	}
 	if (!(vid_font80[1] = malloc(28672))) {
-		printf("Failed\n");
+		printf("Failed: %s\n", strerror(errno));
+
 		return 1;
 	}
-	path = EMUL_expandPath(FONT80_FILE);
-	if ((fp = fopen(path,"rb")) == NULL) {
-		printf("Failed\n");
+
+	fd = openDataFile(FONT80_FILE);
+
+    if (fd < 0) {
+		printf("Failed: %s\n", strerror(errno));
+
 		return 1;
 	}
-	if (fread(vid_font80[0],1,28672,fp) != 28672) {
-		printf("Failed\n");
-		fclose(fp);
+	if (read(fd, vid_font80[0], 28672) != 28672) {
+		printf("Failed: %s\n", strerror(errno));
+
+		close(fd);
+
 		return 1;
 	}
-	if (fread(vid_font80[1],1,28672,fp) != 28672) {
-		printf("Failed\n");
-		fclose(fp);
+	if (read(fd, vid_font80[1], 28672) != 28672) {
+		printf("Failed: %s\n", strerror(errno));
+
+		close(fd);
+
 		return 1;
 	}
-	fclose(fp);
+
+	close(fd);
+
 	printf("Done\n");
 
 	return 0;

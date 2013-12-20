@@ -21,13 +21,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 #ifdef EMX_HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif 	/* end of #ifdef EMX_HAVE_SYS_TYPES_H */
 #include <sys/stat.h>
+#include <fcntl.h>
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
+
 #include "adb.h"
 #include "disks.h"
 #include "emul.h"
@@ -75,9 +78,7 @@ mem_pagestruct	mem_pages[65536];
 
 int MEM_init(void)
 {
-	int		i,rom_base;
-	char		*path;
-	FILE		*fp;
+	int i,fd,rom_base;
 	struct stat	stats;
 
 	if (g_ram_size < 1) g_ram_size = 1;
@@ -111,34 +112,47 @@ int MEM_init(void)
 	printf("Done\n");
 
 	printf("    - Loading ROM image: ");
-	path = EMUL_expandPath(ROM_FILE);
-	if (stat(path, &stats)) {
-		printf("Failed\n");
+    fd = openDataFile(ROM_FILE);
+    if (fd < 0) {
+		printf("Failed: %s\n", strerror(errno));
+
 		return 2;
 	}
+
+    fstat(fd, &stats);
+
 	if (stats.st_size == 131072) {
 		mem_rom03 = 0;
 	} else if (stats.st_size == 262144) {
 		mem_rom03 = 1;
 	} else {
-		printf("Failed\n");
+		printf("Failed (unknown ROM size %d)\n", stats.st_size);
+
+        close(fd);
+
 		return 2;
 	}
+
 	rom_memory = malloc(stats.st_size);
 	if (rom_memory == NULL) {
-		printf("Failed\n");
+		printf("Unable to allocate memory for ROM image: %s\n", strerror(errno));
+
+        close(fd);
+
 		return 2;
 	}
 	
-	if ((fp = fopen(path,"rb")) == NULL) {
-		printf("Failed\n");
+	if (read(fd, rom_memory, stats.st_size) != stats.st_size) {
+		printf("Failed: %s\n", strerror(errno));
+
+        close(fd);
+        free(rom_memory);
+
 		return 2;
 	}
-	if (fread(rom_memory,1,stats.st_size,fp) != stats.st_size) {
-		printf("Failed\n");
-		return 2;
-	}
-	fclose(fp);
+
+    close(fd);
+
 	printf("Done\n");
 
 	if (mem_rom03) {
