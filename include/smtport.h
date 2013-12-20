@@ -1,8 +1,6 @@
 #ifndef _SMARTPORT_H_
 #define _SMARTPORT_H_
 
-#define NUM_SMPT_DEVS	14
-
 extern byte	smpt_rom[256];
 
 int		SMPT_init(void);

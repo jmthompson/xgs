@@ -361,14 +361,14 @@ byte ADB_setStatus(byte val)
 
 byte ADB_triggerPaddles(byte val)
 {
-	adb_pdl0_time = cpu_cycle_count + (adb_pdl0 * 11);
-	adb_pdl1_time = cpu_cycle_count + (adb_pdl1 * 11);
+	adb_pdl0_time = g_cpu_cycles + (adb_pdl0 * 11);
+	adb_pdl1_time = g_cpu_cycles + (adb_pdl1 * 11);
 	return 0;
 }
 
 byte ADB_readPaddle0(byte val)
 {
-	if (cpu_cycle_count < adb_pdl0_time) {
+	if (g_cpu_cycles < adb_pdl0_time) {
 		return 0x80;
 	} else {
 		return 0x00;
@@ -377,7 +377,7 @@ byte ADB_readPaddle0(byte val)
 
 byte ADB_readPaddle1(byte val)
 {
-	if (cpu_cycle_count < adb_pdl1_time) {
+	if (g_cpu_cycles < adb_pdl1_time) {
 		return 0x80;
 	} else {
 		return 0x00;

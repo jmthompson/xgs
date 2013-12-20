@@ -357,15 +357,15 @@ byte VID_setColorReg(byte val)
 byte VID_getVGCIntReg(byte val)
 {
 	val = vid_vgcint & 0xF8;
-	if (emul_onesecirq) val |= 0x04;
-	if (emul_scanirq) val |= 0x02;
+	if (g_onesecirq_enable) val |= 0x04;
+	if (g_scanirq_enable) val |= 0x02;
 	return val;
 }
 
 byte VID_setVGCIntReg(byte val)
 {
-	emul_onesecirq = (val & 0x04)? 1 : 0;
-	emul_scanirq = (val & 0x02)? 1 : 0;
+	g_onesecirq_enable = (val & 0x04)? 1 : 0;
+	g_scanirq_enable = (val & 0x02)? 1 : 0;
 	return 0;
 }
 
