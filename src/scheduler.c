@@ -81,7 +81,7 @@ int schedulerInit() {
 
     printf("resolution is %d ns\n", ts.tv_nsec);
 
-    emul_last_time = EMUL_getCurrentTime();
+	emul_last_time = schedulerGetTime();
 
     for (i = 0 ; i < 60 ; i++) {
         emul_times[i] = 0.0;
@@ -157,16 +157,22 @@ void schedulerStop(int val) {
     globalShutdown();
 }
 
+long schedulerGetTime() {
+	struct timeval tv;
+
+	gettimeofday(&tv, NULL);
+    
+    return (long) (tv.tv_sec * 1000) + (tv.tv_usec / 1000); 
+}
+
 void schedulerHousekeeping() {
     long   cycles;
     float  this_time,last_time,diff;
-	struct timeval tv;
 
     cycles = g_cpu_cycles - emul_last_cycles;
     emul_last_cycles = g_cpu_cycles;
 
-	gettimeofday(&tv, NULL);
-	emul_this_time = (tv.tv_sec * 1000) + (tv.tv_usec / 1000); 
+	emul_this_time = schedulerGetTime();
 
 	this_time = emul_this_time;
 	last_time = emul_last_time;
@@ -204,7 +210,7 @@ void schedulerTick(int val)
 
     g_cpu_cycles += num_cycles;
 
-    EMUL_hardwareTick(ticks, bigticks);
+    hardwareTick(ticks, bigticks);
 
     ticks++;
 

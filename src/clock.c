@@ -27,7 +27,9 @@
 #include "xgs.h"
 
 #include <stdio.h>
+#include <fcntl.h>
 #include <time.h>
+#include <unistd.h>
 #include "clock.h"
 #include "emul.h"
 #include "video.h"
@@ -57,23 +59,25 @@ int	clk_addr;
 
 int CLK_init()
 {
-	FILE	*fp;
-	char	*path;
+    int fd;
 
 	printf("\nInitialzing clock and battery RAM\n");
 	printf("    - Loading battery RAM: ");
-	path = EMUL_expandPath(BRAM_FILE);
-	fp = fopen(path,"rb");
-	if (fp == NULL) {
+
+    fd = openUserFile(BRAM_FILE, O_RDONLY);
+
+    if (fd < 0) {
 		printf("Failed\n");
-	} else {
-		if (fread(bram,1,256,fp) != 256) {
+	}
+    else {
+		if (read(fd, bram, 256) != 256) {
 			printf("Failed\n");
 		} else {
 			printf("Done\n");
 		}
-		fclose(fp);
+		close(fd);
 	}
+
 	return 0;
 }
 
@@ -90,23 +94,27 @@ void CLK_reset()
 
 void CLK_shutdown()
 {
-	FILE	*fp;
-	char	*path;
+    int fd;
 
 	printf("\nShutting down the clock and battery RAM\n");
 	printf("    - Saving battery RAM: ");
-	path = EMUL_expandPath(BRAM_FILE);
-	fp = fopen(path,"wb");
-	if (fp == NULL) {
+
+    fd = openUserFile(BRAM_FILE, O_CREAT|O_WRONLY);
+
+    if (fd < 0) {
 		printf("Failed\n");
+
 		return;
 	}
-	if (fwrite(bram,1,256,fp) != 256) {
+
+	if (write(fd, bram, 256) != 256) {
 		printf("Failed\n");
-		return;
 	}
-	fclose(fp);
-	printf("Done\n");
+    else {
+        printf("Done\n");
+    }
+
+    close(fd);
 }
 
 byte CLK_getData(byte val)

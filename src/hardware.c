@@ -96,7 +96,7 @@ int hardwareInit() {
 
     m65816_init();
 
-    schedulerSetCPUSpeed(2.5);
+    schedulerSetTargetSpeed(2.5);
     hardwareReset();
 
     return 0;
