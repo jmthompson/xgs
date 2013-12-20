@@ -63,10 +63,10 @@ void ADB_inputUpdate()
  		XNextEvent( vid_display, &event );
  		switch( event.xany.type ) {
  		case ClientMessage:
- 			if((Atom)event.xclient.data.l[0] == wm_delete) EMUL_shutdown();
+ 			if((Atom)event.xclient.data.l[0] == wm_delete) GUI_shutdown();
  			break;
  		case DestroyNotify:
- 			EMUL_shutdown();
+ 			GUI_shutdown();
  			break;
 		case MapNotify:
 			if (event.xmap.window == vid_main_window)
@@ -235,7 +235,7 @@ void ADB_inputUpdate()
  				if (ski_modifier_reg & 0x02) EMUL_reset();
  				break;
  			case XK_End:
- 				if (ski_modifier_reg & 0x02) EMUL_shutdown();
+ 				if (ski_modifier_reg & 0x02) GUI_shutdown();
  				break;
  			case XK_Pause:
 				EMUL_nmi();

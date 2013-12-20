@@ -181,7 +181,7 @@ void IWM_update()
 	int	ret,track_num,head,i,j,start,len;
 
 	if (iwm_motor_on && iwm_motor_off) {
-		if (iwm_motor_off_vbl_count <= emul_vbl_count) {
+		if (iwm_motor_off_vbl_count <= g_vbl_count) {
 			iwm_motor_on = 0;
 			iwm_motor_off = 0;
 		}
@@ -378,7 +378,7 @@ void IWM_touchSwitches(int loc)
 				/* 1 second delay */
 				if (iwm_motor_on && !iwm_motor_off) {
 					iwm_motor_off = 1;
-					iwm_motor_off_vbl_count = emul_vbl_count
+					iwm_motor_off_vbl_count = g_vbl_count
 									+ 60;
 				}
 			}
@@ -483,7 +483,7 @@ int IWM_readStatus35()
 					return (iwm_drive35[drive].disk_switched != 0);
 					break;
 			case 0x07:	/* tachometer */
-					return (cpu_cycle_count & 1);
+					return (g_cpu_cycles & 1);
 					break;
 			case 0x08:	/* lower head activate */
 					iwm_drive35[drive].head = 0;
@@ -886,17 +886,17 @@ int IWM_readData525()
 	drive = iwm_drive_select;
 	dsk = &(iwm_drive525[drive]);
 
-	if (!dsk->disk) return (cpu_cycle_count & 0xFF) | 0x80;
+	if (!dsk->disk) return (g_cpu_cycles & 0xFF) | 0x80;
 
 	IWM_unixToNib525(dsk, dsk->cur_qtr_track >> 2);
 
 	trk = &(dsk->track[dsk->cur_qtr_track]);
-	if (!trk->track_valid) return (cpu_cycle_count & 0xFF) | 0x80;
+	if (!trk->track_valid) return (g_cpu_cycles & 0xFF) | 0x80;
 
 	last_read = dsk->time_last_read;
 	track_len = trk->track_len;
 
-	bits_read = (cpu_cycle_count - last_read) >> 2;
+	bits_read = (g_cpu_cycles - last_read) >> 2;
 	pos = dsk->nib_pos;
 	size = trk->nib_area[pos];
 
@@ -920,9 +920,9 @@ int IWM_readData525()
 
 		last_read += (skip_nibs * 32);
 
-		if (bits_read >= 10 || cpu_cycle_count - last_read > 60) {
+		if (bits_read >= 10 || g_cpu_cycles - last_read > 60) {
 			/* We're way off, adjust last_read */
-			last_read = (cpu_cycle_count - 4*8) & ( ~ 0x1F);
+			last_read = (g_cpu_cycles - 4*8) & ( ~ 0x1F);
 			dsk->time_last_read = last_read;
 		}
 
@@ -973,11 +973,11 @@ void IWM_writeData525(int val)
 
 	last_read = dsk->time_last_read;
 
-	bits_read = (cpu_cycle_count - last_read) >> 2;
+	bits_read = (g_cpu_cycles - last_read) >> 2;
 
 	size = bits_read;
 
-	if (!val) val = cpu_cycle_count & 0xFF;
+	if (!val) val = g_cpu_cycles & 0xFF;
 
 	IWM_nibOut525(dsk, trk, val, bits_read);
 
@@ -1386,12 +1386,12 @@ int IWM_readData35()
 
 	drive = iwm_drive_select;
 	dsk = &(iwm_drive35[drive]);
-	if (!dsk->disk) return (cpu_cycle_count & 0xFF) | 0x80;
+	if (!dsk->disk) return (g_cpu_cycles & 0xFF) | 0x80;
 
 	IWM_unixToNib35(dsk, dsk->cur_track);
 
 	trk = &(dsk->track[dsk->cur_track * 2 + dsk->head]);
-	if (!trk->track_valid) return (cpu_cycle_count & 0xFF) | 0x80;
+	if (!trk->track_valid) return (g_cpu_cycles & 0xFF) | 0x80;
 
 	/* Assume everyone is reading 3.5" disks with latch mode enabled */
 
@@ -1420,7 +1420,7 @@ void IWM_writeData35(int val)
 	if (!trk->track_valid) return;
 	trk->track_dirty = 1;
 
-	if (!val) val = cpu_cycle_count & 0xFF;
+	if (!val) val = g_cpu_cycles & 0xFF;
 	IWM_nibOut35(dsk, trk, val, 8);
 }
 

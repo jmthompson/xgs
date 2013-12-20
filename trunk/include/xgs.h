@@ -43,10 +43,17 @@
 // Name of the XGS folder in DATA_DIR
 #define XGS_DATA_DIR "xgs"
 
+// Name of the XGS folder in the user's home directory
+#define XGS_USER_DIR  ".xgs"
+
 #define ROM_FILE	"xgs.rom"
 #define BRAM_FILE	"xgs.ram"
 #define FONT40_FILE	"xgs40.fnt"
 #define FONT80_FILE	"xgs80.fnt"
+
+/* Number of smartport devices available on the emulated smartport */
+
+#define NUM_SMPT_DEVS	14
 
 /* These two are needed everywhere to get vital definitions */
 
@@ -66,5 +73,20 @@ typedef union {
 	word32	L;
 	struct	{ byte B1,B2,B3,B4; } B;
 } lswap;
+
+/*
+ * Globals
+ */
+
+extern float g_fast_mhz;
+extern int g_ram_size;
+extern long g_cpu_cycles;
+extern int g_vbl_count;
+extern int g_vbl;
+extern int g_vblirq_enable;
+extern int g_qtrsecirq_enable;
+extern int g_onesecirq_enable;
+extern int g_scanirq_enable;
+extern int g_fastmode;
 
 #endif /* _XGS_H_ */

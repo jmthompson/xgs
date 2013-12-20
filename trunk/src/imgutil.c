@@ -422,7 +422,7 @@ int imageToDiskCopy(char *source, char *dest)
 		return 4;
 	}
 
-	bzero(&dcimage, sizeof(dcimage));
+	memset(&dcimage, 0, sizeof(dcimage));
 
 	printf("\nGenerated DiskCopy image statistics:\n\n");
 

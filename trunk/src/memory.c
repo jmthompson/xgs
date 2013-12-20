@@ -32,10 +32,9 @@
 #include "disks.h"
 #include "emul.h"
 #include "iwm.h"
+#include "scheduler.h"
 #include "smtport.h"
 #include "video.h"
-
-int	mem_ramsize;
 
 int	mem_shadow_text;
 int	mem_shadow_hires1;
@@ -81,8 +80,8 @@ int MEM_init(void)
 	FILE		*fp;
 	struct stat	stats;
 
-	if (mem_ramsize < 1) mem_ramsize = 1;
-	if (mem_ramsize > 8) mem_ramsize = 8;
+	if (g_ram_size < 1) g_ram_size = 1;
+	if (g_ram_size > 8) g_ram_size = 8;
 
 	printf("    - Allocating 128 KB for slow RAM: ");
 	slow_memory = malloc(2*65536);
@@ -93,13 +92,13 @@ int MEM_init(void)
 	memset(slow_memory, 0, 2*65536);
 	printf("Done\n");
 
-	printf("    - Allocating %d MB for fast RAM: ",mem_ramsize);
-	fast_memory = malloc(mem_ramsize * 1048576);
+	printf("    - Allocating %d MB for fast RAM: ",g_ram_size);
+	fast_memory = malloc(g_ram_size * 1048576);
 	if (fast_memory == NULL) {
 		printf("Failed\n");
 		return 1;
 	}
-	memset(fast_memory, 0, mem_ramsize * 1048576);
+	memset(fast_memory, 0, g_ram_size * 1048576);
 	printf("Done\n");
 
 	printf("    - Allocating 128 KB save RAM: ");
@@ -155,11 +154,11 @@ int MEM_init(void)
 	/* Initialize all pages */
 
 	printf("\nInitializing emulator memory\n");
-	for (i = 0x0000 ; i < mem_ramsize * 4096 ; i++) {
+	for (i = 0x0000 ; i < g_ram_size * 4096 ; i++) {
 		mem_pages[i].readPtr = mem_pages[i].writePtr = fast_memory + (i * 256);
 		mem_pages[i].readFlags = mem_pages[i].writeFlags = 0;
 	}
-	for (i = mem_ramsize * 4096 ; i < 0xE000 ; i++) {
+	for (i = g_ram_size * 4096 ; i < 0xE000 ; i++) {
 		mem_pages[i].readPtr = mem_pages[i].writePtr = junk_memory;
 		mem_pages[i].readFlags = mem_pages[i].writeFlags = MEM_FLAG_INVALID;
 	}
@@ -626,7 +625,7 @@ byte MEM_setShadowReg(byte val)
 byte MEM_getCYAReg(byte val)
 {
 	val = 0;
-	if (emul_speed) val |= 0x80;
+	if (g_fastmode) val |= 0x80;
 	if (iwm_slot7_motor) val |= 0x08;
 	if (iwm_slot6_motor) val |= 0x04;
 	if (iwm_slot5_motor) val |= 0x02;
@@ -636,15 +635,15 @@ byte MEM_getCYAReg(byte val)
 
 byte MEM_setCYAReg(byte val)
 {
-	emul_speed = (val & 0x80)? 1 : 0;
+	g_fastmode = (val & 0x80)? 1 : 0;
 	iwm_slot7_motor = (val & 0x08)? 1 : 0;
 	iwm_slot6_motor = (val & 0x04)? 1 : 0;
 	iwm_slot5_motor = (val & 0x02)? 1 : 0;
 	iwm_slot4_motor = (val & 0x01)? 1 : 0;
-	if (emul_speed) {
-		emul_target_speed = 2.5;
+	if (g_fastmode) {
+        schedulerSetTargetSpeed(g_fast_mhz);
 	} else {
-		emul_target_speed = 1.0;
+        schedulerSetTargetSpeed(1.0);
 	}
 	return 0;
 }
@@ -652,8 +651,8 @@ byte MEM_setCYAReg(byte val)
 byte MEM_getIntEnReg(byte val)
 {
 	val = 0;
-	if (emul_qtrsecirq) val |= 0x10;
-	if (emul_vblirq) val |= 0x08;
+	if (g_qtrsecirq_enable) val |= 0x10;
+	if (g_vblirq_enable) val |= 0x08;
 	if (adb_m2mouseswirq) val |= 0x04;
 	if (adb_m2mousemvirq) val |= 0x02;
 	if (adb_m2mouseenable) val |= 0x01;
@@ -665,8 +664,8 @@ byte MEM_setIntEnReg(byte val)
 	adb_m2mouseenable = (val & 0x01)? 1 : 0;
 	adb_m2mousemvirq = (val & 0x02)? 1 : 0;
 	adb_m2mouseswirq = (val & 0x04)? 1 : 0;
-	emul_vblirq = (val & 0x08)? 1 : 0;
-	emul_qtrsecirq = (val & 0x10)? 1 : 0;
+	g_vblirq_enable = (val & 0x08)? 1 : 0;
+	g_qtrsecirq_enable = (val & 0x10)? 1 : 0;
 	return 0;
 }
 
