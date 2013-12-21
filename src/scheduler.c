@@ -19,12 +19,8 @@
  * hardware updates.
  */
 
-#include <stdio.h>
-#include <stdlib.h>
 #include <signal.h>
-#include <string.h>
 #include <time.h>
-#include <errno.h>
 
 #include "xgs.h"
 #include "m65816.h"
@@ -64,22 +60,18 @@ int schedulerInit() {
     sev.sigev_signo  = SIGUSR1;
 #endif
 
-    printf("\nInitializing scheduler\n");
-
     clock_getres(CLOCK_MONOTONIC, &ts);
-    printf("    - Creating master time: ");
+    printf("Native timer resolution is %d ns\n", ts.tv_nsec);
 
 #ifdef HAVE_TIMERFD
     if ((master_timer = timerfd_create(CLOCK_MONOTONIC, 0)) < 0) {
 #else
     if (timer_create(CLOCK_MONOTONIC, &sev, &master_timer) < 0) {
 #endif
-        printf("Failed (%s)\n", strerror(errno));
+        perror("Error creating master timer");
 
         return errno;
     }
-
-    printf("resolution is %d ns\n", ts.tv_nsec);
 
 	emul_last_time = schedulerGetTime();
 
@@ -140,7 +132,7 @@ void schedulerStart() {
 void schedulerStop(int val) {
     struct sigaction  sa;
 
-    sa.sa_handler = SIG_IGN;
+    sa.sa_handler = SIG_DFL;
     sa.sa_flags   = 0;
     sigemptyset(&sa.sa_mask);
 
@@ -154,7 +146,8 @@ void schedulerStop(int val) {
     sigaction(SIGUSR1, &sa, NULL);
 #endif
 
-    globalShutdown();
+    hardwareShutdown();
+    exit(0);
 }
 
 long schedulerGetTime() {

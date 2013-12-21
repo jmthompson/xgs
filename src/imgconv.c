@@ -19,9 +19,6 @@
 
 #include "xgs.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include "disks.h"
 
 /* Description of an XGS image file header.		*/

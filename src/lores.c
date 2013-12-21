@@ -19,7 +19,6 @@
 
 #include "xgs.h"
 #include "video.h"
-#include "video-output.h"
 
 /* No use duplicating this when we can borrow it from    */
 /* the text mode drivers!                */
@@ -31,7 +30,7 @@ static void
 VID_refreshLoresRow (int row, word32 addr)
 {
     int    col,i,val;
-    PIXEL    *scrn,top,btm;
+    pixel_t    *scrn,top,btm;
 
     for (col = 0 ; col < 40 ; col++, addr++) {
         val = slow_memory[addr];
@@ -115,7 +114,7 @@ static void
 VID_refreshDLoresRow (int row, word32 addr)
 {
     int    col,i,val;
-    PIXEL    *scrn,top,btm;
+    pixel_t    *scrn,top,btm;
 
     for (col = 0 ; col < 40 ; col++, addr++) {
         val = slow_memory[addr];

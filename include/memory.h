@@ -72,8 +72,8 @@ typedef struct {
 
 #define MEM_FLAG_SHADOW_E0	0x0001
 #define MEM_FLAG_SHADOW_E1	0x0002
-#define MEM_FLAG_IO		0x0004
-#define MEM_FLAG_SPECIAL	0x0008
+#define MEM_FLAG_IO		    0x0004
+#define MEM_FLAG_SPECIAL    0x0008
 #define MEM_FLAG_INVALID	0x8000
 
 /* Tables for determining which bytes in slow_memory have changed, to	*/
@@ -88,10 +88,9 @@ extern mem_pagestruct	mem_pages[65536];
 
 extern int	mem_rom03;
 
-extern int	MEM_init(void);
-extern void	MEM_update(void);
-extern void	MEM_reset(void);
-extern void	MEM_shutdown(void);
+extern int	memoryInit(void);
+extern void	memoryShutdown(void);
+extern void	memoryReset(void);
 
 extern void	MEM_rebuildMainMem(void);
 extern void	MEM_rebuildAltZpMem(void);

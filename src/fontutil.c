@@ -19,9 +19,6 @@
 
 #include "xgs.h"
 
-#include <stdio.h>
-#include <string.h>
-
 /* Function prototypes */
 
 int	buildFont40(char *, char *);

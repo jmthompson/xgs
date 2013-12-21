@@ -18,43 +18,32 @@
 
 #include "xgs.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#ifdef HAVE_STRING_H
-#include <string.h>
-#endif
-#include <signal.h>
-#ifdef HAVE_UNISTD_H
-#include <unistd.h>
-#endif
+#ifdef HAVE_LIMITS_H
 #include <limits.h>
-#include "emul.h"
+#endif
+
+#include "hardware.h"
 #include "sound.h"
 
-int    snd_enable;
-
 static int    glu_ctrl_reg,glu_next_val;
-static word16    glu_addr_reg;
-
-static int    sample_rate;
-
+static word16 glu_addr_reg;
 static int    sr,num_osc;
 
-const static int    wp_masks[8] = { 0xFF, 0xFE, 0xFC, 0xF8, 0xF0, 0xE0, 0xC0, 0x80 };
-const static int    acc_masks[8] = { 0x00FF, 0x01FF, 0x03FF, 0x07FF, 0x0FFF, 0x1FFF, 0x3FFF, 0x7FFF };
+const static int wp_masks[8]  = { 0xFF, 0xFE, 0xFC, 0xF8, 0xF0, 0xE0, 0xC0, 0x80 };
+const static int acc_masks[8] = { 0x00FF, 0x01FF, 0x03FF, 0x07FF, 0x0FFF, 0x1FFF, 0x3FFF, 0x7FFF };
 
-const static int    sample_rates[32] = {
-                 298295, 223722, 178977, 149148, 127841, 111861,  99432,  89489,
-                  81353,  74574,  68837,  63920,  59659,  55930,  52640,  49716,
-                  47099,  44744,  42614,  40677,  38908,  37287,  35795,  34419,
-                  33144,  31960,  30858,  29829,  28867,  27965,  27118,  26320
-               };
+const static int sample_rates[32] = {
+    298295, 223722, 178977, 149148, 127841, 111861,  99432,  89489,
+     81353,  74574,  68837,  63920,  59659,  55930,  52640,  49716,
+     47099,  44744,  42614,  40677,  38908,  37287,  35795,  34419,
+     33144,  31960,  30858,  29829,  28867,  27965,  27118,  26320
+};
 
 static int    doc_registers[256];
-static byte    doc_ram[65536];
+static byte   doc_ram[65536];
 
 static int    last_addr[32];
-static word32    osc_acc[32];
+static word32 osc_acc[32];
 static int    osc_enable[32];
 static int    osc_chan[32];
 static int    osc_freq[32];
@@ -66,60 +55,73 @@ static int    osc_res[32];
 static int    osc_mode[32];
 static int    osc_shift[32];
 static int    osc_accmask[32];
-static byte    *osc_addrbase[32];
+static byte  *osc_addrbase[32];
 
 static int    irq_stack[IRQ_STACK_SIZE];
 static int    irq_index;
 
-word32 snd_click_sample;
+static word32 snd_click_sample;
 
-snd_sample_struct *output_buffer;
-int output_index;
-int output_buffer_size;
+static snd_sample_struct *sample_buffer;
+static int buffer_index, buffer_size;
+static SDL_mutex *buffer_mutex;
 
-int SND_init()
+static void bufferCallback(void *, Uint8 *, int len);
+static void enableOscillators(void);
+static void scanOscillators(snd_sample_struct *);
+static void updateOscillator(int);
+
+static void pushIRQ(int);
+static int  pullIRQ(void);
+
+int soundInit()
 {
-    int    i;
+    SDL_AudioSpec wanted, actual;
+    int i;
 
-    output_buffer_size = OUTPUT_BUFFER_SIZE;
-
-    printf("\nInitializing sound system\n");
-
-    for (i = 0xEA00 ; i < 0xEB00 ; i++) {
-        mem_pages[i].readPtr = mem_pages[i].writePtr = doc_ram+((i-0xEA00) * 256);
-        mem_pages[i].readFlags = mem_pages[i].writeFlags = 0;
-    }
-
-    printf("     - Allocating output buffer: ");
-
-    if (output_buffer = malloc(output_buffer_size * sizeof(snd_sample_struct))) {
-        printf("Done.\n");
-    }
-    else {
-        printf("FAILED\n");
+    buffer_mutex = SDL_CreateMutex();
+    if (buffer_mutex == NULL) {
+        printSDLError("Error creating mutex");
 
         return 1;
     }
 
-    if (snd_enable) {
-        printf("    - Initialzing sound driver: ");
-        sample_rate = SND_outputInit(SAMPLE_RATE);
-        if (sample_rate) {
-            printf("Done.\n");
-            printf("    - Sound output is at %d Hz.\n",
-                sample_rate);
-        } else {
-            printf("Failed.\n");
-            printf("    - SOUND OUTPUT DISABLED.\n");
-        }
-    } else {
-        printf("    - SOUND OUTPUT DISABLED.\n");
-        sample_rate = 0;
+    SDL_zero(wanted);
+
+    wanted.freq     = SAMPLE_RATE;
+    wanted.format   = AUDIO_U8;
+    wanted.channels = 2;
+    wanted.samples  = OUTPUT_BUFFER_SIZE;
+    wanted.callback = &bufferCallback;
+
+    if (SDL_OpenAudio(&wanted, &actual) < 0) {
+        printSDLError("Error opening audio device");
+
+        return 1;
     }
+
+    buffer_size = actual.size * 2;
+
+    sample_buffer = malloc(buffer_size * sizeof(snd_sample_struct));
+    if (sample_buffer == NULL) {
+        perror("Unable to allocate sound buffer");
+
+        SDL_CloseAudio();
+
+        return 1;
+    }
+
+    printf("Got audio buffer size of %d samples\n", buffer_size);
+
+    for (i = 0xEA00 ; i < 0xEB00 ; i++) {
+        mem_pages[i].readPtr   = mem_pages[i].writePtr = doc_ram+((i-0xEA00) * 256);
+        mem_pages[i].readFlags = mem_pages[i].writeFlags = 0;
+    }
+
     return 0;
 }
 
-void SND_reset()
+void soundReset()
 {
     int    i;
 
@@ -130,7 +132,7 @@ void SND_reset()
         osc_acc[i] = 0;
         last_addr[i] = 0;
         osc_enable[i] = 0;
-        SND_updateOscillator(i);
+        updateOscillator(i);
     }
 
     doc_registers[0xA0] = 0x00;
@@ -141,30 +143,47 @@ void SND_reset()
 
     irq_index = 0;
 
-    output_index = 0;
+    buffer_index = buffer_size;
 
-    SND_enableOscillators();
+    enableOscillators();
+
+    SDL_PauseAudio(0);
 }
 
-void SND_shutdown()
+void soundShutdown()
 {
-    printf("\nShutting down sound system\n");
-    if (sample_rate) SND_outputShutdown();
+    SDL_CloseAudio();
 }
 
-byte SND_clickSpeaker(byte val)
+void soundUpdate()
+{
+    snd_sample_struct sample;
+
+    scanOscillators(&sample);
+
+    if (SDL_LockMutex(buffer_mutex) == 0) {
+        if (buffer_index > 0) {
+            buffer_index--;
+        }
+        else {
+            printf("uh oh, buffer overflow!\n");
+        }
+
+        sample_buffer[buffer_index].left  = sample.left  + snd_click_sample;
+        sample_buffer[buffer_index].right = sample.right + snd_click_sample;
+
+        SDL_UnlockMutex(buffer_mutex);
+    }
+    else {
+        printSDLError("Failed to lock sound mutex");
+    }
+}
+
+byte soundClickSpeaker(byte val)
 {
     snd_click_sample ^= SHRT_MAX;
+
     return 0;
-}
-
-void SND_generateSamples(snd_sample_struct *input, byte *output, int len) {
-    int  i;
-
-    for (i = 0 ; i < len ; i++) {
-        output[i*2] = (byte) ((input[i].left >> 10) + 128);
-        output[i*2+1] = (byte) ((input[i].right >> 10) + 128);
-    }
 }
 
 byte SND_readSoundCtl(byte val)
@@ -182,7 +201,7 @@ byte SND_readSoundData(byte val)
     } else {
         reg = glu_addr_reg & 0xFF;
         if (reg == 0xE0) {
-            osc_num = SND_pullIRQ();
+            osc_num = pullIRQ();
             if (osc_num != -1) {
                 doc_registers[0xE0] = (osc_num << 1) | 0x01;
             } else {
@@ -224,12 +243,12 @@ byte SND_writeSoundData(byte val)
         } else {
             doc_registers[reg] = val;
         }
-        if (reg == 0xE1) SND_enableOscillators();
+        if (reg == 0xE1) enableOscillators();
         if ((reg & 0xE0) == 0xA0) {
             osc_acc[reg & 0x1F] = 0;
             last_addr[reg & 0x1F] = 0;
         }
-        if (reg < 0xE0) SND_updateOscillator(reg & 0x1F);
+        if (reg < 0xE0) updateOscillator(reg & 0x1F);
     }
     if (glu_ctrl_reg & 0x20) glu_addr_reg++;
     return 0;
@@ -247,23 +266,6 @@ byte SND_writeSoundAddrH(byte val)
     return 0;
 }
 
-void SND_pushIRQ(int osc_num)
-{
-    if (irq_index == IRQ_STACK_SIZE) return;
-    if (!irq_index) m65816_addIRQ();
-    irq_stack[irq_index++] = osc_num;
-}
-
-int SND_pullIRQ(void)
-{
-    int    osc_num;
-
-    if (!irq_index) return -1;
-    osc_num = irq_stack[--irq_index];
-    if (!irq_index) m65816_clearIRQ();
-    return osc_num;
-}
-
 /* Enable oscillators because register $E1 was changed. This is a bit    */
 /* tricky because of sync and swap modes, which pair even/odd registers    */
 /* together. In sync mode, odd oscillators only start if the adjacent    */
@@ -272,7 +274,7 @@ int SND_pullIRQ(void)
 /* oscillator finishes. For free-run and one-shot mode just start the    */
 /* oscillator.                                */
 
-void SND_enableOscillators(void)
+void enableOscillators(void)
 {
     int    i,mode,last_mode;
 
@@ -300,12 +302,117 @@ void SND_enableOscillators(void)
         last_mode = mode;
         doc_registers[0xA0 + i] = (doc_registers[0xA0 + i ] & 0xFE) +
                        !osc_enable[i];
-        SND_updateOscillator(i);
+        updateOscillator(i);
     }
     sr = sample_rates[num_osc];
 }
 
-void SND_updateOscillator(int osc_num)
+static void bufferCallback(void *userdata, Uint8 *stream, int len)
+{
+    int i = 0;
+
+    if (SDL_LockMutex(buffer_mutex) == 0) {
+        int t1 = buffer_size - buffer_index;
+        int t2 = len / 2;
+
+        if (t2 > t1) {
+            printf("uh oh, bufer underrun. samples_wanted = %d, samples_avail = %d\n", t2, t1);
+        }
+
+        while(i < len) {
+            stream[i++] = (Uint8) ((sample_buffer[buffer_index].left  >> 10) + 128);
+            stream[i++] = (Uint8) ((sample_buffer[buffer_index].right >> 10) + 128);
+
+            if (buffer_index < buffer_size) {
+                buffer_index++;
+            }
+        }
+
+        if (buffer_index < buffer_size) {
+            printf("uh oh, exiting sound callback with buffer_index = %d, buffer_size = %d, len = %d\n", buffer_index, buffer_size, len);
+        }
+
+        SDL_UnlockMutex(buffer_mutex);
+    }
+}
+
+static void scanOscillators(snd_sample_struct *out_sample)
+{
+    int addr,this_sample;
+    int osc_num;
+    snd_sample_struct sample;
+
+    sample.left = 0;
+    sample.right = 0;
+    for (osc_num = 0 ; osc_num < num_osc; osc_num++) {
+        if (!osc_enable[osc_num]) continue;
+
+        /* Get the address of the next sample for this    */
+        /* oscillator.                    */
+
+        addr = (osc_acc[osc_num] >> osc_shift[osc_num]) &
+            osc_accmask[osc_num];
+
+        /* The new address may be past the end of the    */
+        /* wavetable.If it is, halt the oscillator.    */
+
+        if (addr < last_addr[osc_num]) {
+            if (!osc_mode[osc_num]) {
+                last_addr[osc_num] = addr;
+                this_sample = osc_addrbase[osc_num][addr];
+                if (osc_int[osc_num]) pushIRQ(osc_num);
+                osc_acc[osc_num] += osc_freq[osc_num];
+            } else {
+                osc_enable[osc_num] = 0;
+            }
+        } else {
+            last_addr[osc_num] = addr;
+            this_sample = osc_addrbase[osc_num][addr];
+            osc_acc[osc_num] += osc_freq[osc_num];
+        }
+
+        /* If it's a zero sample, halt the oscillator */
+
+        if (!this_sample) osc_enable[osc_num] = 0;
+
+        /* At this point, if we are now halted, then    */
+        /* the oscillator was running before and        */
+        /* was halted by us. Now we need to do some     */
+        /* housekeeping: the halted oscillator may need */
+        /* to generate an interrupt, and if it's an     */
+        /* oscillator in swap mode then we need to      */
+        /* start its partner                            */
+
+        if (!osc_enable[osc_num]) {
+            doc_registers[0xA0 + osc_num] |= 0x01;
+            if (osc_int[osc_num]) pushIRQ(osc_num);
+            osc_acc[osc_num] = 0;
+            last_addr[osc_num] = 0;
+            if (osc_mode[osc_num] == 3) {
+                if (osc_num & 0x01) {
+                    osc_enable[osc_num - 1] = 1;
+                    doc_registers[0xA0 + osc_num - 1] &= 0xFE;
+                } else {
+                    osc_enable[osc_num + 1] = 1;
+                    doc_registers[0xA0 + osc_num + 1] &= 0xFE;
+                }
+            }
+            continue;
+        }
+
+        /* Add the sample into the output "supersample" */
+
+        if (osc_chan[osc_num] & 0x01) {
+            sample.right += ((int) this_sample - 128) * osc_vol[osc_num];
+        } else {
+            sample.left += ((int) this_sample - 128) * osc_vol[osc_num];
+        }
+    }
+    out_sample->left = sample.left;
+    out_sample->right = sample.right;
+}
+
+static void updateOscillator(int osc_num)
 {
     int    ctrl;
 
@@ -331,78 +438,19 @@ void SND_updateOscillator(int osc_num)
     }
 }
 
-void SND_scanOscillators(snd_sample_struct *out_sample)
+static void pushIRQ(int osc_num)
 {
-    int addr,this_sample;
-    int osc_num;
-    snd_sample_struct sample;
+    if (irq_index == IRQ_STACK_SIZE) return;
+    if (!irq_index) m65816_addIRQ();
+    irq_stack[irq_index++] = osc_num;
+}
 
-    sample.left = 0;
-    sample.right = 0;
-    for (osc_num = 0 ; osc_num < num_osc; osc_num++) {
-        if (!osc_enable[osc_num]) continue;
+static int pullIRQ(void)
+{
+    int    osc_num;
 
-        /* Get the address of the next sample for this    */
-        /* oscillator.                    */
-
-        addr = (osc_acc[osc_num] >> osc_shift[osc_num]) &
-            osc_accmask[osc_num];
-
-        /* The new address may be past the end of the    */
-        /* wavetable.If it is, halt the oscillator.    */
-
-        if (addr < last_addr[osc_num]) {
-            if (!osc_mode[osc_num]) {
-                last_addr[osc_num] = addr;
-                this_sample = osc_addrbase[osc_num][addr];
-                if (osc_int[osc_num]) SND_pushIRQ(osc_num);
-                osc_acc[osc_num] += osc_freq[osc_num];
-            } else {
-                osc_enable[osc_num] = 0;
-            }
-        } else {
-            last_addr[osc_num] = addr;
-            this_sample = osc_addrbase[osc_num][addr];
-            osc_acc[osc_num] += osc_freq[osc_num];
-        }
-
-        /* If it's a zero sample, halt the oscillator */
-
-        if (!this_sample) osc_enable[osc_num] = 0;
-
-        /* At this point, if we are now halted, then    */
-        /* the oscillator was running before and        */
-        /* was halted by us. Now we need to do some     */
-        /* housekeeping: the halted oscillator may need */
-        /* to generate an interrupt, and if it's an     */
-        /* oscillator in swap mode then we need to      */
-        /* start its partner                            */
-
-        if (!osc_enable[osc_num]) {
-            doc_registers[0xA0 + osc_num] |= 0x01;
-            if (osc_int[osc_num]) SND_pushIRQ(osc_num);
-            osc_acc[osc_num] = 0;
-            last_addr[osc_num] = 0;
-            if (osc_mode[osc_num] == 3) {
-                if (osc_num & 0x01) {
-                    osc_enable[osc_num - 1] = 1;
-                    doc_registers[0xA0 + osc_num - 1] &= 0xFE;
-                } else {
-                    osc_enable[osc_num + 1] = 1;
-                    doc_registers[0xA0 + osc_num + 1] &= 0xFE;
-                }
-            }
-            continue;
-        }
-
-        /* Add the sample into the output "supersample" */
-
-        if (osc_chan[osc_num] & 0x01) {
-            sample.right += ((int) this_sample - 128) * osc_vol[osc_num];
-        } else {
-            sample.left += ((int) this_sample - 128) * osc_vol[osc_num];
-        }
-    }
-    out_sample->left = sample.left;
-    out_sample->right = sample.right;
+    if (!irq_index) return -1;
+    osc_num = irq_stack[--irq_index];
+    if (!irq_index) m65816_clearIRQ();
+    return osc_num;
 }

@@ -19,7 +19,6 @@
 
 #include "xgs.h"
 #include "video.h"
-#include "video-output.h"
 
 word32 vid_hiresbases1[192] = {
 	0x2000, 0x2400, 0x2800, 0x2C00, 0x3000, 0x3400, 0x3800, 0x3C00,
@@ -75,7 +74,7 @@ word32 vid_hiresbases2[192] = {
 	0x43D0, 0x47D0, 0x4BD0, 0x4FD0, 0x53D0, 0x57D0, 0x5BD0, 0x5FD0
 };
 
-PIXEL	vid_dhires_colors[4][16] = {
+pixel_t	vid_dhires_colors[4][16] = {
 	{ 0, 2, 4,  6, 8, 10, 12, 14, 1,  3,  5,  7,  9, 11, 13, 15 },
 	{ 0, 4, 8, 12, 1,  5,  9, 13, 2,  6, 10, 14,  3,  7, 11, 15 },                      
 	{ 0, 8, 1,  9, 2, 10,  3, 11, 4, 12,  5, 13,  6, 14,  7, 15 },                      
@@ -89,7 +88,7 @@ VID_refreshHiresRow (int row, word32 addr)
 {
 	int	i,col,addrhi,addrlo,*pattern,color1,color2;
 	byte	val;
-	PIXEL	*scrn,*scrn2;
+	pixel_t	*scrn,*scrn2;
 
 	addrhi = addr >> 8;
 	addrlo = addr & 0xFF;
@@ -204,7 +203,7 @@ VID_refreshDHiresRow (int row, word32 addr)
 {
 	int	i,col,addrhi,addrlo;
 	word32	val,val2;
-	PIXEL	*scrn,*scrn2;
+	pixel_t	*scrn,*scrn2;
 
 	scrn = vid_lines[row * 2];
 	scrn2 = vid_lines[row * 2 + 1];

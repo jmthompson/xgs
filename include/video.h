@@ -1,69 +1,76 @@
-#define VID_WIDTH	640
-#define VID_HEIGHT	400
+/* Size of the border. It's the same on all four sizes so this is both a height and a width */
 
-#define VID_STATUS_FONT	"8x13"
+#define VID_BORDER_SIZE 40
 
-#define PIXEL word32
+/* Height of the actual screen. It's double-height to fit the aspect ratio of modern screens */
 
-#define VID_DEPTH 24
-#define VID_CLASS TrueColor
+#define VID_WIDTH    640
+#define VID_HEIGHT    400
 
-#define VID_MODE_40TEXT1	0
-#define VID_MODE_40TEXT2	1
-#define VID_MODE_80TEXT1	2
-#define VID_MODE_80TEXT2	3
+#define VID_STATUS_FONT    "8x13"
 
-#define VID_MODE_LORES1		4
-#define VID_MODE_LORES2		5
-#define VID_MODE_DLORES1	6
-#define VID_MODE_DLORES2	7
+#define VID_MODE_40TEXT1    0
+#define VID_MODE_40TEXT2    1
+#define VID_MODE_80TEXT1    2
+#define VID_MODE_80TEXT2    3
 
-#define VID_MODE_HIRES1		8
-#define VID_MODE_HIRES2		9
-#define VID_MODE_DHIRES1	10
-#define VID_MODE_DHIRES2	11
+#define VID_MODE_LORES1        4
+#define VID_MODE_LORES2        5
+#define VID_MODE_DLORES1    6
+#define VID_MODE_DLORES2    7
 
-#define VID_MODE_SUPER		12
+#define VID_MODE_HIRES1        8
+#define VID_MODE_HIRES2        9
+#define VID_MODE_DHIRES1    10
+#define VID_MODE_DHIRES2    11
 
-extern PIXEL	vid_black,vid_white;
-extern byte	*vid_font40[2];
-extern byte	*vid_font80[2];
-extern int	vid_currmode;
+#define VID_MODE_SUPER        12
 
-extern int	vid_super;
-extern int	vid_linear;
-extern int	vid_a2mono;
+typedef word32 pixel_t;
 
-extern int	vid_bordercolor;
-extern int	vid_textfgcolor;
-extern int	vid_textbgcolor;
+extern pixel_t vid_black,vid_white;
+extern byte    *vid_font40[2];
+extern byte    *vid_font80[2];
+extern int    vid_currmode;
 
-extern PIXEL	*vid_lines[];
+extern int    vid_super;
+extern int    vid_linear;
+extern int    vid_a2mono;
 
-extern PIXEL vid_textfg,vid_textbg,vid_border,vid_stdcolors[16],vid_supercolors[256];
+extern int    vid_bordercolor;
+extern int    vid_textfgcolor;
+extern int    vid_textbgcolor;
 
-extern int	vid_80col;
-extern int	vid_altcharset;
+extern pixel_t **vid_lines;
 
-extern int	vid_text;
-extern int	vid_mixed;
-extern int	vid_page2;
-extern int	vid_hires;
-extern int	vid_dblres;
+extern pixel_t vid_textfg,vid_textbg,vid_border,vid_stdcolors[16],vid_supercolors[256];
 
-extern int	vid_vgcint;
+extern int    vid_80col;
+extern int    vid_altcharset;
 
-extern int	vid_vert_cnt;
-extern int	vid_horiz_cnt;
+extern int    vid_text;
+extern int    vid_mixed;
+extern int    vid_page2;
+extern int    vid_hires;
+extern int    vid_dblres;
 
-extern void	(*VID_updateRoutine)(void);
+extern int    vid_vgcint;
 
-int VID_init(void);
-void VID_update(void);
-void VID_reset(void);
-void VID_shutdown(void);
+extern int    vid_vert_cnt;
+extern int    vid_horiz_cnt;
+
+extern void    (*VID_updateRoutine)(void);
+
+int  videoInit(void);
+void videoUpdate(void);
+void videoReset(void);
+void videoShutdown(void);
+
+void videoModeChanged(void);
+void videoSetFullscreen(int);
+void videoSetSize(int, int);
+
 void VID_switchPage(int, int, int);
-void VID_newMode(void);
 void VID_redrawScreen(void);
 
 byte VID_clear80col(byte);
@@ -114,3 +121,9 @@ void VID_refreshDHiresPage1(void);
 void VID_refreshDHiresPage2(void);
 
 void VID_refreshSuperHires(void);
+
+// FIXME: non-SDL
+void VID_outputSetStandardColors(void);
+void VID_outputSetSuperColors(void);
+void VID_outputSetTextColors(void);
+void VID_outputSetBorderColor(void);

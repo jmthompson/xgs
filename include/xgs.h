@@ -1,7 +1,28 @@
 #ifndef _XGS_H_
 #define _XGS_H_
 
+// Begin common includes
+
+#include "SDL.h"
 #include "config.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <errno.h>
+
+#ifdef HAVE_STRING_H
+#include <string.h>
+#endif
+
+#ifdef HAVE_FCNTL_H
+#include <fcntl.h>
+#endif
+
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+
+// End common includes
 
 #ifndef HAVE_RANDOM
 #ifdef random
@@ -81,12 +102,18 @@ typedef union {
 extern float g_fast_mhz;
 extern int g_ram_size;
 extern long g_cpu_cycles;
-extern int g_vbl_count;
-extern int g_vbl;
+extern long g_vbl_count;
 extern int g_vblirq_enable;
 extern int g_qtrsecirq_enable;
 extern int g_onesecirq_enable;
 extern int g_scanirq_enable;
 extern int g_fastmode;
+
+extern void globalShutdown(void);
+
+extern void printSDLError(const char *);
+
+extern int openDataFile(const char *);
+extern int openUserFile(const char *, const int);
 
 #endif /* _XGS_H_ */

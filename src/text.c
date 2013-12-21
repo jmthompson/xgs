@@ -20,7 +20,6 @@
 
 #include "xgs.h"
 #include "video.h"
-#include "video-output.h"
 
 /* Base address table for text/lores pages 1. */
 
@@ -45,7 +44,7 @@ VID_refreshText40Row (int row, word32 addr)
 {
     int    col,i;
     byte    *font;
-    PIXEL    *scrn;
+    pixel_t    *scrn;
 
     for (col = 0 ; col < 40 ; col++, addr++) {
         font = vid_font40[vid_altcharset] + (slow_memory[addr] * 224);
@@ -104,7 +103,7 @@ VID_refreshText80Row (int row, word32 addr)
 {
     int    col,i,upd0,upd1;
     byte    *font;
-    PIXEL    *scrn;
+    pixel_t    *scrn;
 
     for (col = 0 ; col < 40 ; col++, addr++) {
         font = vid_font80[vid_altcharset] + (slow_memory[addr] * 112);
