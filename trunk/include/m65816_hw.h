@@ -17,4 +17,4 @@
 /* pseudo-opcode. Useful for trapping certain emulated machine		*/
 /* functions and emulating them in fast C code.				*/
 
-#define E_WDM(v)	EMUL_handleWDM(v)
+#define E_WDM(v)	hardwareHandleWDM(v)

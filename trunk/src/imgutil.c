@@ -23,9 +23,6 @@
 
 #include "xgs.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include "disks.h"
 
 byte	block_buffer[512];

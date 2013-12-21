@@ -16,79 +16,89 @@
  * Generic hardware functionality
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 #include "xgs.h"
 
 #include "adb.h"
 #include "clock.h"
 #include "disks.h"
+#include "events.h"
 #include "hardware.h"
 #include "iwm.h"
 #include "smtport.h"
 #include "scheduler.h"
 #include "sound.h"
 #include "video.h"
-#include "video-output.h"
 
-int hardwareInit() {
+static int in_vbl;
+
+int hardwareInit()
+{
     int err;
 
-    if ((err = MEM_init())) return err;
-    if ((err = VID_init())) {
-        MEM_shutdown();
+    if ((err = memoryInit())) return err;
+    if ((err = videoInit())) {
+        memoryShutdown();
         return err;
     }
-    if ((err = SND_init())) {
-        VID_shutdown();
-        MEM_shutdown();
+    if ((err = soundInit())) {
+        videoShutdown();
+        memoryShutdown();
+        return err;
+    }
+    if ((err = eventsInit())) {
+        videoShutdown();
+        memoryShutdown();
         return err;
     }
     if ((err = ADB_init())) {
-        SND_shutdown();
-        VID_shutdown();
-        MEM_shutdown();
+        eventsShutdown();
+        soundShutdown();
+        videoShutdown();
+        memoryShutdown();
         return err;
     }
-    if ((err = CLK_init())) {
+    if ((err = clockInit())) {
         ADB_shutdown();
-        SND_shutdown();
-        VID_shutdown();
-        MEM_shutdown();
+        eventsShutdown();
+        soundShutdown();
+        videoShutdown();
+        memoryShutdown();
         return err;
     }
     if ((err = IWM_init())) {
-        CLK_shutdown();
+        clockShutdown();
         ADB_shutdown();
-        SND_shutdown();
-        VID_shutdown();
-        MEM_shutdown();
+        eventsShutdown();
+        soundShutdown();
+        videoShutdown();
+        memoryShutdown();
         return err;
     }
 
     if ((err = SMPT_init())) {
         IWM_shutdown();
-        CLK_shutdown();
+        clockShutdown();
         ADB_shutdown();
-        SND_shutdown();
-        VID_shutdown();
-        MEM_shutdown();
+        eventsShutdown();
+        soundShutdown();
+        videoShutdown();
+        memoryShutdown();
         return err;
     }
 
     if ((err = schedulerInit())) {
         IWM_shutdown();
-        CLK_shutdown();
+        clockShutdown();
         ADB_shutdown();
-        SND_shutdown();
-        VID_shutdown();
-        MEM_shutdown();
+        eventsShutdown();
+        soundShutdown();
+        videoShutdown();
+        memoryShutdown();
         return err;
     }
 
-    g_vbl_count = 0;
+    in_vbl = 0;
+
     g_vblirq_enable = 0;
     g_qtrsecirq_enable = 0;
     g_onesecirq_enable = 0;
@@ -106,19 +116,15 @@ void hardwareBigTick(const long bigtick)
 {
     g_vbl_count++;
 
-    if (g_vbl_count == 0x00) {
+    if (in_vbl == 0x00) {
         if (g_vblirq_enable) {
             if (!(mem_diagtype & 0x08)) {
                 mem_diagtype |= 0x08;
                 m65816_addIRQ();
             }
         }
-        VID_update();
-        MEM_update();
-        ADB_update();
-        CLK_update();
+        videoUpdate();
         IWM_update();
-        SMPT_update();
     }
 
     if ((bigtick == 0) || (bigtick == 15) || (bigtick == 30) || (bigtick == 45)) {
@@ -140,14 +146,15 @@ void hardwareBigTick(const long bigtick)
 
 void hardwareTick(const long tick, const long bigtick)
 {
-    SND_update();
+    eventsUpdate();
+    soundUpdate();
 
     if (tick == 400) {
-        g_vbl_count = 0x80;
+        in_vbl = 0x80;
         vid_vert_cnt = tick >> 1;
-    } else if (tick == MAX_TICKS) {
+    } else if (tick == (MAX_TICKS - 1)) {
         vid_vert_cnt = 0;
-        g_vbl_count = 0x00;
+        in_vbl = 0x00;
         hardwareBigTick(bigtick);
     } else {
         vid_vert_cnt = tick >> 1;
@@ -163,11 +170,11 @@ void hardwareTick(const long tick, const long bigtick)
 
 void hardwareReset()
 {
-    MEM_reset();
-    VID_reset();
-    SND_reset();
+    memoryReset();
+    videoReset();
+    soundReset();
     ADB_reset();
-    CLK_reset();
+    clockReset();
     IWM_reset();
     SMPT_reset();
     m65816_reset();
@@ -177,19 +184,20 @@ void hardwareShutdown()
 {
     SMPT_shutdown();
     IWM_shutdown();
-    CLK_shutdown();
+    clockShutdown();
     ADB_shutdown();
-    SND_shutdown();
-    VID_shutdown();
-    MEM_shutdown();
+    eventsShutdown();
+    soundShutdown();
+    videoShutdown();
+    memoryShutdown();
 }
 
-void EMUL_trace(int parm)
+void hardwareSetTrace(int parm)
 {
     m65816_setTrace(parm);
 }
 
-void EMUL_nmi()
+void hardwareRaiseNMI()
 {
     int    i;
 
@@ -200,7 +208,7 @@ void EMUL_nmi()
      m65816_nmi();
 }
 
-void EMUL_handleWDM(byte parm)
+void hardwareHandleWDM(byte parm)
 {
     switch(parm) {
         case 0xC7 :    SMPT_prodosEntry();
@@ -217,7 +225,7 @@ void EMUL_handleWDM(byte parm)
     }
 }
 
-byte EMUL_getVBL(byte val)
+byte hardwareInVBL()
 {
-    return g_vbl_count;
+    return in_vbl;
 }

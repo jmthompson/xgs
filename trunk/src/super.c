@@ -20,12 +20,11 @@
 
 #include "xgs.h"
 #include "video.h"
-#include "video-output.h"
 
 void VID_refreshSuperHires()
 {
     register byte    v,scb;
-    register PIXEL    *scrn,*scrn2;
+    register pixel_t    *scrn,*scrn2;
     register int    a,palette,pixel,lastpixel;
     register int    row,col,fillmode;
 

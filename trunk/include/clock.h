@@ -28,13 +28,12 @@ extern int	clk_state;
 extern int	clk_addr;
 */
 
-int CLK_init(void);
-void CLK_update(void);
-void CLK_reset(void);
-void CLK_shutdown(void);
+int clockInit(void);
+void clockShutdown(void);
+void clockReset(void);
 
-byte CLK_getData(byte);
-byte CLK_setData(byte);
+byte clockGetData(byte);
+byte clockSetData(byte);
 
-byte CLK_getControl(byte);
-byte CLK_setControl(byte);
+byte clockGetControl(byte);
+byte clockSetControl(byte);

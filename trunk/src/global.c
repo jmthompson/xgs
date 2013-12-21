@@ -16,13 +16,9 @@
  * Global functions & startup code
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <errno.h>
-#include <fcntl.h>
-
 #include "xgs.h"
+
+#include <signal.h>
 
 #include "adb.h"
 #include "clock.h"
@@ -33,7 +29,6 @@
 #include "scheduler.h"
 #include "sound.h"
 #include "video.h"
-#include "video-output.h"
 
 // Begin globals
 float g_fast_mhz;
@@ -41,7 +36,7 @@ float g_fast_mhz;
 int g_ram_size;
 
 long g_cpu_cycles;
-int g_vbl_count;
+long g_vbl_count;
 int g_vblirq_enable;
 int g_qtrsecirq_enable;
 int g_onesecirq_enable;
@@ -49,7 +44,6 @@ int g_scanirq_enable;
 
 int g_fastmode;
 
-int g_vbl_count;
 // End globals
 
 static char *data_dir;
@@ -62,13 +56,10 @@ static char *s6d1_image;
 static char *s6d2_image;
 static char *smtport_images[NUM_SMPT_DEVS];
 
-static void displayUsage(const char *myname)
-{
-    fprintf(stderr,"\nUsage: %s [-s5d1 filename ] [-s5d2 filename ] [-s6d1 filename ] [-s6d2 filename ] [-smpt# filename ] [-ram # ] [-trace]\n",myname);
-    exit(1);
-}
+static void displayUsage(const char *);
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
     char *homedir;
     int i, err, unit;
     size_t len;
@@ -111,7 +102,7 @@ int main(int argc, char **argv) {
         max_path = len;
     }
 
-    g_fast_mhz = 2.5;
+    g_fast_mhz = 2.8;
     g_ram_size = 2;
 
     s5d1_image = NULL;
@@ -124,7 +115,7 @@ int main(int argc, char **argv) {
     i = 0;
     while (++i < argc) {
         if (!strcmp(argv[i],"-trace")) {
-            EMUL_trace(1);
+            hardwareSetTrace(1);
         } else if (!strcmp(argv[i],"-ram")) {
             if (++i >= argc) displayUsage(argv[0]);
             g_ram_size = atoi(argv[i]);
@@ -151,17 +142,23 @@ int main(int argc, char **argv) {
         } else displayUsage(argv[0]);
     }
 
+    if (SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO|SDL_INIT_EVENTS|SDL_INIT_JOYSTICK) < 0) {
+        printSDLError("Failed to initialize SDL");
+
+        return -1;
+    }
+
+    atexit(SDL_Quit);
+
     printf("Starting XGS Version %s\n\n", VERSION);
 
     if (hardwareInit() != 0) {
         return -1;
     }
 
-    printf("\nLoading startup drives\n");
-
     for (i = 0 ; i < NUM_SMPT_DEVS ; i++) {
         if (!smtport_images[i]) continue;
-        printf("    - Loading SmartPort device %d from \"%s\": ", i, smtport_images[i]);
+        printf("Loading SmartPort device %d from \"%s\": ", i, smtport_images[i]);
         err = SMPT_loadDrive(i, smtport_images[i]);
         if (err) {
             printf("Failed (err #%d)\n",err);
@@ -170,7 +167,7 @@ int main(int argc, char **argv) {
         }
     }
     if (s5d1_image) {
-        printf("    - Loading S5, D1 from \"%s\": ", s5d1_image);
+        printf("Loading S5, D1 from \"%s\": ", s5d1_image);
         err = IWM_loadDrive(5, 1, s5d1_image);
         if (err) {
             printf("Failed (err #%d)\n",err);
@@ -179,7 +176,7 @@ int main(int argc, char **argv) {
         }
     }
     if (s5d2_image) {
-        printf("    - Loading S5, D2 from \"%s\": ", s5d2_image);
+        printf("Loading S5, D2 from \"%s\": ", s5d2_image);
         err = IWM_loadDrive(5, 2, s5d2_image);
         if (err) {
             printf("Failed (err #%d)\n",err);
@@ -188,7 +185,7 @@ int main(int argc, char **argv) {
         }
     }
     if (s6d1_image) {
-        printf("    - Loading S6, D1 from \"%s\": ", s6d1_image);
+        printf("Loading S6, D1 from \"%s\": ", s6d1_image);
         err = IWM_loadDrive(6, 1, s6d1_image);
         if (err) {
             printf("Failed (err #%d)\n",err);
@@ -197,7 +194,7 @@ int main(int argc, char **argv) {
         }
     }
     if (s6d2_image) {
-        printf("    - Loading S6, D2 from \"%s\": ", s6d2_image);
+        printf("Loading S6, D2 from \"%s\": ", s6d2_image);
         err = IWM_loadDrive(6, 2, s6d2_image);
         if (err) {
             printf("Failed (err #%d)\n",err);
@@ -212,13 +209,12 @@ int main(int argc, char **argv) {
 
 void globalShutdown()
 {
-    SMPT_shutdown();
-    IWM_shutdown();
-    CLK_shutdown();
-    ADB_shutdown();
-    SND_shutdown();
-    VID_shutdown();
-    MEM_shutdown();
+    raise(SIGTERM);
+}
+
+void printSDLError(const char *msg)
+{
+    fprintf(stderr, "%s: %s\n", msg, SDL_GetError());
 }
 
 /*
@@ -226,7 +222,8 @@ void globalShutdown()
  * If found, opens it read-only and returns the file descriptor.
  */
 
-int openDataFile(const char *filename) {
+int openDataFile(const char *filename)
+{
     int fd,  len;
     char *path;
 
@@ -261,7 +258,8 @@ int openDataFile(const char *filename) {
  * and return the file descriptor.
  */
 
-int openUserFile(const char *filename, const int flags) {
+int openUserFile(const char *filename, const int flags)
+{
     int fd,  len;
     char *path;
 
@@ -276,9 +274,15 @@ int openUserFile(const char *filename, const int flags) {
 
     snprintf(path, len, "%s/%s", user_dir, filename);
 
-    fd = open(path, flags);
+    fd = open(path, flags, 0600);
 
     free(path);
 
     return fd;
+}
+
+static void displayUsage(const char *myname)
+{
+    fprintf(stderr,"\nUsage: %s [-s5d1 filename ] [-s5d2 filename ] [-s6d1 filename ] [-s6d2 filename ] [-smpt# filename ] [-ram # ] [-trace]\n",myname);
+    exit(1);
 }

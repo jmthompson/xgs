@@ -18,8 +18,6 @@ extern byte		adb_m2mouseenable;
 extern byte		adb_m2mousemvirq;
 extern byte		adb_m2mouseswirq;
 
-extern int		adb_grab_mode;
-
 extern int	adb_pdl0, adb_pdl1;
 extern word32	adb_pdl0_time,adb_pdl1_time;
 
@@ -39,8 +37,6 @@ extern byte	ski_button0;
 extern byte	ski_button1;
 extern int	ski_xdelta;
 extern int	ski_ydelta;
-extern int	ski_lastx;
-extern int	ski_lasty;
 
 extern int	ski_input_index;
 extern int	ski_output_index;
