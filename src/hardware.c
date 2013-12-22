@@ -123,6 +123,7 @@ void hardwareBigTick(const long bigtick)
                 m65816_addIRQ();
             }
         }
+        eventsUpdate();
         videoUpdate();
         IWM_update();
     }
@@ -146,7 +147,6 @@ void hardwareBigTick(const long bigtick)
 
 void hardwareTick(const long tick, const long bigtick)
 {
-    eventsUpdate();
     soundUpdate();
 
     if (tick == 400) {
