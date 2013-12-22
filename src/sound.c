@@ -25,6 +25,9 @@
 #include "hardware.h"
 #include "sound.h"
 
+char *sound_device = NULL;
+static SDL_AudioDeviceID sound_device_id;
+
 static int    glu_ctrl_reg,glu_next_val;
 static word16 glu_addr_reg;
 static int    sr,num_osc;
@@ -91,27 +94,29 @@ int soundInit()
     wanted.freq     = SAMPLE_RATE;
     wanted.format   = AUDIO_U8;
     wanted.channels = 2;
-    wanted.samples  = OUTPUT_BUFFER_SIZE;
+    wanted.samples  = OUTPUT_BUFFER_SIZE * 2;
     wanted.callback = &bufferCallback;
 
-    if (SDL_OpenAudio(&wanted, &actual) < 0) {
+    sound_device_id = SDL_OpenAudioDevice(sound_device, 0, &wanted, &actual, 0);
+
+    if (sound_device_id == 0) {
         printSDLError("Error opening audio device");
 
         return 1;
     }
 
-    buffer_size = actual.size * 2;
+    printf("Got audio buffer size of %d samples\n", actual.samples);
+
+    buffer_size = actual.samples;
 
     sample_buffer = malloc(buffer_size * sizeof(snd_sample_struct));
     if (sample_buffer == NULL) {
         perror("Unable to allocate sound buffer");
 
-        SDL_CloseAudio();
+        SDL_CloseAudioDevice(sound_device_id);
 
         return 1;
     }
-
-    printf("Got audio buffer size of %d samples\n", buffer_size);
 
     for (i = 0xEA00 ; i < 0xEB00 ; i++) {
         mem_pages[i].readPtr   = mem_pages[i].writePtr = doc_ram+((i-0xEA00) * 256);
@@ -143,34 +148,31 @@ void soundReset()
 
     irq_index = 0;
 
-    buffer_index = buffer_size;
+    buffer_index = 0;
+    memset(sample_buffer, 0, sizeof(snd_sample_struct) * buffer_size); 
 
     enableOscillators();
 
-    SDL_PauseAudio(0);
+    SDL_PauseAudioDevice(sound_device_id, 0);
 }
 
 void soundShutdown()
 {
-    SDL_CloseAudio();
+    SDL_CloseAudioDevice(sound_device_id);
 }
 
 void soundUpdate()
 {
     snd_sample_struct sample;
 
-    scanOscillators(&sample);
-
     if (SDL_LockMutex(buffer_mutex) == 0) {
-        if (buffer_index > 0) {
-            buffer_index--;
-        }
-        else {
-            printf("uh oh, buffer overflow!\n");
-        }
+        if (buffer_index < buffer_size) {
+            scanOscillators(&sample);
 
-        sample_buffer[buffer_index].left  = sample.left  + snd_click_sample;
-        sample_buffer[buffer_index].right = sample.right + snd_click_sample;
+            sample_buffer[buffer_index].left  = sample.left  + snd_click_sample;
+            sample_buffer[buffer_index].right = sample.right + snd_click_sample;
+            buffer_index++;
+        }
 
         SDL_UnlockMutex(buffer_mutex);
     }
@@ -310,27 +312,17 @@ void enableOscillators(void)
 static void bufferCallback(void *userdata, Uint8 *stream, int len)
 {
     int i = 0;
+    int j = 0;
 
     if (SDL_LockMutex(buffer_mutex) == 0) {
-        int t1 = buffer_size - buffer_index;
-        int t2 = len / 2;
-
-        if (t2 > t1) {
-            printf("uh oh, bufer underrun. samples_wanted = %d, samples_avail = %d\n", t2, t1);
+        while ((i < len) && (j < buffer_size)) {
+            stream[i++] = (Uint8) ((sample_buffer[j].left  >> 10) + 128);
+            stream[i++] = (Uint8) ((sample_buffer[j].right >> 10) + 128);
+            j++;
         }
 
-        while(i < len) {
-            stream[i++] = (Uint8) ((sample_buffer[buffer_index].left  >> 10) + 128);
-            stream[i++] = (Uint8) ((sample_buffer[buffer_index].right >> 10) + 128);
-
-            if (buffer_index < buffer_size) {
-                buffer_index++;
-            }
-        }
-
-        if (buffer_index < buffer_size) {
-            printf("uh oh, exiting sound callback with buffer_index = %d, buffer_size = %d, len = %d\n", buffer_index, buffer_size, len);
-        }
+        buffer_index = 0;
+        memset(sample_buffer, 0, sizeof(snd_sample_struct) * buffer_size); 
 
         SDL_UnlockMutex(buffer_mutex);
     }
@@ -454,3 +446,4 @@ static int pullIRQ(void)
     if (!irq_index) m65816_clearIRQ();
     return osc_num;
 }
+
