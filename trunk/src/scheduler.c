@@ -39,13 +39,13 @@ static float actual_speed;
 static long bigticks;
 static long ticks;
 
-long    emul_last_time;
-long    emul_this_time;
+long emul_last_time;
+long emul_this_time;
 
-word32    emul_last_cycles;
+long emul_last_cycles;
 
-double    emul_times[60];
-double    emul_total_time;
+long emul_times[60];
+long emul_total_time;
 
 long emul_cycles[60];
 long emul_total_cycles;
@@ -103,12 +103,16 @@ void schedulerStart() {
 
     memset(&ts, 0, sizeof(ts));
 
-    ts.it_interval.tv_nsec = (1000000000 / (525 * 60)) - 1000;  // one microtick, minus a little padding
+    ts.it_interval.tv_nsec = (1000000000 / (524 * 60));
     ts.it_value.tv_nsec    = 1000000;
 
 #ifdef HAVE_TIMERFD
+    printf("Using timerfd_settime with a resolution of %ld ns\n", ts.it_interval.tv_nsec);
+
     if (timerfd_settime(master_timer, 0, &ts, NULL) < 0) {
 #else
+    printf("Using timer_settime with a resolution of %ld ns\n", ts.it_interval.tv_nsec);
+
     if (timer_settime(master_timer, 0, &ts, NULL) < 0) {
 #endif
         printf("failed to set timer: %s\n", strerror(errno));
@@ -160,17 +164,14 @@ long schedulerGetTime() {
 
 void schedulerHousekeeping() {
     long   cycles;
-    float  this_time,last_time,diff;
+    float  diff;
 
     cycles = g_cpu_cycles - emul_last_cycles;
     emul_last_cycles = g_cpu_cycles;
 
 	emul_this_time = schedulerGetTime();
 
-	this_time = emul_this_time;
-	last_time = emul_last_time;
-
-	diff = abs(this_time - last_time);
+	diff = emul_this_time - emul_last_time;
 
 	emul_last_time = emul_this_time;
 
@@ -182,7 +183,11 @@ void schedulerHousekeeping() {
 	emul_cycles[bigticks] = cycles;
 	emul_total_cycles += cycles;
 
-	actual_speed = (emul_total_cycles / emul_total_time)  / 1000;
+	actual_speed = ((float) emul_total_cycles / (float) emul_total_time) / 1000.0;
+
+    if (bigticks == 0) {
+        printf("Current speed = %0.1f MHz (%ld cycles, %ld ms)\n", actual_speed, emul_total_cycles, emul_total_time);
+    }
 }
 
 float schedulerGetActualSpeed() {
