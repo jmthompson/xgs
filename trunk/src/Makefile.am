@@ -1,7 +1,7 @@
 ## Process this file with automake to produce Makefile.in
 
 AM_CFLAGS = -D DATA_DIR=\"$(datadir)\" -I ../include -I ../m65816 @SDL_CFLAGS@
-AM_LDFLAGS = @SDL_LIBS@
+AM_LDFLAGS = @SDL_LIBS@ -lrt
 
 bin_PROGRAMS = xgs imgconv imgutil
 imgconv_SOURCES = disks.c imgconv.c

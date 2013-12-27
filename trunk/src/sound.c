@@ -123,6 +123,8 @@ int soundInit()
         mem_pages[i].readFlags = mem_pages[i].writeFlags = 0;
     }
 
+    SDL_PauseAudioDevice(sound_device_id, 0);
+
     return 0;
 }
 
@@ -152,8 +154,6 @@ void soundReset()
     memset(sample_buffer, 0, sizeof(snd_sample_struct) * buffer_size); 
 
     enableOscillators();
-
-    SDL_PauseAudioDevice(sound_device_id, 0);
 }
 
 void soundShutdown()
@@ -179,6 +179,11 @@ void soundUpdate()
     else {
         printSDLError("Failed to lock sound mutex");
     }
+}
+
+float soundGetLatency()
+{
+    return (float) buffer_size / (float) SAMPLE_RATE;
 }
 
 byte soundClickSpeaker(byte val)

@@ -34,6 +34,7 @@
 float g_fast_mhz;
 
 int g_ram_size;
+int g_framerate;
 
 long g_cpu_cycles;
 long g_vbl_count;
@@ -102,8 +103,9 @@ int main(int argc, char **argv)
         max_path = len;
     }
 
-    g_fast_mhz = 2.8;
-    g_ram_size = 2;
+    g_fast_mhz  = 2.8;
+    g_ram_size  = 2;
+    g_framerate = 60;
 
     s5d1_image = NULL;
     s5d2_image = NULL;
@@ -209,7 +211,7 @@ int main(int argc, char **argv)
 
 void globalShutdown()
 {
-    raise(SIGTERM);
+    raise(SIGUSR2);
 }
 
 void printSDLError(const char *msg)
