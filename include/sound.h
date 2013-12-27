@@ -1,6 +1,6 @@
 #define IRQ_STACK_SIZE      256
 #define SAMPLE_RATE		    28000
-#define OUTPUT_BUFFER_SIZE	16384
+#define OUTPUT_BUFFER_SIZE	1024
 
 extern int snd_enable;
 
@@ -14,6 +14,8 @@ int  soundInit(void);
 void soundReset(void);
 void soundShutdown(void);
 void soundUpdate(void);
+
+float soundGetLatency(void);
 
 byte soundClickSpeaker(byte);
 

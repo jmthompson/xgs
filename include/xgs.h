@@ -101,6 +101,7 @@ typedef union {
 
 extern float g_fast_mhz;
 extern int g_ram_size;
+extern int g_framerate;
 extern long g_cpu_cycles;
 extern long g_vbl_count;
 extern int g_vblirq_enable;

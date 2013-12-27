@@ -112,7 +112,7 @@ int hardwareInit()
     return 0;
 }
 
-void hardwareBigTick(const long bigtick)
+void hardwareBigTick(const long frame)
 {
     g_vbl_count++;
 
@@ -127,7 +127,7 @@ void hardwareBigTick(const long bigtick)
     videoUpdate();
     IWM_update();
 
-    if ((bigtick == 0) || (bigtick == 15) || (bigtick == 30) || (bigtick == 45)) {
+    if ((frame == 0) || (frame == 15) || (frame == 30) || (frame == 45)) {
         if (g_qtrsecirq_enable) {
             if (!(mem_diagtype & 0x10)) {
                 mem_diagtype |= 0x10;
@@ -136,7 +136,7 @@ void hardwareBigTick(const long bigtick)
         }
     }
 
-    if (g_onesecirq_enable && !bigtick) {
+    if (g_onesecirq_enable && !frame) {
         if (!(vid_vgcint & 0x40)) {
             vid_vgcint |= 0xC0;
             m65816_addIRQ();
@@ -144,13 +144,11 @@ void hardwareBigTick(const long bigtick)
     }
 }
 
-void hardwareTick(const long tick, const long bigtick)
+void hardwareTick(const long line_number)
 {
-    soundUpdate();
+    vid_vert_cnt = line_number >> 1;
 
-    vid_vert_cnt = tick >> 1;
-
-    if (tick < 400) {
+    if (line_number < 400) {
         in_vbl = 0x00;
     } else {
         in_vbl = 0x80;
@@ -215,7 +213,7 @@ void hardwareHandleWDM(byte parm)
                 break;
         case 0xFE :    m65816_setTrace(1);
                 break;
-        case 0xFF :    schedulerStop(0);
+        case 0xFF :    schedulerStop();
                 break;
         default :    break;
     }

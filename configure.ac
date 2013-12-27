@@ -84,20 +84,5 @@ int main(int argc, char **argv) {
 AC_MSG_RESULT([$have_hrtimers])
 LIBS="$temp_LIBS"
 
-dnl Check for the timerfd_* functions
-AS_IF(
-    [ test "$have_hrtimers" = "yes" ],
-    [
-        AC_CHECK_LIB([c],
-            [timerfd_create],
-            [
-                AC_DEFINE([HAVE_TIMERFD], [], [Define if your system supports timerfd_* syscalls ])
-            ],
-            [
-            ]
-        )
-    ]
-)
-
 AC_CONFIG_FILES([Makefile m65816/Makefile src/Makefile])
 AC_OUTPUT

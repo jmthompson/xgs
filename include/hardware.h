@@ -2,7 +2,7 @@ int hardwareInit();
 void hardwareReset();
 void hardwareShutdown();
 void hardwareBigTick(const long);
-void hardwareTick(const long, const long);
+void hardwareTick(const long);
 
 byte hardwareInVBL(byte);
 void hardwareSetTrace(int val);
