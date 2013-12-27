@@ -36,6 +36,8 @@ static void handleMouseBtnUp(SDL_MouseButtonEvent *);
 static void handleMouseMotion(SDL_MouseMotionEvent *);
 static void handleWindow(SDL_WindowEvent *);
 
+static char applyModifiers(char, byte);
+
 int eventsInit()
 {
     return 0;
@@ -237,7 +239,8 @@ static void handleKeyUp(SDL_KeyboardEvent *event)
     }
 
     if (key) {
-        ski_input_buffer[ski_input_index++] = key;
+        ski_input_buffer[ski_input_index++] = applyModifiers(key, ski_modifier_reg);
+
         if (ski_input_index == ADB_INPUT_BUFFER) ski_input_index = 0;
     }
 }
@@ -388,4 +391,66 @@ static void handleWindow(SDL_WindowEvent *event)
             break;
 */
     }
+}
+
+static char applyModifiers(char key, byte modifiers) {
+    char high = key & 0x80;
+
+    key &= 0x7F;
+
+    if (modifiers & 0x02) {         // control
+        if ((key >= 'a') && (key <= 'z')) {
+            key -= 95;
+        }
+    }
+    else if (modifiers & 0x41) {    // caps lock, shift
+        if ((key >= 'a') && (key <= 'z')) {
+            key -= 32;
+        }
+        switch (key) {
+            case '1':
+                key = '!';
+                break;
+            case '2':
+                key = '@';
+                break;
+            case '3':
+                key = '#';
+                break;
+            case '4':
+                key = '$';
+                break;
+            case '5':
+                key = '%';
+                break;
+            case '6':
+                key = '^';
+                break;
+            case '7':
+                key = '&';
+                break;
+            case '8':
+                key = '*';
+                break;
+            case '9':
+                key = '(';
+                break;
+            case '0':
+                key = ')';
+                break;
+            case '[':
+                key = '{';
+                break;
+            case ']':
+                key = '}';
+                break;
+            case '\\':
+                key = '|';
+                break;
+            default:
+                break;
+        }
+    }
+
+    return key | high;
 }
