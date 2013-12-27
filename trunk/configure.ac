@@ -12,7 +12,7 @@ AC_PROG_CC
 AM_PROG_AR
 
 # Checks for libraries.
-LT_INIT
+LT_INIT([disable-shared])
 
 # Checks for header files.
 AC_PATH_X
