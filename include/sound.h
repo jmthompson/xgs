@@ -1,6 +1,6 @@
 #define IRQ_STACK_SIZE      256
 #define SAMPLE_RATE		    28000
-#define OUTPUT_BUFFER_SIZE	2048
+#define OUTPUT_BUFFER_SIZE	16384
 
 extern int snd_enable;
 

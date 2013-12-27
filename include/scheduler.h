@@ -1,6 +1,3 @@
-#define MAX_TICKS     524
-#define MAX_BIG_TICKS 60
-
 extern long cpu_cycle_count;
 
 extern int schedulerInit(void);
