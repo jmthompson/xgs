@@ -26,6 +26,8 @@
 #include "m65816.h"
 #include "hardware.h"
 #include "scheduler.h"
+#include "sound.h"
+#include "video.h"
 
 #ifdef HAVE_TIMERFD
 static int master_timer;
@@ -44,10 +46,10 @@ long emul_this_time;
 
 long emul_last_cycles;
 
-long emul_times[60];
+long emul_times[FRAMES_PER_SECOND];
 long emul_total_time;
 
-long emul_cycles[60];
+long emul_cycles[FRAMES_PER_SECOND];
 long emul_total_cycles;
 
 int schedulerInit() {
@@ -75,7 +77,7 @@ int schedulerInit() {
 
 	emul_last_time = schedulerGetTime();
 
-    for (i = 0 ; i < 60 ; i++) {
+    for (i = 0 ; i < FRAMES_PER_SECOND; i++) {
         emul_times[i] = 0.0;
         emul_cycles[i] = 0;
     }
@@ -103,15 +105,18 @@ void schedulerStart() {
 
     memset(&ts, 0, sizeof(ts));
 
-    ts.it_interval.tv_nsec = (1000000000 / (524 * 60));
-    ts.it_value.tv_nsec    = 1000000;
+    float delay = ((float) SAMPLE_RATE / (float) OUTPUT_BUFFER_SIZE) * 1000000000;
+
+    ts.it_interval.tv_nsec = (1000000000 / FRAMES_PER_SECOND);
+    ts.it_value.tv_sec     = (long) delay / 1000000000;
+    ts.it_value.tv_nsec    = (long) delay % 1000000000;
 
 #ifdef HAVE_TIMERFD
-    printf("Using timerfd_settime with a resolution of %ld ns\n", ts.it_interval.tv_nsec);
+    printf("Using timerfd_settime\n");
 
     if (timerfd_settime(master_timer, 0, &ts, NULL) < 0) {
 #else
-    printf("Using timer_settime with a resolution of %ld ns\n", ts.it_interval.tv_nsec);
+    printf("Using timer_settime\n");
 
     if (timer_settime(master_timer, 0, &ts, NULL) < 0) {
 #endif
@@ -119,6 +124,8 @@ void schedulerStart() {
 
         return;
     }
+
+    printf("Timer period = %.01f ms, starting in %.1f seconcds\n", (float) ts.it_interval.tv_nsec / 1000000.0, delay / 1000000000);
 
     while(1) {
 #ifdef HAVE_TIMERFD
@@ -204,23 +211,21 @@ void schedulerSetTargetSpeed(float mhz) {
 
 void schedulerTick(int val)
 {
-    int num_cycles = m65816_run(target_speed * 32);
+    for (ticks = 0 ; ticks < LINES_PER_FRAME ; ticks++) {
+        int num_cycles = m65816_run(target_speed * 32);
 
-    g_cpu_cycles += num_cycles;
+        g_cpu_cycles += num_cycles;
 
-    hardwareTick(ticks, bigticks);
-
-    ticks++;
-
-    if (ticks == MAX_TICKS) {
-        ticks = 0;
-
-        bigticks++;
-
-        if (bigticks == MAX_BIG_TICKS) {
-            bigticks = 0;
-        }
-
-        schedulerHousekeeping();
+        hardwareTick(ticks, bigticks);
     }
+
+    ticks = 0;
+
+    hardwareBigTick(bigticks++);
+
+    if (bigticks == FRAMES_PER_SECOND) {
+        bigticks = 0;
+    }
+
+    schedulerHousekeeping();
 }

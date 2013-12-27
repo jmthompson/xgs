@@ -116,17 +116,16 @@ void hardwareBigTick(const long bigtick)
 {
     g_vbl_count++;
 
-    if (in_vbl == 0x00) {
-        if (g_vblirq_enable) {
-            if (!(mem_diagtype & 0x08)) {
-                mem_diagtype |= 0x08;
-                m65816_addIRQ();
-            }
+    if (g_vblirq_enable) {
+        if (!(mem_diagtype & 0x08)) {
+            mem_diagtype |= 0x08;
+            m65816_addIRQ();
         }
-        eventsUpdate();
-        videoUpdate();
-        IWM_update();
     }
+
+    eventsUpdate();
+    videoUpdate();
+    IWM_update();
 
     if ((bigtick == 0) || (bigtick == 15) || (bigtick == 30) || (bigtick == 45)) {
         if (g_qtrsecirq_enable) {
@@ -149,17 +148,14 @@ void hardwareTick(const long tick, const long bigtick)
 {
     soundUpdate();
 
-    if (tick == 400) {
-        in_vbl = 0x80;
-        vid_vert_cnt = tick >> 1;
-    } else if (tick == (MAX_TICKS - 1)) {
-        vid_vert_cnt = 0;
-        in_vbl = 0x00;
-        hardwareBigTick(bigtick);
-    } else {
-        vid_vert_cnt = tick >> 1;
-    }
+    vid_vert_cnt = tick >> 1;
 
+    if (tick < 400) {
+        in_vbl = 0x00;
+    } else {
+        in_vbl = 0x80;
+    }
+         
     if (g_scanirq_enable && (vid_vert_cnt < 200) && (slow_memory[0x019D00 + vid_vert_cnt] & 0x40)) {
         if (!(vid_vgcint & 0x20)) {
             vid_vgcint |= 0xA0;
@@ -225,7 +221,7 @@ void hardwareHandleWDM(byte parm)
     }
 }
 
-byte hardwareInVBL()
+byte hardwareInVBL(byte val)
 {
     return in_vbl;
 }
