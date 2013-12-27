@@ -322,7 +322,7 @@ static void bufferCallback(void *userdata, Uint8 *stream, int len)
         }
 
         buffer_index = 0;
-        memset(sample_buffer, 0, sizeof(snd_sample_struct) * buffer_size); 
+        memset(sample_buffer, snd_click_sample? 0x80 : 0, sizeof(snd_sample_struct) * buffer_size); 
 
         SDL_UnlockMutex(buffer_mutex);
     }
