@@ -35,6 +35,7 @@ static float target_speed;
 static float actual_speed;
 
 static long frames;
+static long doc_ticks;
 
 static long emul_last_time;
 static long emul_this_time;
@@ -83,11 +84,8 @@ void schedulerStart() {
     sigset_t ss;
     int signum;
 
-    sigemptyset(&ss);
-    sigaddset(&ss, SIGUSR1);
-    sigaddset(&ss, SIGUSR2);
-
-    sigprocmask(SIG_BLOCK,  &ss, NULL);
+    doc_ticks = 0;
+    frames    = 0;
 
     memset(&ts, 0, sizeof(ts));
 
@@ -103,6 +101,9 @@ void schedulerStart() {
 
     printf("Timer period is %0.1f ms (%d Hz)\n", (float) ts.it_interval.tv_nsec / 1000000.0, g_framerate);
 
+    sigemptyset(&ss);
+    sigaddset(&ss, SIGUSR1);
+
     while(1) {
         if (sigwait(&ss, &signum) != 0) {
             perror("sigwait failed");
@@ -112,9 +113,6 @@ void schedulerStart() {
 
         if (signum == SIGUSR1) {
             schedulerTick();
-        }
-        else if (signum == SIGUSR2) {
-            schedulerStop();
         }
     }
 }
@@ -183,14 +181,20 @@ void schedulerTick()
 
         g_cpu_cycles += num_cycles;
 
-        soundUpdate();
+        // The DOC tick period is 38us, but our video line tick period is 31.75us.
+        // We skip one out of every six video line ticks to compensate for this.
+        if (doc_ticks++ % 6) {
+            soundUpdate();
+        }
+
         hardwareTick(line);
     }
 
     hardwareBigTick(frames++);
 
     if (frames == g_framerate) {
-        frames = 0;
+        doc_ticks = 0;
+        frames    = 0;
     }
 
     schedulerHousekeeping();

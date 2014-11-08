@@ -78,6 +78,9 @@ void eventsUpdate()
             case SDL_WINDOWEVENT:
                 handleWindow(&event.window);
                 break;
+            case SDL_QUIT:
+                schedulerStop();
+                break;
         }
     }
 }
