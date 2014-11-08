@@ -1,12 +1,15 @@
-#define IRQ_STACK_SIZE      256
-#define SAMPLE_RATE		    28000
-#define OUTPUT_BUFFER_SIZE	1024
+#define IRQ_STACK_SIZE       256
+#define SAMPLE_RATE		     26320
+#define DEFAULT_AUDIO_BUFFER 4096
+
+#define NUM_OSC 32
 
 extern int snd_enable;
 
 typedef struct {
-	int	left,right;
-} snd_sample_struct;
+    float left;
+    float right;
+} audio_sample;
 
 /* Function prototypes */
 
@@ -14,8 +17,6 @@ int  soundInit(void);
 void soundReset(void);
 void soundShutdown(void);
 void soundUpdate(void);
-
-float soundGetLatency(void);
 
 byte soundClickSpeaker(byte);
 

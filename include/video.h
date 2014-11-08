@@ -9,7 +9,7 @@
 
 #define VID_STATUS_FONT    "8x13"
 
-#define LINES_PER_FRAME     525
+#define LINES_PER_FRAME     524
 
 #define VID_MODE_40TEXT1    0
 #define VID_MODE_40TEXT2    1

@@ -109,6 +109,7 @@ extern int g_qtrsecirq_enable;
 extern int g_onesecirq_enable;
 extern int g_scanirq_enable;
 extern int g_fastmode;
+extern int g_audio_buffer;
 
 extern void globalShutdown(void);
 
