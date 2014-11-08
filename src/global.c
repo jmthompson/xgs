@@ -45,6 +45,8 @@ int g_scanirq_enable;
 
 int g_fastmode;
 
+int g_audio_buffer;
+
 // End globals
 
 static char *data_dir;
@@ -64,6 +66,7 @@ int main(int argc, char **argv)
     char *homedir;
     int i, err, unit;
     size_t len;
+    sigset_t ss;
 
     len = strlen(XGS_DATA_DIR) + strlen(DATA_DIR) + 2;
 
@@ -107,6 +110,8 @@ int main(int argc, char **argv)
     g_ram_size  = 2;
     g_framerate = 60;
 
+    g_audio_buffer = DEFAULT_AUDIO_BUFFER;
+
     s5d1_image = NULL;
     s5d2_image = NULL;
     s6d1_image = NULL;
@@ -141,6 +146,9 @@ int main(int argc, char **argv)
             if ((unit < 0) || (unit >= NUM_SMPT_DEVS)) displayUsage(argv[0]);
             if (++i >= argc) displayUsage(argv[0]);
             smtport_images[unit] = argv[i];
+        } else if (!strcmp(argv[i],"-audiobuffer")) {
+            if (++i >= argc) displayUsage(argv[0]);
+            g_audio_buffer = atoi(argv[i]);
         } else displayUsage(argv[0]);
     }
 
@@ -151,6 +159,15 @@ int main(int argc, char **argv)
     }
 
     atexit(SDL_Quit);
+
+    sigemptyset(&ss);
+    sigaddset(&ss, SIGUSR1);
+
+    if (pthread_sigmask(SIG_BLOCK, &ss, NULL) != 0) {
+        perror("Unable to set signal mask");
+
+        return -1;
+    }
 
     printf("Starting XGS Version %s\n\n", VERSION);
 
@@ -211,7 +228,7 @@ int main(int argc, char **argv)
 
 void globalShutdown()
 {
-    raise(SIGUSR2);
+    raise(SIGINT);
 }
 
 void printSDLError(const char *msg)
@@ -241,7 +258,7 @@ int openDataFile(const char *filename)
     snprintf(path, len, "%s/%s", user_dir, filename);
     fd = open(path, O_RDONLY);
 
-    if ((fd < 0) && (errno != ENOENT)) {
+    if ((fd >= 0) || (errno != ENOENT)) {
         free(path);
 
         return fd;
