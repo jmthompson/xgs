@@ -31,7 +31,7 @@ static SDL_AudioDeviceID sound_device_id;
 
 static int    glu_ctrl_reg,glu_next_val;
 static word16 glu_addr_reg;
-static int    sr,num_osc;
+static int    num_osc;
 static float  system_volume;
 
 const static int wp_masks[8]  = { 0xFF, 0xFE, 0xFC, 0xF8, 0xF0, 0xE0, 0xC0, 0x80 };
@@ -306,7 +306,9 @@ void enableOscillators(void)
 {
     int    i,mode,last_mode;
 
-    num_osc = ((doc_registers[0xE1] >> 1) & 0x1F) + 1;
+    num_osc = doc_registers[0xE1] >> 1;
+    if (num_osc < 1)  num_osc = 1;
+    if (num_osc > 32) num_osc = 32;
 
     last_mode = -1;
     for (i = 0 ; i < num_osc ; i++) {
@@ -332,7 +334,6 @@ void enableOscillators(void)
                        !osc_enable[i];
         updateOscillator(i);
     }
-    sr = sample_rates[num_osc];
 }
 
 static void bufferCallback(void *userdata, Uint8 *stream, int len)
