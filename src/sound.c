@@ -306,9 +306,7 @@ void enableOscillators(void)
 {
     int    i,mode,last_mode;
 
-    num_osc = doc_registers[0xE1] >> 1;
-    if (num_osc < 1)  num_osc = 1;
-    if (num_osc > 32) num_osc = 32;
+    num_osc = ((doc_registers[0xE1] >> 1) & 0x1F) + 1;
 
     last_mode = -1;
     for (i = 0 ; i < num_osc ; i++) {
