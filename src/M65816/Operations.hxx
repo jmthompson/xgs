@@ -1,22 +1,22 @@
 inline void stackPush(const uint8_t& v)
 {
-    board->writeMemory(0, S-- + StackOffset, v);
+    system->cpuWrite(0, S-- + StackOffset, v);
 }
 
 inline void stackPush(const uint16_t& v)
 {
-    board->writeMemory(0, S-- + StackOffset, v >> 8);
-    board->writeMemory(0, S-- + StackOffset, v);
+    system->cpuWrite(0, S-- + StackOffset, v >> 8);
+    system->cpuWrite(0, S-- + StackOffset, v);
 }
 
 inline void stackPull(uint8_t& v)
 {
-    v = board->readMemory(0, ++S + StackOffset);
+    v = system->cpuRead(0, ++S + StackOffset);
 }
 
 inline void stackPull(uint16_t& v)
 {
-    v = board->readMemory(0, ++S + StackOffset) | (board->readMemory(0, ++S + StackOffset) << 8);
+    v = system->cpuRead(0, ++S + StackOffset) | (system->cpuRead(0, ++S + StackOffset) << 8);
 }
 
 inline void jumpTo(const uint16_t& addr)
@@ -53,33 +53,33 @@ inline void checkDirectPageAlignment()
 
 inline void fetchImmediateOperand(uint8_t &op)
 {
-    op = board->readMemory(PBR, PC++);
+    op = system->cpuRead(PBR, PC++);
 }
 
 inline void fetchImmediateOperand(uint16_t &op)
 {
-    op = board->readMemory(PBR, PC++) | (board->readMemory(PBR, PC++) << 8);
+    op = system->cpuRead(PBR, PC++) | (system->cpuRead(PBR, PC++) << 8);
 }
 
 inline void fetchOperand(uint8_t &op)
 {
-    op = board->readMemory(operand_bank, operand_addr);
+    op = system->cpuRead(operand_bank, operand_addr);
 }
 
 inline void fetchOperand(uint16_t &op)
 {
-    op = board->readMemory(operand_bank, operand_addr) | (board->readMemory(operand_bank, operand_addr + 1) << 8);
+    op = system->cpuRead(operand_bank, operand_addr) | (system->cpuRead(operand_bank, operand_addr + 1) << 8);
 }
 
 inline void storeOperand(uint8_t &op)
 {
-    board->writeMemory(operand_bank, operand_addr, op);
+    system->cpuWrite(operand_bank, operand_addr, op);
 }
 
 inline void storeOperand(uint16_t &op)
 {
-    board->writeMemory(operand_bank, operand_addr, op);
-    board->writeMemory(operand_bank, operand_addr + 1, op >> 8);
+    system->cpuWrite(operand_bank, operand_addr, op);
+    system->cpuWrite(operand_bank, operand_addr + 1, op >> 8);
 }
 
 inline void checkIfNegative(const uint8_t &v) { SR.N = v & 0x80; }
@@ -205,6 +205,8 @@ inline void op_CMP()
 
     checkIfNegative(tmp);
     checkIfZero(tmp);
+
+    SR.C = (A >= operand.m);
 }
     
 inline void op_CPX()
@@ -213,6 +215,8 @@ inline void op_CPX()
 
     checkIfNegative(tmp);
     checkIfZero(tmp);
+
+    SR.C = (X >= operand.x);
 }
     
 inline void op_CPY()
@@ -221,17 +225,19 @@ inline void op_CPY()
 
     checkIfNegative(tmp);
     checkIfZero(tmp);
+
+    SR.C = (Y >= operand.x);
 }
 
 // Block moves
 
 void op_MVP()
 {
-    uint8_t dst_bank = board->readMemory(PBR, PC);
-    uint8_t src_bank = board->readMemory(PBR, PC + 1);
+    uint8_t dst_bank = system->cpuRead(PBR, PC);
+    uint8_t src_bank = system->cpuRead(PBR, PC + 1);
 
     if (cpu->A.W != 0xFFFF) {
-        board->writeMemory(dst_bank, cpu->Y.W, board->readMemory(src_bank, cpu->X.W));
+        system->cpuWrite(dst_bank, cpu->Y.W, system->cpuRead(src_bank, cpu->X.W));
 
         --cpu->A.W;
         --cpu->X.W;
@@ -246,11 +252,11 @@ void op_MVP()
 
 void op_MVN()
 {
-    uint8_t dst_bank = board->readMemory(PBR, PC);
-    uint8_t src_bank = board->readMemory(PBR, PC + 1);
+    uint8_t dst_bank = system->cpuRead(PBR, PC);
+    uint8_t src_bank = system->cpuRead(PBR, PC + 1);
 
     if (cpu->A.W != 0xFFFF) {
-        board->writeMemory(dst_bank, cpu->Y.W, board->readMemory(src_bank, cpu->X.W));
+        system->cpuWrite(dst_bank, cpu->Y.W, system->cpuRead(src_bank, cpu->X.W));
 
         --cpu->A.W;
         ++cpu->X.W;
@@ -291,37 +297,37 @@ inline void op_LDY()
 
 inline void op_STA()
 {
-    board->writeMemory(operand_bank, operand_addr, A);
+    system->cpuWrite(operand_bank, operand_addr, A);
 
     if (sizeof(MemSizeType) == 2) {
-        board->writeMemory(operand_bank, operand_addr + 1, A >> 8);
+        system->cpuWrite(operand_bank, operand_addr + 1, A >> 8);
     }
 }
 
 inline void op_STX()
 {
-    board->writeMemory(operand_bank, operand_addr, X);
+    system->cpuWrite(operand_bank, operand_addr, X);
 
     if (sizeof(IndexSizeType) == 2) {
-        board->writeMemory(operand_bank, operand_addr + 1, X >> 8);
+        system->cpuWrite(operand_bank, operand_addr + 1, X >> 8);
     }
 }
 
 inline void op_STY()
 {
-    board->writeMemory(operand_bank, operand_addr, Y);
+    system->cpuWrite(operand_bank, operand_addr, Y);
 
     if (sizeof(IndexSizeType) == 2) {
-        board->writeMemory(operand_bank, operand_addr + 1, Y >> 8);
+        system->cpuWrite(operand_bank, operand_addr + 1, Y >> 8);
     }
 }
 
 inline void op_STZ()
 {
-    board->writeMemory(operand_bank, operand_addr, 0);
+    system->cpuWrite(operand_bank, operand_addr, 0);
 
     if (sizeof(MemSizeType) == 2) {
-        board->writeMemory(operand_bank, operand_addr + 1, 0);
+        system->cpuWrite(operand_bank, operand_addr + 1, 0);
     }
 }
 

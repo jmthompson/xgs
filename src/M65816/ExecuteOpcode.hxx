@@ -584,7 +584,7 @@ void executeOpcode(unsigned int opcode)
         case 0x42:  /* WDM */
             fetchImmediateOperand(operand.b);
 
-            board->handleWdm(operand.b);
+            system->handleWdm(operand.b);
 
             break;
 
@@ -1367,7 +1367,7 @@ void executeOpcode(unsigned int opcode)
 
         case 0xAA:  /* TAX i */
             // transfer all bits when x=0, even if m=1
-            Y = static_cast<IndexSizeType> (cpu->A);
+            X = static_cast<IndexSizeType> (cpu->A);
 
             checkIfNegative(X);
             checkIfZero(X);

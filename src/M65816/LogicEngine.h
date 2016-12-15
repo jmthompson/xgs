@@ -11,7 +11,7 @@ template <typename MemSizeType, typename IndexSizeType, typename StackSizeType, 
 class LogicEngine {
     private:
         Processor *cpu;
-        SystemBoard *board;
+        System *system;
 
         const MemSizeType n_bit = 1 << ((sizeof(MemSizeType) * 8) - 1);
         const MemSizeType v_bit = 1 << ((sizeof(MemSizeType) * 8) - 2);
@@ -64,7 +64,7 @@ class LogicEngine {
 #include "Operations.hxx"
 
     public:
-        LogicEngine(Processor *parent) : cpu(parent), board(parent->board), SR(parent->SR), D(parent->D), S(parent->S), PC(parent->PC), PBR(parent->PBR), DBR(parent->DBR), A(parent->A), X(parent->X), Y(parent->Y) { }
+        LogicEngine(Processor *parent) : cpu(parent), system(parent->system), SR(parent->SR), D(parent->D), S(parent->S), PC(parent->PC), PBR(parent->PBR), DBR(parent->DBR), A(parent->A), X(parent->X), Y(parent->Y) { }
         ~LogicEngine() = default;
 
 

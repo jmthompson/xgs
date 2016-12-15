@@ -9,13 +9,13 @@
 
 #include "Processor.h"
 #include "Debugger.h"
-#include "SystemBoard/SystemBoard.h"
+#include "System/System.h"
 
 namespace M65816 {
 
-Processor::Processor(SystemBoard *sb)
+Processor::Processor(System *theSystem)
 {
-    board = sb;
+    system = theSystem;
 
     engine_e0m0x0 = new LogicEngine<uint16_t, uint16_t, uint16_t, 0>(this);
     engine_e0m0x1 = new LogicEngine<uint16_t, uint8_t, uint16_t, 0>(this);
@@ -27,10 +27,13 @@ Processor::Processor(SystemBoard *sb)
 unsigned int Processor::runUntil(const unsigned int max_cycles)
 {
     unsigned int opcode;
+    uint16_t lastPC;
 
     num_cycles = 0;
 
     while (num_cycles < max_cycles) {
+        lastPC = PC;
+
         if (abort_pending) {
             opcode = 0x102;
         }
@@ -44,9 +47,9 @@ unsigned int Processor::runUntil(const unsigned int max_cycles)
             return max_cycles;
         }
         else {
-            opcode = board->readMemory(PBR, PC);
+            opcode = system->cpuRead(PBR, PC);
 
-            if (debugger) debugger->executeHook();
+//            if (debugger) debugger->preExecute(PBR, PC);
 
             ++PC;
         }
@@ -80,6 +83,8 @@ unsigned int Processor::runUntil(const unsigned int max_cycles)
                 engine_e0m0x0->executeOpcode(opcode);
             }
         }
+
+        if (debugger) debugger->postExecute(PBR, lastPC);
     }
 }
 

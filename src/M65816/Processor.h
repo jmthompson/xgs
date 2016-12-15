@@ -12,7 +12,7 @@
 
 #include "config.h"
 #include "StatusRegister.h"
-#include "SystemBoard/SystemBoard.h"
+#include "System/System.h"
 
 using std::uint8_t;
 using std::uint16_t;
@@ -40,7 +40,7 @@ class Processor {
         LogicEngine<uint8_t, uint8_t, uint16_t, 0> *engine_e0m1x1;
         LogicEngine<uint8_t, uint8_t, uint8_t, 0x0100> *engine_e1m1x1;
  
-        SystemBoard *board;
+        System *system;
         Debugger *debugger;
 
         bool stopped;
@@ -78,7 +78,7 @@ class Processor {
         unsigned int num_cycles;
 
     public:
-        Processor(SystemBoard *);
+        Processor(System *);
         ~Processor();
 
         // Run until a certain number of cycles have been executed. Returns the number
@@ -103,7 +103,7 @@ class Processor {
         // Load the contents of a vector into the PC and PBR
         inline void loadVector(uint16_t va)
         {
-            PC  = board->readMemory(0, va) | (board->readMemory(0, va + 1) << 8);
+            PC  = system->cpuRead(0, va) | (system->cpuRead(0, va + 1) << 8);
             PBR = 0;
         }
 

@@ -17,6 +17,7 @@
 
 #include "Opcode.h"
 
+using std::string;
 using std::uint8_t;
 using std::uint32_t;
 
@@ -29,7 +30,7 @@ struct Instruction {
     uint16_t address;
     const Opcode *opcode;
 
-    std::vector<uint8_t> bytes;
+    std::vector<unsigned int> bytes;
 };
 
 class Debugger {
@@ -39,13 +40,15 @@ class Debugger {
         uint8_t instruction[4];
         int instruction_len;
 
+        string renderArgument(const Instruction& ins);
+        string renderBytes(const Instruction& ins);
+
     public:
         Debugger(Processor *theCpu) : cpu(theCpu) {}
         ~Debugger() = default;
 
         Instruction decodeInstruction(uint8_t bank, uint16_t address);
-        std::string renderArgument(const Instruction &ins);
-        virtual void executeHook();
+        virtual void postExecute(uint8_t bank, uint16_t address);
 };
 
 } // namespace M65816
