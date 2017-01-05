@@ -2048,7 +2048,7 @@ void executeOpcode(unsigned int opcode)
             break;
 
         case 0x100: /* irq */
-            cpu->irq_pending = cpu->waiting = false;
+            cpu->waiting = false;
 
             if (!StackOffset) {
                 stackPush(PBR);

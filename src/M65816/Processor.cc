@@ -9,11 +9,19 @@
 
 #include "Processor.h"
 #include "Debugger.h"
-#include "System/System.h"
+#include "xgscore/System.h"
 
 namespace M65816 {
 
-Processor::Processor(System *theSystem)
+Processor::Processor()
+{
+}
+
+Processor::~Processor()
+{
+}
+
+void Processor::attach(System *theSystem)
 {
     system = theSystem;
 
@@ -27,12 +35,14 @@ Processor::Processor(System *theSystem)
 unsigned int Processor::runUntil(const unsigned int max_cycles)
 {
     unsigned int opcode;
+    uint8_t  lastPBR;
     uint16_t lastPC;
 
     num_cycles = 0;
 
     while (num_cycles < max_cycles) {
         lastPC = PC;
+        lastPBR = PBR;
 
         if (abort_pending) {
             opcode = 0x102;
@@ -84,7 +94,7 @@ unsigned int Processor::runUntil(const unsigned int max_cycles)
             }
         }
 
-        if (debugger) debugger->postExecute(PBR, lastPC);
+        if (debugger != nullptr) debugger->postExecute(lastPBR, lastPC);
     }
 }
 
@@ -94,8 +104,8 @@ void Processor::reset(void)
     waiting = false;
 
     nmi_pending   = false;
-    irq_pending   = false;
     abort_pending = false;
+    irq_pending   = 0;
 
     SR.E = true;
     SR.M = true;

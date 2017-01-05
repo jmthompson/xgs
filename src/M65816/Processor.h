@@ -10,9 +10,9 @@
 #ifndef PROCESSOR_H
 #define PROCESSOR_H
 
-#include "config.h"
+#include "gstypes.h"
 #include "StatusRegister.h"
-#include "System/System.h"
+#include "xgscore/System.h"
 
 using std::uint8_t;
 using std::uint16_t;
@@ -40,15 +40,16 @@ class Processor {
         LogicEngine<uint8_t, uint8_t, uint16_t, 0> *engine_e0m1x1;
         LogicEngine<uint8_t, uint8_t, uint8_t, 0x0100> *engine_e1m1x1;
  
-        System *system;
-        Debugger *debugger;
+        System *system = nullptr;
+        Debugger *debugger = nullptr;
 
         bool stopped;
         bool waiting;
 
         bool nmi_pending;
-        bool irq_pending;
         bool abort_pending;
+
+        unsigned int irq_pending;
 
         // Status Register
         M65816::StatusRegister SR;
@@ -78,8 +79,11 @@ class Processor {
         unsigned int num_cycles;
 
     public:
-        Processor(System *);
+        Processor();
         ~Processor();
+
+        // Attach this CPU to a system
+        void attach(System *);
 
         // Run until a certain number of cycles have been executed. Returns the number
         // of cycles actually executed, which may be slightly higher than requested.
@@ -91,11 +95,14 @@ class Processor {
         // Raise a non-maskable interrupt
         void nmi() { nmi_pending = true; }
 
-        // Raise an interrupt
-        void irq() { irq_pending = true; }
-
         // Raise the ABORT signal
         void abort() { abort_pending = true; }
+
+        // Raise an interrupt
+        void raiseInterrupt() { ++irq_pending; }
+
+        // Lower an interrupt
+        void lowerInterrupt() { if (irq_pending) --irq_pending; }
 
         void attachDebugger(M65816::Debugger *dbug) { debugger = dbug; }
         void detachDebugger() { debugger = nullptr; }

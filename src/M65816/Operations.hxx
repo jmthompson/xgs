@@ -385,7 +385,7 @@ inline void op_ADC()
         SR.C = (sum > m_max);
     }
 
-    SR.V = ((~(sum ^ operand.m) & (sum ^ A)) & n_bit);
+    SR.V = (sum ^ operand.m) & (sum ^ A) & n_bit;
 
     A = sum;
 
@@ -427,7 +427,7 @@ inline void op_SBC()
         SR.C = !(diff > m_max);
     }
 
-    SR.V = ((diff ^ operand.m) & (diff ^ A) & n_bit)? 1 : 0;
+    SR.V = (diff ^ (255 - operand.m)) & (diff ^ A) & n_bit;
 
     A = diff;
 

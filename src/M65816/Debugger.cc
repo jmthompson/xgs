@@ -26,7 +26,6 @@ using std::endl;
 using std::int8_t;
 using std::int16_t;
 using std::string;
-using std::printf;
 
 namespace M65816 {
 
