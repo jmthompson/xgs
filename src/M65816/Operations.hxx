@@ -208,7 +208,7 @@ inline void op_CMP()
 
     SR.C = (A >= operand.m);
 }
-    
+
 inline void op_CPX()
 {
     IndexSizeType tmp = X - operand.x;
@@ -218,7 +218,7 @@ inline void op_CPX()
 
     SR.C = (X >= operand.x);
 }
-    
+
 inline void op_CPY()
 {
     IndexSizeType tmp = Y - operand.x;

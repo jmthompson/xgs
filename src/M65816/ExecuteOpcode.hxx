@@ -1289,7 +1289,7 @@ void executeOpcode(unsigned int opcode)
 
         case 0xA0:  /* LDY # */
             fetchImmediateOperand(operand.x);
-            
+
             op_LDY();
 
             break;
@@ -1297,14 +1297,14 @@ void executeOpcode(unsigned int opcode)
         case 0xA1:  /* LDA (d,x) */
             getAddress_dxi();
             fetchOperand(operand.m);
-            
+
             op_LDA();
 
             break;
 
         case 0xA2:  /* LDX # */
             fetchImmediateOperand(operand.x);
-            
+
             op_LDX();
 
             break;
@@ -1312,7 +1312,7 @@ void executeOpcode(unsigned int opcode)
         case 0xA3:  /* LDA d,s */
             getAddress_sr();
             fetchOperand(operand.m);
-            
+
             op_LDA();
 
             break;
@@ -1320,7 +1320,7 @@ void executeOpcode(unsigned int opcode)
         case 0xA4:  /* LDY d */
             getAddress_d();
             fetchOperand(operand.x);
-            
+
             op_LDY();
 
             break;
@@ -1328,7 +1328,7 @@ void executeOpcode(unsigned int opcode)
         case 0xA5:  /* LDA d */
             getAddress_d();
             fetchOperand(operand.m);
-            
+
             op_LDA();
 
             break;
@@ -1336,7 +1336,7 @@ void executeOpcode(unsigned int opcode)
         case 0xA6:  /* LDX d */
             getAddress_d();
             fetchOperand(operand.x);
-            
+
             op_LDX();
 
             break;
@@ -1344,7 +1344,7 @@ void executeOpcode(unsigned int opcode)
         case 0xA7:  /* LDA [d] */
             getAddress_dil();
             fetchOperand(operand.m);
-            
+
             op_LDA();
 
             break;
@@ -1360,7 +1360,7 @@ void executeOpcode(unsigned int opcode)
 
         case 0xA9:  /* LDA # */
             fetchImmediateOperand(operand.m);
-            
+
             op_LDA();
 
             break;
@@ -1385,7 +1385,7 @@ void executeOpcode(unsigned int opcode)
         case 0xAC:  /* LDY a */
             getAddress_a();
             fetchOperand(operand.x);
-            
+
             op_LDY();
 
             break;
@@ -1393,7 +1393,7 @@ void executeOpcode(unsigned int opcode)
         case 0xAD:  /* LDA a */
             getAddress_a();
             fetchOperand(operand.m);
-            
+
             op_LDA();
 
             break;
@@ -1401,7 +1401,7 @@ void executeOpcode(unsigned int opcode)
         case 0xAE:  /* LDX a */
             getAddress_a();
             fetchOperand(operand.x);
-            
+
             op_LDX();
 
             break;
@@ -1409,7 +1409,7 @@ void executeOpcode(unsigned int opcode)
         case 0xAF:  /* LDA al */
             getAddress_al();
             fetchOperand(operand.m);
-            
+
             op_LDA();
 
             break;
@@ -1430,7 +1430,7 @@ void executeOpcode(unsigned int opcode)
         case 0xB1:  /* LDA (d),y */
             getAddress_dix();
             fetchOperand(operand.m);
-            
+
             op_LDA();
 
             break;
@@ -1438,7 +1438,7 @@ void executeOpcode(unsigned int opcode)
         case 0xB2:  /* LDA (d) */
             getAddress_di();
             fetchOperand(operand.m);
-            
+
             op_LDA();
 
             break;
@@ -1446,7 +1446,7 @@ void executeOpcode(unsigned int opcode)
         case 0xB3:  /* LDA (d,s),y */
             getAddress_srix();
             fetchOperand(operand.m);
-            
+
             op_LDA();
 
             break;
@@ -1454,7 +1454,7 @@ void executeOpcode(unsigned int opcode)
         case 0xB4:  /* LDY d,x */
             getAddress_dxx();
             fetchOperand(operand.x);
-            
+
             op_LDY();
 
             break;
@@ -1462,7 +1462,7 @@ void executeOpcode(unsigned int opcode)
         case 0xB5:  /* LDA d,x */
             getAddress_dxx();
             fetchOperand(operand.m);
-            
+
             op_LDA();
 
             break;
@@ -1470,7 +1470,7 @@ void executeOpcode(unsigned int opcode)
         case 0xB6:  /* LDX d,y */
             getAddress_dxy();
             fetchOperand(operand.x);
-            
+
             op_LDX();
 
             break;
@@ -1478,7 +1478,7 @@ void executeOpcode(unsigned int opcode)
         case 0xB7:  /* LDA [d],y */
             getAddress_dixl();
             fetchOperand(operand.m);
-            
+
             op_LDA();
 
             break;
@@ -1491,7 +1491,7 @@ void executeOpcode(unsigned int opcode)
         case 0xB9:  /* LDA a,y */
             getAddress_axy();
             fetchOperand(operand.m);
-            
+
             op_LDA();
 
             break;
@@ -1515,7 +1515,7 @@ void executeOpcode(unsigned int opcode)
         case 0xBC:  /* LDY a,x */
             getAddress_axx();
             fetchOperand(operand.x);
-            
+
             op_LDY();
 
             break;
@@ -1523,7 +1523,7 @@ void executeOpcode(unsigned int opcode)
         case 0xBD:  /* LDA a,x */
             getAddress_axx();
             fetchOperand(operand.m);
-            
+
             op_LDA();
 
             break;
@@ -1531,7 +1531,7 @@ void executeOpcode(unsigned int opcode)
         case 0xBE:  /* LDX a,y */
             getAddress_axy();
             fetchOperand(operand.x);
-            
+
             op_LDX();
 
             break;
@@ -1539,7 +1539,7 @@ void executeOpcode(unsigned int opcode)
         case 0xBF:  /* LDA al,x */
             getAddress_alxx();
             fetchOperand(operand.m);
-            
+
             op_LDA();
 
             break;
@@ -1809,6 +1809,10 @@ void executeOpcode(unsigned int opcode)
             fetchImmediateOperand(operand.b);
 
             SR |= operand.b;
+
+            if (SR.X) {
+                cpu->X.B.H = cpu->Y.B.H = 0;
+            }
 
             break;
 
