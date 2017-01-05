@@ -100,7 +100,7 @@ void getAddress_axy()
 
 void getAddress_alxx()
 {
-    operand_addr = system->cpuRead(PBR, PC) | (system->cpuRead(PBR, PC + 1) << 8) + X;
+    operand_addr = (system->cpuRead(PBR, PC) | (system->cpuRead(PBR, PC + 1) << 8)) + X;
     operand_bank = system->cpuRead(PBR, PC + 2);
 
     PC += 3;
