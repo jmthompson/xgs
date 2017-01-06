@@ -82,12 +82,7 @@ class StatusRegister {
         }
 
         operator uint8_t() const {
-            if (E) {
-                return (N << 7)|(V << 6)|(D << 3)|(I << 2)|(Z << 1)|C;
-            }
-            else {
-                return (N << 7)|(V << 6)|(M << 5)|(X << 4)|(D << 3)|(I << 2)|(Z << 1)|C;
-            }
+            return (N << 7)|(V << 6)|(M << 5)|(X << 4)|(D << 3)|(I << 2)|(Z << 1)|C;
         };
 };
 
