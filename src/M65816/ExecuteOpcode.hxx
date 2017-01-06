@@ -361,6 +361,8 @@ void executeOpcode(unsigned int opcode)
                 SR = v;
             }
 
+            cpu->modeSwitch();
+
             break;
 
         case 0x29:  /* AND # */
@@ -1245,9 +1247,6 @@ void executeOpcode(unsigned int opcode)
 
         case 0x9A:  /* TXS i */
             S = X;
-
-            checkIfNegative(S);
-            checkIfZero(S);
 
             break;
 

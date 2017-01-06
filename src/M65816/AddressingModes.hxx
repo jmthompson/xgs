@@ -29,7 +29,7 @@ void getAddress_dix()
 
     tmp = operand_addr;
 
-    operand_addr += X;
+    operand_addr += Y;
 
     checkDataPageCross(tmp);
 }
@@ -40,8 +40,10 @@ void getAddress_dixl()
 
     checkDirectPageAlignment();
 
-    operand_addr = system->cpuRead(0, tmp) | (system->cpuRead(0, tmp + 1) << 8) + X;
+    operand_addr = system->cpuRead(0, tmp) | (system->cpuRead(0, tmp + 1) << 8);
     operand_bank = system->cpuRead(0, tmp + 2);
+
+    operand_addr += Y;
 }
 
 void getAddress_dxi()
