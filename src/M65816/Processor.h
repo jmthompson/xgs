@@ -51,6 +51,8 @@ class Processor {
 
         unsigned int irq_pending;
 
+    public:
+
         // Status Register
         M65816::StatusRegister SR;
 
@@ -78,7 +80,6 @@ class Processor {
         // Number of cycles executed
         unsigned int num_cycles;
 
-    public:
         Processor();
         ~Processor();
 
