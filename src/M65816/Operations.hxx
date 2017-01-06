@@ -233,11 +233,12 @@ inline void op_CPY()
 
 void op_MVP()
 {
-    uint8_t dst_bank = system->cpuRead(PBR, PC);
     uint8_t src_bank = system->cpuRead(PBR, PC + 1);
 
+    DBR = system->cpuRead(PBR, PC);
+
     if (cpu->A.W != 0xFFFF) {
-        system->cpuWrite(dst_bank, cpu->Y.W, system->cpuRead(src_bank, cpu->X.W));
+        system->cpuWrite(DBR, cpu->Y.W, system->cpuRead(src_bank, cpu->X.W));
 
         --cpu->A.W;
         --cpu->X.W;
@@ -252,11 +253,12 @@ void op_MVP()
 
 void op_MVN()
 {
-    uint8_t dst_bank = system->cpuRead(PBR, PC);
     uint8_t src_bank = system->cpuRead(PBR, PC + 1);
 
+    DBR = system->cpuRead(PBR, PC);
+
     if (cpu->A.W != 0xFFFF) {
-        system->cpuWrite(dst_bank, cpu->Y.W, system->cpuRead(src_bank, cpu->X.W));
+        system->cpuWrite(DBR, cpu->Y.W, system->cpuRead(src_bank, cpu->X.W));
 
         --cpu->A.W;
         ++cpu->X.W;
