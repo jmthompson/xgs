@@ -102,8 +102,14 @@ void getAddress_axy()
 
 void getAddress_alxx()
 {
-    operand_addr = (system->cpuRead(PBR, PC) | (system->cpuRead(PBR, PC + 1) << 8)) + X;
-    operand_bank = system->cpuRead(PBR, PC + 2);
+    uint32_t address = system->cpuRead(PBR, PC)
+                        | (system->cpuRead(PBR, PC + 1) << 8)
+                        | (system->cpuRead(PBR, PC + 2) << 16);
+
+    address += X;
+
+    operand_addr = address;
+    operand_bank = address >> 16;
 
     PC += 3;
 }
