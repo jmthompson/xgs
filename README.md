@@ -69,7 +69,8 @@ You can also display the help text if you need help with the command-line option
 
 At the moment, this version mostly boots. That is to say, it will start up but
 dump to the Monitor prompt almost immediately. This is likely due to CPU bugs.
-I've been finding and fixing these by comparing the debug output 
+I've been finding and fixing these by comparing the debug output against the
+output from older versions of XGS.
 
 This code will be very much in flux for the next few months as I continue to
 debug, improve, and streamline the code base.
