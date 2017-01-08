@@ -16,9 +16,11 @@
 
 #include <cstdlib>
 
+#include "ADB.h"
 #include "Mega2.h"
 #include "VGC.h"
 #include "System.h"
+#include "M65816/Processor.h"
 
 using std::uint8_t;
 
@@ -28,6 +30,7 @@ using std::uint8_t;
 void Mega2::reset()
 {
     vgc = (VGC *) system->getDevice("vgc");
+    adb = (ADB *) system->getDevice("adb");
 
     sw_80store = false;
     sw_auxrd   = false;
@@ -310,6 +313,20 @@ uint8_t Mega2::read(const unsigned int& offset)
 
             break;
 
+        case 0x41:
+            if (vgc->sw_qtrsecirq_enable) val |= 0x10;
+            if (vgc->sw_vblirq_enable)    val |= 0x08;
+            if (adb->sw_m2mouseswirq)     val |= 0x04;
+            if (adb->sw_m2mousemvirq)     val |= 0x02;
+            if (adb->sw_m2mouseenable)    val |= 0x01;
+
+            break;
+
+        case 0x46:
+            val = sw_diagtype;
+
+            break;
+
         case 0x68:
             if (sw_intcxrom)   val |= 0x01;
             if (sw_rombank)    val |= 0x02;
@@ -517,6 +534,23 @@ void Mega2::write(const unsigned int& offset, const uint8_t& val)
 #endif
             break;
 
+        case 0x41:
+            adb->sw_m2mouseenable    = val & 0x01;
+            adb->sw_m2mousemvirq     = val & 0x02;
+            adb->sw_m2mouseswirq     = val & 0x04;
+            vgc->sw_vblirq_enable    = val & 0x08;
+            vgc->sw_qtrsecirq_enable = val & 0x10;
+
+            break;
+
+        case 0x47:
+            if (sw_diagtype & 0x10) system->cpu->lowerInterrupt();
+            if (sw_diagtype & 0x08) system->cpu->lowerInterrupt();
+
+            sw_diagtype &= ~0x18;
+
+            break;
+
         case 0x68:
             sw_intcxrom   = val & 0x01;
             sw_rombank    = val & 0x02;
@@ -607,38 +641,3 @@ void Mega2::write(const unsigned int& offset, const uint8_t& val)
 
     last_access = offset;
 }
-#if 0
-byte MEM_getIntEnReg(byte val)
-{
-    val = 0;
-    if (g_qtrsecirq_enable) val |= 0x10;
-    if (g_vblirq_enable) val |= 0x08;
-    if (adb_m2mouseswirq) val |= 0x04;
-    if (adb_m2mousemvirq) val |= 0x02;
-    if (adb_m2mouseenable) val |= 0x01;
-    return val;
-}
-
-byte MEM_setIntEnReg(byte val)
-{
-    adb_m2mouseenable = (val & 0x01)? 1 : 0;
-    adb_m2mousemvirq = (val & 0x02)? 1 : 0;
-    adb_m2mouseswirq = (val & 0x04)? 1 : 0;
-    g_vblirq_enable = (val & 0x08)? 1 : 0;
-    g_qtrsecirq_enable = (val & 0x10)? 1 : 0;
-    return 0;
-}
-
-byte MEM_getDiagType(byte val)
-{
-    return m_diagtype;
-}
-
-byte MEM_setVBLClear(byte val)
-{
-    if (m_diagtype & 0x10) m65816_clearIRQ();
-    if (m_diagtype & 0x08) m65816_clearIRQ();
-    m_diagtype &= ~0x18;
-    return 0;
-}
-#endif

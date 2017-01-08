@@ -75,7 +75,7 @@ std::string Debugger::renderArgument(const Instruction& ins)
             break;
 
         case kAddrMode_al:
-            buffer << boost::format("$%02X/%02X%02X") % ins.bytes[3] % ins.bytes[2] % ins.bytes[1];
+            buffer << boost::format("$%02X%02X%02X") % ins.bytes[3] % ins.bytes[2] % ins.bytes[1];
             break;
 
         case kAddrMode_d:
@@ -112,7 +112,7 @@ std::string Debugger::renderArgument(const Instruction& ins)
             break;
 
         case kAddrMode_alxx:
-            buffer << boost::format("$%02X/%02X%02X,X") % ins.bytes[3] % ins.bytes[2] % ins.bytes[1];
+            buffer << boost::format("$%02X%02X%02X,X") % ins.bytes[3] % ins.bytes[2] % ins.bytes[1];
             break;
 
         case kAddrMode_axy:
@@ -163,7 +163,7 @@ std::string Debugger::renderArgument(const Instruction& ins)
             break;
 
         case kAddrMode_blockmove:
-            buffer << boost::format("$%02X,%02X") % ins.bytes[1] % ins.bytes[2];
+            buffer << boost::format("$%02X,$%02X") % ins.bytes[1] % ins.bytes[2];
             break;
     }
 
@@ -185,10 +185,11 @@ void Debugger::postExecute(uint8_t bank, uint16_t address)
 {
     Instruction ins = decodeInstruction(bank, address);
 
-    cout << boost::format("%02X/%04X:%-12s  %3s %-18s |%c%c%c%c%c%c%c%c| E=%1d DBR=%02X A=%04X X=%04X Y=%04X S=%04X D=%04X\n")
+    cout << boost::format("%02X/%04X:%-12s  %3s  %-18s |%c%c%c%c%c%c%c%c| E=%1d DBR=%02X A=%04X X=%04X Y=%04X S=%04X D=%04X\n")
                 % (int) bank
                 % address
-                % renderBytes(ins)
+                //% renderBytes(ins)
+                % " "
                 % ins.opcode->getName()
                 % renderArgument(ins)
                 % (cpu->SR.N? 'n' : '-')
