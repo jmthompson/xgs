@@ -184,11 +184,11 @@ void Mega2::buildLanguageCard(unsigned int dst_bank, unsigned int src_bank)
         system->mapWrite(dst_bank|page, 0xFF00|page);
     }
 
-    unsigned int lcpage = sw_lcbank2? 0xD0 : 0xC0;
+    unsigned int offset = sw_lcbank2? 0 : 0x10;
 
     for (page = 0xD0 ; page <= 0xDF ; page++) {
-        system->mapRead(dst_bank|page,  sw_lcread?  src_bank|lcpage : 0xFF00|page);
-        system->mapWrite(dst_bank|page, sw_lcwrite? src_bank|lcpage : 0xFF00|page);
+        system->mapRead(dst_bank|page,  sw_lcread?  src_bank|(page - offset): 0xFF00|page);
+        system->mapWrite(dst_bank|page, sw_lcwrite? src_bank|(page - offset): 0xFF00|page);
     }
 
     for (page = 0xE0 ; page <= 0xFF ; page++) {
