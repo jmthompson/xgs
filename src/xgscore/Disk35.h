@@ -18,7 +18,7 @@ class Disk35 {
         static const unsigned int kNibblesPerTrack = 6656;
 
         VirtualDisk *vdisk = nullptr;
-        DiskTrack tracks[kNumTracks * 2];
+        DiskTrack tracks[2][kNumTracks];
 
         bool motor_on      = false;
         bool disk_switched = false;
@@ -36,6 +36,8 @@ class Disk35 {
         uint8_t read(const cycles_t);
         void write(const cycles_t, uint8_t);
         void flush();
+
+        void action(const unsigned int);
 
         void load(VirtualDisk *);
         void unload();

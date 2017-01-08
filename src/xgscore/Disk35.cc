@@ -29,8 +29,8 @@ using std::uint32_t;
 
 Disk35::Disk35()
 {
-    for (unsigned int i = 0 ; i < kNumTracks * 2 ; ++i) {
-        tracks[i].track_num = i >> 1;
+    for (unsigned int i = 0 ; i < kNumTracks ; ++i) {
+        tracks[0][i].track_num = tracks[1][i].track_num = i;
     }
 }
 
@@ -117,13 +117,57 @@ void Disk35::write(const cycles_t cycle_count, const uint8_t val)
 
 void Disk35::flush()
 {
-    for (unsigned int i = 0; i < kNumTracks * 2 ; ++i) {
-        DiskTrack& track = tracks[i];
-        if (!track.valid) continue;
+    for (unsigned int i = 0 ; i < 2 ; ++i) {
+        for (unsigned int j = 0 ; j < kNumTracks ; ++j) {
+            DiskTrack& track = tracks[i][j];
 
-        flushTrack(track);
+            if (track.valid) {
+                flushTrack(track);
 
-        if (i != current_track) track.invalidate();
+                if (j != current_track) track.invalidate();
+            }
+        }
+    }
+}
+
+void Disk35::action(const unsigned int state)
+{
+    switch(state) {
+        case 0x00:  // Set step direction inward (towards higher tracks)
+            step = 0;
+
+            break;
+        case 0x01:  // Set step direction outward (towards lower tracks) 
+            step = 1;
+
+            break;
+        case 0x03:  // reset disk-switched flag
+            disk_switched = false;
+
+            break;
+        case 0x04:    // step disk
+            if (step) {
+                if (current_track) --current_track;
+            }
+            else {
+                if (current_track < (kNumTracks - 1)) ++current_track;
+            }
+
+            break;
+        case 0x08:  // turn motor on
+            motor_on = true;
+
+            break;
+        case 0x09:  // turn motor off
+            motor_on = false;
+
+            break;
+        case 0x0D:  // eject disk
+            unload();
+
+            break;
+        default:
+            break;
     }
 }
 
@@ -137,9 +181,9 @@ void Disk35::load(VirtualDisk *new_vdisk)
     disk_switched = true;
     nib_pos = 0;
 
-    for (unsigned int i = 0 ; i < 80*2 ; ++i) {
-        tracks[i].valid = false;
-        tracks[i].dirty = false;
+    for (unsigned int i = 0 ; i < kNumTracks ; ++i) {
+        tracks[0][i].valid = tracks[0][i].dirty = false;
+        tracks[1][i].valid = tracks[1][i].dirty = false;
     }
 }
 

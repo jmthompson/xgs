@@ -84,10 +84,10 @@ void IWM::reset()
     iwm_enable2      = false;
     iwm_reset        = 0;
 
-    iwm_phase[0] = 0;
-    iwm_phase[1] = 0;
-    iwm_phase[2] = 0;
-    iwm_phase[3] = 0;
+    iwm_phase[0] = false;
+    iwm_phase[1] = false;
+    iwm_phase[2] = false;
+    iwm_phase[3] = false;
 }
 
 uint8_t IWM::read(const unsigned int& offset)
@@ -270,7 +270,14 @@ void IWM::touchSwitches(const unsigned int loc)
 
         if (iwm_motor_on) {
             if (iwm_35sel) {
-                //if ((phase == 3) && on) IWM_doAction35();
+                if ((phase == 3) && on) {
+                    unsigned int state = (iwm_phase[1] << 3) + (iwm_phase[0] << 2) + (iwm_35ctl << 1) + iwm_phase[2];
+
+                    disks_35[iwm_drive_select].action(state);
+                }
+                else {
+                    return;
+                }
             }
             else if (on) {
                 disks_525[iwm_drive_select].phaseChange(phase);
