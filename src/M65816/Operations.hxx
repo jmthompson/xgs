@@ -387,7 +387,7 @@ inline void op_ADC()
         SR.C = (sum > m_max);
     }
 
-    SR.V = (sum ^ operand.m) & (sum ^ A) & n_bit;
+    SR.V = (A ^ sum) & (operand.m ^ sum) & n_bit;
 
     A = sum;
 
@@ -397,7 +397,7 @@ inline void op_ADC()
 
 inline void op_SBC()
 {
-    unsigned int diff = 0;
+    int diff = 0;
     bool borrow = !SR.C;
 
     if (SR.D) {
@@ -429,7 +429,7 @@ inline void op_SBC()
         SR.C = !(diff > m_max);
     }
 
-    SR.V = (diff ^ (255 - operand.m)) & (diff ^ A) & n_bit;
+    SR.V = (A ^ diff) & (~operand.m ^ diff) & n_bit;
 
     A = diff;
 

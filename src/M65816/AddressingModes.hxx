@@ -172,11 +172,11 @@ void getAddress_dil()
 
 void getAddress_axi()
 {
-    uint16_t tmp = system->cpuRead(PBR, PC) | (system->cpuRead(PBR, PC + 1) << 8) + X;
+    uint16_t tmp = (system->cpuRead(PBR, PC) | (system->cpuRead(PBR, PC + 1) << 8)) + X;
 
     PC += 2;
 
-    operand_addr = system->cpuRead(0, tmp) | (system->cpuRead(0, tmp + 1) << 8);
+    operand_addr = system->cpuRead(PBR, tmp) | (system->cpuRead(PBR, tmp + 1) << 8);
     operand_bank = PBR;
 }
 
