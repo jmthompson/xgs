@@ -1559,8 +1559,9 @@ void executeOpcode(unsigned int opcode)
 
         case 0xC2:  /* REP # */
             fetchImmediateOperand(operand.b);
-
             SR &= ~operand.b;
+
+            cpu->modeSwitch();
 
             break;
 
@@ -1806,12 +1807,9 @@ void executeOpcode(unsigned int opcode)
 
         case 0xE2:  /* SEP # */
             fetchImmediateOperand(operand.b);
-
             SR |= operand.b;
 
-            if (SR.X) {
-                cpu->X.B.H = cpu->Y.B.H = 0;
-            }
+            cpu->modeSwitch();
 
             break;
 

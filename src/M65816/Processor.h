@@ -11,7 +11,6 @@
 #define PROCESSOR_H
 
 #include "gstypes.h"
-#include "StatusRegister.h"
 #include "xgscore/System.h"
 
 using std::uint8_t;
@@ -22,11 +21,83 @@ namespace M65816 {
 
 template <typename MemSizeType, typename IndexSizeType, typename StackSizeType, const uint16_t StackOffset>
 class LogicEngine;
+class LogicEngineBase;
 
-class Debugger;
+/**
+ * The StatusRegister class implements the status register as a series
+ * of direct-accessible boolean flags, plus overloads to allow constructing
+ * from and casting to/from uint8_t.
+ */
+class StatusRegister {
+    public:
+        bool N = false;
+        bool V = false;
+        bool M = true;
+        bool X = true;
+        bool D = false;
+        bool I = true;
+        bool Z = false;
+        bool C = false;
+
+        bool E = true;
+
+        StatusRegister() = default;
+        StatusRegister(uint8_t v) { operator=(v); }
+        ~StatusRegister() = default;
+
+        StatusRegister& operator= (uint8_t v)
+        {
+            N = v & 0x80;
+            V = v & 0x40;
+            D = v & 0x08;
+            I = v & 0x04;
+            Z = v & 0x02;
+            C = v & 0x01;
+
+            if (!E) {
+                M = v & 0x20;
+                X = v & 0x10;
+            }
+
+            return *this;
+        }
+
+        StatusRegister& operator&= (uint8_t v)
+        {
+            if (!(v & 0x80)) N = false;
+            if (!(v & 0x40)) V = false;
+            if (!(v & 0x08)) D = false;
+            if (!(v & 0x04)) I = false;
+            if (!(v & 0x02)) Z = false;
+            if (!(v & 0x01)) C = false;
+
+            if (!E) {
+                if (!(v & 0x20)) M = false;
+                if (!(v & 0x10)) X = false;
+            }
+        }
+
+        StatusRegister& operator|= (uint8_t v)
+        {
+            if (v & 0x80) N = true;
+            if (v & 0x40) V = true;
+            if (v & 0x08) D = true;
+            if (v & 0x04) I = true;
+            if (v & 0x02) Z = true;
+            if (v & 0x01) C = true;
+
+            if (!E) {
+                if (v & 0x20) M = true;
+                if (v & 0x10) X = true;
+            }
+        }
+
+        operator uint8_t() const {
+            return (N << 7)|(V << 6)|(M << 5)|(X << 4)|(D << 3)|(I << 2)|(Z << 1)|C;
+        };
+};
 
 class Processor {
-    friend class Debugger;
     friend class LogicEngine<uint16_t, uint16_t, uint16_t, 0>;
     friend class LogicEngine<uint16_t, uint8_t, uint16_t, 0>;
     friend class LogicEngine<uint8_t, uint16_t, uint16_t, 0>;
@@ -40,8 +111,10 @@ class Processor {
         LogicEngine<uint8_t, uint8_t, uint16_t, 0> *engine_e0m1x1;
         LogicEngine<uint8_t, uint8_t, uint8_t, 0x0100> *engine_e1m1x1;
  
+        LogicEngineBase *engine = nullptr;
         System *system = nullptr;
-        Debugger *debugger = nullptr;
+
+        const unsigned int *cycle_counts;
 
         bool stopped;
         bool waiting;
@@ -105,9 +178,6 @@ class Processor {
         // Lower an interrupt
         void lowerInterrupt() { if (irq_pending) --irq_pending; }
 
-        void attachDebugger(M65816::Debugger *dbug) { debugger = dbug; }
-        void detachDebugger() { debugger = nullptr; }
-
         // Load the contents of a vector into the PC and PBR
         inline void loadVector(uint16_t va)
         {
@@ -115,122 +185,11 @@ class Processor {
             PBR = 0;
         }
 
-        // called whenever the E, M, or X bits in SR are changed
-        void modeSwitch()
-        {
-            if (SR.E) {
-                SR.M  = true;
-                SR.X  = true;
-                S.B.H = 0x01;
-            }
-
-            if (SR.X) {
-                X.B.H = Y.B.H = 0;
-            }
-        }
+        // Called whenever the E, M, or X bits change.
+        void modeSwitch();
 };
 
 #include "LogicEngine.h"
-
-const unsigned int cycle_counts_e0m0x0[259] = {
-    8, 7, 8, 5, 7, 4, 7, 7, 3, 3, 2, 4, 8, 5, 8, 6,
-    2, 7, 6, 8, 7, 5, 8, 7, 2, 6, 2, 2, 8, 6, 9, 6,
-    6, 7, 8, 5, 4, 4, 7, 7, 4, 3, 2, 5, 5, 5, 8, 6,
-    2, 7, 6, 8, 5, 5, 8, 7, 2, 6, 2, 2, 6, 6, 9, 6,
-    7, 7, 2, 5, 0, 4, 7, 7, 3, 3, 2, 3, 3, 5, 8, 6,
-    2, 7, 6, 8, 0, 5, 8, 7, 2, 6, 4, 2, 4, 6, 9, 6,
-    6, 7, 6, 5, 4, 4, 7, 7, 4, 3, 2, 6, 5, 5, 8, 6,
-    2, 7, 6, 8, 5, 5, 8, 7, 2, 6, 5, 2, 6, 6, 9, 6,
-    2, 7, 3, 5, 4, 4, 4, 7, 2, 3, 2, 3, 5, 5, 5, 6,
-    2, 7, 6, 8, 5, 5, 5, 7, 2, 6, 2, 2, 5, 6, 6, 6,
-    3, 7, 3, 5, 4, 4, 4, 7, 2, 3, 2, 4, 5, 5, 5, 6,
-    2, 7, 6, 8, 5, 5, 5, 7, 2, 6, 2, 2, 5, 6, 5, 6,
-    3, 7, 3, 5, 4, 4, 7, 7, 2, 3, 2, 3, 5, 5, 8, 6,
-    2, 7, 6, 8, 6, 5, 8, 7, 2, 6, 4, 3, 6, 6, 9, 6,
-    3, 7, 3, 5, 4, 4, 7, 7, 2, 3, 2, 3, 5, 5, 8, 6,
-    2, 7, 6, 8, 5, 5, 8, 7, 2, 6, 5, 2, 6, 6, 9, 6,
-    8, 8, 0
-};
-
-const unsigned int cycle_counts_e0m0x1[259] = {
-    8, 7, 8, 5, 7, 4, 7, 7, 3, 3, 2, 4, 8, 5, 8, 6,
-    2, 6, 6, 8, 7, 5, 8, 7, 2, 5, 2, 2, 8, 5, 9, 6,
-    6, 7, 8, 5, 4, 4, 7, 7, 4, 3, 2, 5, 5, 5, 8, 6,
-    2, 6, 6, 8, 5, 5, 8, 7, 2, 5, 2, 2, 5, 5, 9, 6,
-    7, 7, 2, 5, 0, 4, 7, 7, 4, 3, 2, 3, 3, 5, 8, 6,
-    2, 6, 6, 8, 0, 5, 8, 7, 2, 5, 3, 2, 4, 5, 9, 6,
-    6, 7, 6, 5, 4, 4, 7, 7, 5, 3, 2, 6, 5, 5, 8, 6,
-    2, 6, 6, 8, 5, 5, 8, 7, 2, 5, 4, 2, 6, 5, 9, 6,
-    2, 7, 3, 5, 3, 4, 3, 7, 2, 3, 2, 3, 4, 5, 4, 6,
-    2, 6, 6, 8, 4, 5, 4, 7, 2, 5, 2, 2, 5, 5, 5, 6,
-    2, 7, 2, 5, 3, 4, 3, 7, 2, 3, 2, 4, 4, 5, 4, 6,
-    2, 6, 6, 8, 4, 5, 4, 7, 2, 5, 2, 2, 4, 5, 4, 6,
-    2, 7, 3, 5, 3, 4, 7, 7, 2, 3, 2, 3, 4, 5, 8, 6,
-    2, 6, 6, 8, 6, 5, 8, 7, 2, 5, 3, 3, 6, 5, 9, 6,
-    2, 7, 3, 5, 3, 4, 7, 7, 2, 3, 2, 3, 4, 5, 8, 6,
-    2, 6, 6, 8, 5, 5, 8, 7, 2, 5, 4, 2, 6, 5, 9, 6,
-    8, 8, 0
-};
-
-const unsigned  int cycle_counts_e0m1x0[259] = {
-    8, 6, 8, 4, 5, 3, 5, 6, 3, 2, 2, 4, 6, 4, 6, 5,
-    2, 6, 5, 7, 5, 4, 6, 6, 2, 5, 2, 2, 6, 5, 7, 5,
-    6, 6, 8, 4, 3, 3, 5, 6, 4, 2, 2, 5, 4, 4, 6, 5,
-    2, 6, 5, 7, 4, 4, 6, 6, 2, 5, 2, 2, 5, 5, 7, 5,
-    7, 6, 2, 4, 0, 3, 5, 6, 4, 2, 2, 3, 3, 4, 6, 5,
-    2, 6, 5, 7, 0, 4, 6, 6, 2, 5, 4, 2, 4, 5, 7, 5,
-    6, 6, 6, 4, 3, 3, 5, 6, 5, 2, 2, 6, 5, 4, 6, 5,
-    2, 6, 5, 7, 4, 4, 6, 6, 2, 5, 5, 2, 6, 5, 7, 5,
-    2, 6, 3, 4, 4, 3, 4, 6, 2, 2, 2, 3, 5, 4, 5, 5,
-    2, 6, 5, 7, 5, 4, 5, 6, 2, 5, 2, 2, 4, 5, 5, 5,
-    3, 6, 3, 4, 4, 3, 4, 6, 2, 2, 2, 4, 5, 4, 5, 5,
-    2, 6, 5, 7, 5, 4, 5, 6, 2, 5, 2, 2, 5, 5, 5, 5,
-    3, 6, 3, 4, 4, 3, 6, 6, 2, 2, 2, 3, 5, 4, 6, 5,
-    2, 6, 5, 7, 6, 4, 8, 6, 2, 5, 4, 3, 6, 5, 7, 5,
-    3, 6, 3, 4, 4, 3, 6, 6, 2, 2, 2, 3, 5, 4, 6, 5,
-    2, 6, 5, 7, 5, 4, 8, 6, 2, 5, 5, 2, 6, 5, 7, 5,
-    8, 8, 0
-};
-
-const unsigned  int cycle_counts_e0m1x1[259] = {
-    8, 6, 8, 4, 5, 3, 5, 6, 3, 2, 2, 4, 6, 4, 6, 5,
-    2, 5, 5, 7, 5, 4, 6, 6, 2, 4, 2, 2, 6, 4, 7, 5,
-    6, 6, 8, 4, 3, 3, 5, 6, 4, 2, 2, 5, 4, 4, 6, 5,
-    2, 5, 5, 7, 4, 4, 6, 6, 2, 4, 2, 2, 4, 4, 7, 5,
-    7, 6, 2, 4, 7, 3, 5, 6, 3, 2, 2, 3, 3, 4, 6, 5,
-    2, 5, 5, 7, 7, 4, 6, 6, 2, 4, 3, 2, 4, 4, 7, 5,
-    6, 6, 6, 4, 3, 3, 5, 6, 4, 2, 2, 6, 5, 4, 6, 5,
-    2, 5, 5, 7, 4, 4, 6, 6, 2, 4, 4, 2, 6, 4, 7, 5,
-    2, 6, 3, 4, 3, 3, 3, 6, 2, 2, 2, 3, 4, 4, 4, 5,
-    2, 6, 5, 7, 4, 4, 4, 6, 2, 5, 2, 2, 4, 5, 5, 5,
-    2, 6, 2, 4, 3, 3, 3, 6, 2, 2, 2, 4, 4, 4, 4, 5,
-    2, 5, 5, 7, 4, 4, 4, 6, 2, 4, 2, 2, 4, 4, 4, 5,
-    2, 6, 3, 4, 3, 3, 5, 6, 2, 2, 2, 3, 4, 4, 4, 5,
-    2, 5, 5, 7, 6, 4, 6, 6, 2, 4, 3, 3, 6, 4, 7, 5,
-    2, 6, 3, 4, 3, 3, 5, 6, 2, 2, 2, 3, 4, 4, 6, 5,
-    2, 5, 5, 7, 5, 4, 6, 6, 2, 4, 4, 2, 6, 4, 7, 5,
-    8, 8, 0
-};
-
-const unsigned int cycle_counts_e1m1x1[259] = {
-    8, 6, 8, 4, 5, 3, 5, 6, 3, 2, 2, 4, 6, 4, 6, 5,
-    2, 5, 5, 7, 5, 4, 6, 6, 2, 4, 2, 2, 6, 4, 7, 5,
-    6, 6, 8, 4, 3, 3, 5, 6, 4, 2, 2, 5, 4, 4, 6, 5,
-    2, 5, 5, 7, 4, 4, 6, 6, 2, 4, 2, 2, 4, 4, 7, 5,
-    6, 6, 2, 4, 0, 3, 5, 6, 3, 2, 2, 3, 3, 4, 6, 5,
-    2, 5, 5, 7, 0, 4, 6, 6, 2, 4, 3, 2, 4, 4, 7, 5,
-    6, 6, 6, 4, 3, 3, 5, 6, 4, 2, 2, 6, 5, 4, 6, 5,
-    2, 5, 5, 7, 4, 4, 6, 6, 2, 4, 4, 2, 6, 4, 7, 5,
-    2, 6, 3, 4, 3, 3, 3, 6, 2, 2, 2, 3, 4, 4, 4, 5,
-    2, 5, 5, 7, 4, 4, 4, 6, 2, 4, 2, 2, 4, 4, 4, 5,
-    2, 6, 2, 4, 3, 3, 3, 6, 2, 2, 2, 4, 4, 4, 4, 5,
-    2, 5, 5, 7, 4, 4, 4, 6, 2, 4, 2, 2, 4, 4, 4, 5,
-    2, 6, 3, 4, 3, 3, 5, 6, 2, 2, 2, 3, 4, 4, 6, 5,
-    2, 5, 5, 7, 6, 4, 6, 6, 2, 4, 3, 3, 6, 4, 7, 5,
-    2, 6, 3, 4, 3, 3, 5, 6, 2, 2, 2, 3, 4, 4, 6, 5,
-    2, 5, 5, 7, 5, 4, 6, 6, 2, 4, 4, 2, 6, 4, 7, 5,
-    7, 7, 0
-};
 
 } // namespace M65816
 

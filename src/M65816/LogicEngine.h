@@ -7,8 +7,16 @@
  * Commercial use is prohibited without my written permission
  */
 
+class LogicEngineBase {
+    public:
+        LogicEngineBase()  = default;
+        ~LogicEngineBase() = default;
+
+        virtual void executeOpcode(const unsigned int) = 0;
+};
+
 template <typename MemSizeType, typename IndexSizeType, typename StackSizeType, const uint16_t StackOffset>
-class LogicEngine {
+class LogicEngine : public LogicEngineBase {
     private:
         Processor *cpu;
         System *system;

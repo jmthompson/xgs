@@ -33,7 +33,7 @@
 #include "Smartport.h"
 #include "VGC.h"
 
-#include "M65816/Debugger.h"
+//#include "M65816/Debugger.h"
 #include "M65816/Processor.h"
 
 namespace fs = boost::filesystem;
@@ -126,11 +126,13 @@ Emulator::Emulator(Config *theConfig)
     sys->installDevice("iwm", iwm);
     sys->installDevice("smpt",smpt);
 
+#if 0
     if (config->use_debugger) {
         debugger = new M65816::Debugger(cpu);
 
         cpu->attachDebugger(debugger);
     }
+#endif
 
     target_speed = 2.6;
 

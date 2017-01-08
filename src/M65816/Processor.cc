@@ -11,10 +11,11 @@
 #include <boost/format.hpp>
 
 #include "Processor.h"
-#include "Debugger.h"
 #include "xgscore/System.h"
 
 namespace M65816 {
+
+#include "cycle_counts.h"
 
 Processor::Processor()
 {
@@ -35,70 +36,82 @@ void Processor::attach(System *theSystem)
     engine_e1m1x1 = new LogicEngine<uint8_t, uint8_t, uint8_t, 0x0100>(this);
 }
 
+void Processor::modeSwitch()
+{
+    if (SR.E) {
+        SR.M  = true;
+        SR.X  = true;
+        S.B.H = 0x01;
+
+        engine = engine_e1m1x1;
+        cycle_counts = cycle_counts_e1m1x1;
+    }
+    else {
+        if (SR.X) { // x = 1
+            X.B.H = Y.B.H = 0;
+
+            if (SR.M) { // m=1, x=1
+                engine = engine_e0m1x1;
+                cycle_counts = cycle_counts_e0m1x1;
+            }
+            else {      // m=0, x=1
+                engine = engine_e0m0x1;
+                cycle_counts = cycle_counts_e0m0x1;
+            }
+        }
+        else {  // x = 0
+            if (SR.M) { // m=1, x=0
+                engine = engine_e0m1x0;
+                cycle_counts = cycle_counts_e0m1x0;
+            }
+            else { // m=0, x=0
+                engine = engine_e0m0x0;
+                cycle_counts = cycle_counts_e0m0x0;
+            }
+        }
+    }
+}
+
 unsigned int Processor::runUntil(const unsigned int max_cycles)
 {
     unsigned int opcode;
-    uint8_t  lastPBR;
-    uint16_t lastPC;
 
     num_cycles = 0;
 
     while (num_cycles < max_cycles) {
-        lastPC = PC;
-        lastPBR = PBR;
-
         if (abort_pending) {
-            opcode = 0x102;
+            engine->executeOpcode(0x102);
+
+            return 0;
         }
         else if (nmi_pending) {
-            opcode = 0x101;
+            engine->executeOpcode(0x101);
+
+            return 0;
         }
         else if (irq_pending) {
-            opcode = 0x100;
+            engine->executeOpcode(0x100);
+
+            return 0;
         }
         else if (waiting) {
             return max_cycles;
         }
-        else {
-            opcode = system->cpuRead(PBR, PC);
 
-//            if (debugger) debugger->preExecute(PBR, PC);
+        unsigned int opcode     = system->cpuRead(PBR, PC);
+        unsigned int new_cycles = cycle_counts[opcode];
 
-            ++PC;
-        }
+        // We must never go over our max cycle count
+        if ((num_cycles + new_cycles) > max_cycles) break;
 
-        if (SR.E) {
-            num_cycles += cycle_counts_e1m1x1[opcode];
+        ++PC;
 
-            engine_e1m1x1->executeOpcode(opcode);
-        }
-        else if (SR.M) {
-            if (SR.X) {
-                num_cycles += cycle_counts_e0m1x1[opcode];
+        num_cycles += new_cycles;
 
-                engine_e0m1x1->executeOpcode(opcode);
-            }
-            else {
-                num_cycles += cycle_counts_e0m1x0[opcode];
-
-                engine_e0m1x0->executeOpcode(opcode);
-            }
-        }
-        else {
-            if (SR.X) {
-                num_cycles += cycle_counts_e0m0x1[opcode];
-
-                engine_e0m0x1->executeOpcode(opcode);
-            }
-            else {
-                num_cycles += cycle_counts_e0m0x0[opcode];
-
-                engine_e0m0x0->executeOpcode(opcode);
-            }
-        }
-
-        if (debugger != nullptr) debugger->postExecute(lastPBR, lastPC);
+        engine->executeOpcode(opcode);
     }
+
+    return num_cycles;
 }
 
 void Processor::reset(void)
@@ -120,6 +133,7 @@ void Processor::reset(void)
     S.W = 0x01FF;
     A.W = X.W = Y.W = 0;
 
+    modeSwitch();
     loadVector(0xFFFC);
 }
 
