@@ -15,7 +15,8 @@
 #include <cstdlib>
 #include <stdexcept>
 
-#include "gstypes.h"
+#include "common.h"
+
 #include "VirtualDisk.h"
 #include "Smartport.h"
 #include "System.h"
@@ -115,8 +116,8 @@ void Smartport::prodosEntry()
 {
     M65816::Processor *cpu = system->cpu;
 
-    uint8_t cmd = system->cpuRead(0, 0x42);
-    VirtualDisk *unit = (system->cpuRead(0, 0x43) & 0x80)? units[1] : units[0];
+    uint8_t cmd = system->sysRead(0, 0x42);
+    VirtualDisk *unit = (system->sysRead(0, 0x43) & 0x80)? units[1] : units[0];
 
     if (!unit) {
         cpu->A.B.L = 0x028; // NO DEVICE CONNECTED
@@ -125,8 +126,8 @@ void Smartport::prodosEntry()
         return;
     }
 
-    uint16_t buffer = system->cpuRead(0, 0x44) | (system->cpuRead(0, 0x45) << 8);
-    uint16_t block  = system->cpuRead(0, 0x46) | (system->cpuRead(0, 0x47) << 8);
+    uint16_t buffer = system->sysRead(0, 0x44) | (system->sysRead(0, 0x45) << 8);
+    uint16_t block  = system->sysRead(0, 0x46) | (system->sysRead(0, 0x47) << 8);
 
     cpu->A.B.L = 0;
 
@@ -141,7 +142,7 @@ void Smartport::prodosEntry()
                 unit->read(disk_buffer, block, 1);
 
                 for (unsigned int i = 0 ; i < sizeof(disk_buffer); ++i) {
-                    system->cpuWrite(0, buffer + i, disk_buffer[i]);
+                    system->sysWrite(0, buffer + i, disk_buffer[i]);
                 }
             }
             catch (std::runtime_error& e) {
@@ -156,7 +157,7 @@ void Smartport::prodosEntry()
             else {
                 try {
                     for (unsigned int i = 0 ; i < sizeof(disk_buffer); ++i) {
-                        disk_buffer[i] = system->cpuRead(0, buffer + i);
+                        disk_buffer[i] = system->sysRead(0, buffer + i);
                     }
 
                     unit->write(disk_buffer, block, 1);
@@ -186,14 +187,14 @@ void Smartport::smartportEntry()
 {
     M65816::Processor *cpu = system->cpu;
 
-    uint16_t addr  = (system->cpuRead(0, cpu->S.W + 1) | (system->cpuRead(0, cpu->S.W + 2) << 8)) + 1;
+    uint16_t addr  = (system->sysRead(0, cpu->S.W + 1) | (system->sysRead(0, cpu->S.W + 2) << 8)) + 1;
 
-    uint8_t  cmd   = system->cpuRead(0, addr);
-    uint16_t paddr = system->cpuRead(0, addr + 1) | (system->cpuRead(0, addr + 2) << 8);
+    uint8_t  cmd   = system->sysRead(0, addr);
+    uint16_t paddr = system->sysRead(0, addr + 1) | (system->sysRead(0, addr + 2) << 8);
     uint8_t  pbank;
 
     if (cmd & 0x40) {
-        pbank = system->cpuRead(0, addr + 3);
+        pbank = system->sysRead(0, addr + 3);
         addr += 4;
     }
     else {
@@ -201,10 +202,10 @@ void Smartport::smartportEntry()
         addr += 2;
     }
     
-    system->cpuWrite(0, cpu->S.W + 1, addr & 0xFF);
-    system->cpuWrite(0, cpu->S.W + 2, addr >> 8);
+    system->sysWrite(0, cpu->S.W + 1, addr & 0xFF);
+    system->sysWrite(0, cpu->S.W + 2, addr >> 8);
 
-    //num_params = system->cpuRead(pbank, paddr);
+    //num_params = system->sysRead(pbank, paddr);
 
     switch (cmd) {
         case 0x00:
@@ -279,7 +280,7 @@ void Smartport::statusCmd(const uint8_t pbank, const uint16_t paddr)
 {
     M65816::Processor *cpu = system->cpu;
 
-    unsigned int unit_num = system->cpuRead(pbank, paddr + 1);
+    unsigned int unit_num = system->sysRead(pbank, paddr + 1);
 
     if ((unit_num < 0) || (unit_num > kNumUnits)) {
         cpu->A.B.L = 0x28;
@@ -289,16 +290,16 @@ void Smartport::statusCmd(const uint8_t pbank, const uint16_t paddr)
 
     VirtualDisk *unit = unit_num? units[unit_num - 1] : nullptr;
 
-    uint16_t status_addr = system->cpuRead(pbank, paddr + 2) | (system->cpuRead(pbank, paddr + 3) << 8); 
-    uint8_t  status_code = system->cpuRead(pbank, paddr + 4);
+    uint16_t status_addr = system->sysRead(pbank, paddr + 2) | (system->sysRead(pbank, paddr + 3) << 8); 
+    uint8_t  status_code = system->sysRead(pbank, paddr + 4);
 
     switch(status_code) {
         case 0x00:
             if (!unit_num) {
-                system->cpuWrite(0, status_addr, kNumUnits);
+                system->sysWrite(0, status_addr, kNumUnits);
 
                 for (unsigned int i = 1 ; i < 8 ; ++i) {
-                    system->cpuWrite(0, status_addr + i, 0);
+                    system->sysWrite(0, status_addr + i, 0);
                 }
 
                 cpu->X.B.L = 8;
@@ -307,16 +308,16 @@ void Smartport::statusCmd(const uint8_t pbank, const uint16_t paddr)
             }
             else {
                 if (unit == nullptr) {
-                    system->cpuWrite(0, status_addr, 0xEC);
-                    system->cpuWrite(0, status_addr + 1, 0);
-                    system->cpuWrite(0, status_addr + 2, 0);
-                    system->cpuWrite(0, status_addr + 3, 0);
+                    system->sysWrite(0, status_addr, 0xEC);
+                    system->sysWrite(0, status_addr + 1, 0);
+                    system->sysWrite(0, status_addr + 2, 0);
+                    system->sysWrite(0, status_addr + 3, 0);
                 }
                 else {
-                    system->cpuWrite(0, status_addr, unit->locked? 0xFC: 0xF8);
-                    system->cpuWrite(0, status_addr + 1, unit->num_chunks & 0xFF);
-                    system->cpuWrite(0, status_addr + 2, unit->num_chunks >> 8);
-                    system->cpuWrite(0, status_addr + 3, 0);
+                    system->sysWrite(0, status_addr, unit->locked? 0xFC: 0xF8);
+                    system->sysWrite(0, status_addr + 1, unit->num_chunks & 0xFF);
+                    system->sysWrite(0, status_addr + 2, unit->num_chunks >> 8);
+                    system->sysWrite(0, status_addr + 3, 0);
                 }
 
                 cpu->X.B.L = 4;
@@ -335,28 +336,28 @@ void Smartport::statusCmd(const uint8_t pbank, const uint16_t paddr)
             break;
         case 0x03:
             if (unit == nullptr) {
-                system->cpuWrite(0, status_addr, 0xEC);
-                system->cpuWrite(0, status_addr + 1, 0);
-                system->cpuWrite(0, status_addr + 2, 0);
-                system->cpuWrite(0, status_addr + 3, 0);
+                system->sysWrite(0, status_addr, 0xEC);
+                system->sysWrite(0, status_addr + 1, 0);
+                system->sysWrite(0, status_addr + 2, 0);
+                system->sysWrite(0, status_addr + 3, 0);
             }
             else {
-                system->cpuWrite(0, status_addr, unit->locked? 0xFC: 0xF8);
-                system->cpuWrite(0, status_addr + 1, unit->num_chunks & 0xFF);
-                system->cpuWrite(0, status_addr + 2, unit->num_chunks >> 8);
-                system->cpuWrite(0, status_addr + 3, 0);
+                system->sysWrite(0, status_addr, unit->locked? 0xFC: 0xF8);
+                system->sysWrite(0, status_addr + 1, unit->num_chunks & 0xFF);
+                system->sysWrite(0, status_addr + 2, unit->num_chunks >> 8);
+                system->sysWrite(0, status_addr + 3, 0);
             }
 
-            system->cpuWrite(0, status_addr + 4, 0x10);
+            system->sysWrite(0, status_addr + 4, 0x10);
 
             for (unsigned int i = 0 ; i < 16 ; ++i) {
-                system->cpuWrite(0, status_addr + 5 + i, id_string[i]);
+                system->sysWrite(0, status_addr + 5 + i, id_string[i]);
             }
 
-            system->cpuWrite(0, status_addr + 21, 0x02);
-            system->cpuWrite(0, status_addr + 22, 0xC0);
-            system->cpuWrite(0, status_addr + 23, 0x00);
-            system->cpuWrite(0, status_addr + 24, 0x00);
+            system->sysWrite(0, status_addr + 21, 0x02);
+            system->sysWrite(0, status_addr + 22, 0xC0);
+            system->sysWrite(0, status_addr + 23, 0x00);
+            system->sysWrite(0, status_addr + 24, 0x00);
 
             cpu->X.B.L = 25;
             cpu->Y.B.L = 0;
@@ -374,7 +375,7 @@ void Smartport::readBlockCmd(const uint8_t pbank, const uint16_t paddr)
 {
     M65816::Processor *cpu = system->cpu;
 
-    unsigned int unit_num = system->cpuRead(pbank, paddr + 1);
+    unsigned int unit_num = system->sysRead(pbank, paddr + 1);
 
     if ((unit_num < 0) || (unit_num > kNumUnits)) {
         cpu->A.B.L = 0x28;
@@ -390,9 +391,9 @@ void Smartport::readBlockCmd(const uint8_t pbank, const uint16_t paddr)
         return;
     }
 
-    uint16_t buffer = system->cpuRead(pbank, paddr + 2) | (system->cpuRead(pbank, paddr + 3) << 8); 
-    uint32_t block  = system->cpuRead(pbank, paddr + 4) | (system->cpuRead(pbank, paddr + 5) << 8)
-                        | (system->cpuRead(pbank, paddr + 6) << 16);
+    uint16_t buffer = system->sysRead(pbank, paddr + 2) | (system->sysRead(pbank, paddr + 3) << 8);
+    uint32_t block  = system->sysRead(pbank, paddr + 4) | (system->sysRead(pbank, paddr + 5) << 8)
+                        | (system->sysRead(pbank, paddr + 6) << 16);
 
     if (block > unit->num_chunks) {
         cpu->A.B.L = 0x2D;
@@ -410,7 +411,7 @@ void Smartport::readBlockCmd(const uint8_t pbank, const uint16_t paddr)
     }
 
     for (unsigned int i = 0 ; i < sizeof(disk_buffer) ; ++i) {
-        system->cpuWrite(0, buffer + i, disk_buffer[i]);
+        system->sysWrite(0, buffer + i, disk_buffer[i]);
     }
 
     cpu->X.B.L = 0x00;
@@ -422,7 +423,7 @@ void Smartport::writeBlockCmd(const uint8_t pbank, const uint16_t paddr)
 {
     M65816::Processor *cpu = system->cpu;
 
-    unsigned int unit_num = system->cpuRead(pbank, paddr + 1);
+    unsigned int unit_num = system->sysRead(pbank, paddr + 1);
 
     if ((unit_num < 0) || (unit_num > kNumUnits)) {
         cpu->A.B.L = 0x28;
@@ -444,9 +445,9 @@ void Smartport::writeBlockCmd(const uint8_t pbank, const uint16_t paddr)
         return;
     }
 
-    uint16_t buffer = system->cpuRead(pbank, paddr + 2) | (system->cpuRead(pbank, paddr + 3) << 8); 
-    uint32_t block  = system->cpuRead(pbank, paddr + 4) | (system->cpuRead(pbank, paddr + 5) << 8)
-                        | (system->cpuRead(pbank, paddr + 6) << 16);
+    uint16_t buffer = system->sysRead(pbank, paddr + 2) | (system->sysRead(pbank, paddr + 3) << 8);
+    uint32_t block  = system->sysRead(pbank, paddr + 4) | (system->sysRead(pbank, paddr + 5) << 8)
+                        | (system->sysRead(pbank, paddr + 6) << 16);
 
     if (block > unit->num_chunks) {
         cpu->A.B.L = 0x2D;
@@ -455,7 +456,7 @@ void Smartport::writeBlockCmd(const uint8_t pbank, const uint16_t paddr)
     }
 
     for (unsigned int i = 0 ; i < sizeof(disk_buffer) ; ++i) {
-        disk_buffer[i] = system->cpuRead(0, buffer + i);
+        disk_buffer[i] = system->sysRead(0, buffer + i);
     }
 
     try {
@@ -517,7 +518,7 @@ void Smartport::statusCmdExt(const uint8_t pbank, const uint16_t paddr)
 {
     M65816::Processor *cpu = system->cpu;
 
-    unsigned int unit_num = system->cpuRead(pbank, paddr + 1);
+    unsigned int unit_num = system->sysRead(pbank, paddr + 1);
 
     if ((unit_num < 0) || (unit_num > kNumUnits)) {
         cpu->A.B.L = 0x28;
@@ -527,17 +528,17 @@ void Smartport::statusCmdExt(const uint8_t pbank, const uint16_t paddr)
 
     VirtualDisk *unit = unit_num? units[unit_num - 1] : nullptr;
 
-    uint16_t status_addr = system->cpuRead(pbank, paddr + 2) | (system->cpuRead(pbank, paddr + 3) << 8); 
-    uint8_t  status_bank = system->cpuRead(pbank, paddr + 4);
-    uint8_t  status_code = system->cpuRead(pbank, paddr + 6);
+    uint16_t status_addr = system->sysRead(pbank, paddr + 2) | (system->sysRead(pbank, paddr + 3) << 8);
+    uint8_t  status_bank = system->sysRead(pbank, paddr + 4);
+    uint8_t  status_code = system->sysRead(pbank, paddr + 6);
 
     switch (status_code) {
         case 0x00:
             if (!unit_num) {
-                system->cpuWrite(0, status_addr, kNumUnits);
+                system->sysWrite(0, status_addr, kNumUnits);
 
                 for (unsigned int i = 1 ; i < 8 ; ++i) {
-                    system->cpuWrite(status_bank, status_addr + i, 0);
+                    system->sysWrite(status_bank, status_addr + i, 0);
                 }
 
                 cpu->X.B.L = 8;
@@ -546,18 +547,18 @@ void Smartport::statusCmdExt(const uint8_t pbank, const uint16_t paddr)
             }
             else {
                 if (unit == nullptr) {
-                    system->cpuWrite(status_bank, status_addr, 0xEC);
-                    system->cpuWrite(status_bank, status_addr + 1, 0);
-                    system->cpuWrite(status_bank, status_addr + 2, 0);
-                    system->cpuWrite(status_bank, status_addr + 3, 0);
-                    system->cpuWrite(status_bank, status_addr + 4, 0);
+                    system->sysWrite(status_bank, status_addr, 0xEC);
+                    system->sysWrite(status_bank, status_addr + 1, 0);
+                    system->sysWrite(status_bank, status_addr + 2, 0);
+                    system->sysWrite(status_bank, status_addr + 3, 0);
+                    system->sysWrite(status_bank, status_addr + 4, 0);
                 }
                 else {
-                    system->cpuWrite(status_bank, status_addr, unit->locked? 0xFC: 0xF8);
-                    system->cpuWrite(status_bank, status_addr + 1, unit->num_chunks & 0xFF);
-                    system->cpuWrite(status_bank, status_addr + 2, unit->num_chunks >> 8);
-                    system->cpuWrite(status_bank, status_addr + 3, 0);
-                    system->cpuWrite(status_bank, status_addr + 4, 0);
+                    system->sysWrite(status_bank, status_addr, unit->locked? 0xFC: 0xF8);
+                    system->sysWrite(status_bank, status_addr + 1, unit->num_chunks & 0xFF);
+                    system->sysWrite(status_bank, status_addr + 2, unit->num_chunks >> 8);
+                    system->sysWrite(status_bank, status_addr + 3, 0);
+                    system->sysWrite(status_bank, status_addr + 4, 0);
                 }
 
                 cpu->X.B.L = 5;
@@ -576,30 +577,30 @@ void Smartport::statusCmdExt(const uint8_t pbank, const uint16_t paddr)
             break;
         case 0x03:
             if (unit == nullptr) {
-                system->cpuWrite(status_bank, status_addr, 0xEC);
-                system->cpuWrite(status_bank, status_addr + 1, 0);
-                system->cpuWrite(status_bank, status_addr + 2, 0);
-                system->cpuWrite(status_bank, status_addr + 3, 0);
-                system->cpuWrite(status_bank, status_addr + 4, 0);
+                system->sysWrite(status_bank, status_addr, 0xEC);
+                system->sysWrite(status_bank, status_addr + 1, 0);
+                system->sysWrite(status_bank, status_addr + 2, 0);
+                system->sysWrite(status_bank, status_addr + 3, 0);
+                system->sysWrite(status_bank, status_addr + 4, 0);
             }
             else {
-                system->cpuWrite(status_bank, status_addr, unit->locked? 0xFC: 0xF8);
-                system->cpuWrite(status_bank, status_addr + 1, unit->num_chunks & 0xFF);
-                system->cpuWrite(status_bank, status_addr + 2, unit->num_chunks >> 8);
-                system->cpuWrite(status_bank, status_addr + 3, 0);
-                system->cpuWrite(status_bank, status_addr + 4, 0);
+                system->sysWrite(status_bank, status_addr, unit->locked? 0xFC: 0xF8);
+                system->sysWrite(status_bank, status_addr + 1, unit->num_chunks & 0xFF);
+                system->sysWrite(status_bank, status_addr + 2, unit->num_chunks >> 8);
+                system->sysWrite(status_bank, status_addr + 3, 0);
+                system->sysWrite(status_bank, status_addr + 4, 0);
             }
 
-            system->cpuWrite(0, status_addr + 5, 0x10);
+            system->sysWrite(0, status_addr + 5, 0x10);
 
             for (unsigned int i = 0 ; i < 16 ; ++i) {
-                system->cpuWrite(0, status_addr + 6 + i, id_string[i]);
+                system->sysWrite(0, status_addr + 6 + i, id_string[i]);
             }
 
-            system->cpuWrite(0, status_addr + 22, 0x02);
-            system->cpuWrite(0, status_addr + 23, 0xC0);
-            system->cpuWrite(0, status_addr + 24, 0x00);
-            system->cpuWrite(0, status_addr + 25, 0x00);
+            system->sysWrite(0, status_addr + 22, 0x02);
+            system->sysWrite(0, status_addr + 23, 0xC0);
+            system->sysWrite(0, status_addr + 24, 0x00);
+            system->sysWrite(0, status_addr + 25, 0x00);
 
             cpu->X.B.L = 26;
             cpu->Y.B.L = 0;
@@ -617,7 +618,7 @@ void Smartport::readBlockCmdExt(const uint8_t pbank, const uint16_t paddr)
 {
     M65816::Processor *cpu = system->cpu;
 
-    unsigned int unit_num = system->cpuRead(pbank, paddr + 1);
+    unsigned int unit_num = system->sysRead(pbank, paddr + 1);
 
     if ((unit_num < 0) || (unit_num > kNumUnits)) {
         cpu->A.B.L = 0x28;
@@ -633,11 +634,13 @@ void Smartport::readBlockCmdExt(const uint8_t pbank, const uint16_t paddr)
         return;
     }
 
-    uint16_t buffer_addr = system->cpuRead(pbank, paddr + 2) | (system->cpuRead(pbank, paddr + 3) << 8);
-    uint8_t  buffer_bank = system->cpuRead(pbank, paddr + 4);
+    uint16_t buffer_addr = system->sysRead(pbank, paddr + 2) | (system->sysRead(pbank, paddr + 3) << 8);
+    uint8_t  buffer_bank = system->sysRead(pbank, paddr + 4);
 
-    uint32_t block = system->cpuRead(pbank, paddr + 6) | (system->cpuRead(pbank, paddr + 7) << 8)
-                        | (system->cpuRead(pbank, paddr + 8) << 16) | (system->cpuRead(pbank, paddr + 9) << 24);
+    uint32_t block = system->sysRead(pbank, paddr + 6)
+                        | (system->sysRead(pbank, paddr + 7) << 8)
+                        | (system->sysRead(pbank, paddr + 8) << 16)
+                        | (system->sysRead(pbank, paddr + 9) << 24);
 
     if (block > unit->num_chunks) {
         cpu->A.B.L = 0x2D;
@@ -655,7 +658,7 @@ void Smartport::readBlockCmdExt(const uint8_t pbank, const uint16_t paddr)
     }
 
     for (unsigned int i = 0 ; i < sizeof(disk_buffer) ; ++i) {
-        system->cpuWrite(buffer_bank, buffer_addr + i, disk_buffer[i]);
+        system->sysWrite(buffer_bank, buffer_addr + i, disk_buffer[i]);
     }
 
     cpu->X.B.L = 0x00;
@@ -667,7 +670,7 @@ void Smartport::writeBlockCmdExt(const uint8_t pbank, const uint16_t paddr)
 {
     M65816::Processor *cpu = system->cpu;
 
-    unsigned int unit_num = system->cpuRead(pbank, paddr + 1);
+    unsigned int unit_num = system->sysRead(pbank, paddr + 1);
 
     if ((unit_num < 0) || (unit_num > kNumUnits)) {
         cpu->A.B.L = 0x28;
@@ -689,11 +692,13 @@ void Smartport::writeBlockCmdExt(const uint8_t pbank, const uint16_t paddr)
         return;
     }
 
-    uint16_t buffer_addr = system->cpuRead(pbank, paddr + 2) | (system->cpuRead(pbank, paddr + 3) << 8); 
-    uint8_t  buffer_bank = system->cpuRead(pbank, paddr + 4);
+    uint16_t buffer_addr = system->sysRead(pbank, paddr + 2) | (system->sysRead(pbank, paddr + 3) << 8); 
+    uint8_t  buffer_bank = system->sysRead(pbank, paddr + 4);
 
-    uint32_t block = system->cpuRead(pbank, paddr + 6) | (system->cpuRead(pbank, paddr + 7) << 8)
-                        | (system->cpuRead(pbank, paddr + 8) << 16) | (system->cpuRead(pbank, paddr + 9) << 24);
+    uint32_t block = system->sysRead(pbank, paddr + 6)
+                        | (system->sysRead(pbank, paddr + 7) << 8)
+                        | (system->sysRead(pbank, paddr + 8) << 16)
+                        | (system->sysRead(pbank, paddr + 9) << 24);
 
     if (block > unit->num_chunks) {
         cpu->A.B.L = 0x2D;
@@ -702,7 +707,7 @@ void Smartport::writeBlockCmdExt(const uint8_t pbank, const uint16_t paddr)
     }
 
     for (unsigned int i = 0 ; i < sizeof(disk_buffer) ; ++i) {
-        disk_buffer[i] = system->cpuRead(buffer_bank, buffer_addr + i);
+        disk_buffer[i] = system->sysRead(buffer_bank, buffer_addr + i);
     }
 
     try {

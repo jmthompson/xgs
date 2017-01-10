@@ -10,7 +10,7 @@
 #ifndef PROCESSOR_H
 #define PROCESSOR_H
 
-#include "gstypes.h"
+#include "types.h"
 #include "xgscore/System.h"
 
 using std::uint8_t;
@@ -181,7 +181,7 @@ class Processor {
         // Load the contents of a vector into the PC and PBR
         inline void loadVector(uint16_t va)
         {
-            PC  = system->cpuRead(0, va) | (system->cpuRead(0, va + 1) << 8);
+            PC  = system->cpuRead(0, va, VECTOR) | (system->cpuRead(0, va + 1, VECTOR) << 8);
             PBR = 0;
         }
 

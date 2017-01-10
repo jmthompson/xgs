@@ -2,7 +2,6 @@
 #define MEGA2_H_
 
 #include <vector>
-#include "gstypes.h"
 
 #include "Device.h"
 

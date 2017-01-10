@@ -2,10 +2,8 @@
 #define DEVICE_H_
 
 #include <vector>
-#include <string>
-#include "gstypes.h"
 
-using std::string;
+#include "common.h"
 
 class System;
 

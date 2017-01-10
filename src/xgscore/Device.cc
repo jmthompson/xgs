@@ -13,7 +13,8 @@
  */
 
 #include <vector>
-#include "gstypes.h"
+
+#include "common.h"
 
 #include "System.h"
 #include "Device.h"

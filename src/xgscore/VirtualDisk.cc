@@ -20,7 +20,8 @@
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/path.hpp>
 
-#include "gstypes.h"
+#include "common.h"
+
 #include "VirtualDisk.h"
 
 namespace fs = boost::filesystem;
@@ -106,7 +107,7 @@ void VirtualDisk::openTwoImgFile()
         throw std::runtime_error("Got EOF trying to read 2IMG header");
     }
 
-#ifdef WORDS_BIGENDIAN
+#ifdef BIGENDIAN
     header.magic          = swap_endian(header.magic);
     header.creator        = swap_endian(header.creator);
     header.header_len     = swap_endian(header.header_len);
@@ -166,13 +167,13 @@ void VirtualDisk::openDiskCopyFile()
         throw std::runtime_error("Got EOF trying to read DiskCopy header");
     }
 
-#ifndef WORDS_BIGENDIAN
+#ifndef BIGENDIAN
     header.data_size     = swap_endian(header.data_size);
     header.tag_size      = swap_endian(header.tag_size);
     header.data_checksum = swap_endian(header.data_checksum);
     header.tag_checksum  = swap_endian(header.tag_checksum);
     header.unused        = swap_endian(header.unused);
-#endif /* WORDS_BIGENDIAN */
+#endif /* BIGENDIAN */
 
 	if (header.unused != 0x0100) {
         throw std::runtime_error("Invalid DiskCopy header");
@@ -204,7 +205,7 @@ int DSK_writeUnivImageHeader(FILE *fp, image_header *image)
 	image_header	our_image;
 
 	memcpy(&our_image,image,sizeof(image_header));
-#ifdef WORDS_BIGENDIAN
+#ifdef BIGENDIAN
     our_image.header_len     = swap_endian(our_image.header_len);
     our_image.version        = swap_endian(our_image.version);
     our_image.format         = swap_endian(our_image.format);
@@ -216,7 +217,7 @@ int DSK_writeUnivImageHeader(FILE *fp, image_header *image)
     our_image.comment_len    = swap_endian(our_image.comment_len);
     our_image.creator_offset = swap_endian(our_image.creator_offset);
     our_image.creator_len    = swap_endian(our_image.creator_len);
-#endif /* WORDS_BIGENDIAN */
+#endif /* BIGENDIAN */
 	fwrite(&our_image, sizeof(image_header), 1, fp);
 	return errno;
 }

@@ -16,7 +16,7 @@
 
 #include <SDL.h>
 
-#include "gstypes.h"
+#include "common.h"
 #include "ADB.h"
 #include "System.h"
 #include "M65816/Processor.h"

@@ -197,7 +197,7 @@ class VGC : public Device {
         static const unsigned int kVideoHeight = 400;
 
         // Number of video lines in a single frame
-        static const unsigned int kLinesPerFrame = 524;
+        static const unsigned int kLinesPerFrame = 525;
 
         VGC() = default;
         ~VGC() = default;

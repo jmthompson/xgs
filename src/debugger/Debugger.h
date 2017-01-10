@@ -15,42 +15,49 @@
 #include <string>
 #include <vector>
 
-#include "Opcode.h"
+#include "M65816/types.h"
 
-using std::string;
-using std::uint8_t;
-using std::uint32_t;
-
-namespace M65816 {
-
-class Processor;
-
-struct Instruction {
-    uint8_t bank;
-    uint16_t address;
-    const Opcode *opcode;
-
-    std::vector<unsigned int> bytes;
-};
+class System;
 
 class Debugger {
     private:
-        Processor *cpu;
+        const unsigned int kMaxInstLen = 4;
 
-        uint8_t instruction[4];
-        int instruction_len;
+        System *system;
 
-        string renderArgument(const Instruction& ins);
-        string renderBytes(const Instruction& ins);
+        /**
+         * True when the CPU is fetching an instruction
+         */
+        bool ins_fetch = false;
+
+        /**
+         * The instruction being fetched
+         */
+        struct {
+            std::uint8_t pbr;
+            std::uint16_t pc;
+
+            unsigned int len;
+
+            std::vector<unsigned int> bytes;
+        } cpu_instr;
+
+        void handleInstructionRead(const std::uint8_t, const std::uint16_t, const std::uint8_t);
+
+        std::string renderArgument();
+        std::string renderBytes();
 
     public:
-        Debugger(Processor *theCpu) : cpu(theCpu) {}
+        Debugger() = default;
         ~Debugger() = default;
 
-        Instruction decodeInstruction(uint8_t bank, uint16_t address);
-        virtual void postExecute(uint8_t bank, uint16_t address);
-};
+        void attach(System *theSystem)
+        {
+            system = theSystem;
+        }
 
-} // namespace M65816
+        std::uint8_t memoryRead(const uint8_t bank, const uint16_t address, const uint8_t val, const M65816::mem_access_t type);
+        std::uint8_t memoryWrite(const uint8_t bank, const uint16_t address, const uint8_t val, const M65816::mem_access_t type);
+};
 
 #endif // DEBUGGER_H

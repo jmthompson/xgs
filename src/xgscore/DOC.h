@@ -5,7 +5,6 @@
 #include <string>
 #include <vector>
 
-#include "gstypes.h"
 #include "Device.h"
 
 using std::uint8_t;
@@ -99,7 +98,7 @@ class DOC : public Device {
         void microtick(const unsigned int);
 
         //void clickSpeaker();
-        void setOutputDevice(string&);
+        void setOutputDevice(const char *);
 
         void bufferCallback(Uint8 *, int);
 };

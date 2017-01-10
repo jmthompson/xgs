@@ -22,7 +22,8 @@
 
 #include <SDL.h>
 
-#include "gstypes.h"
+#include "common.h"
+
 #include "IWM.h"
 #include "System.h"
 

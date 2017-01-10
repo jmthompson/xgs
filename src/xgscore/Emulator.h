@@ -4,7 +4,7 @@
 #include <stdexcept>
 #include <SDL.h>
 
-#include "gstypes.h"
+#include "common.h"
 
 class Config;
 class System;
@@ -17,7 +17,6 @@ class VGC;
 
 namespace M65816 {
     class Processor;
-    class Debugger;
 }
 
 class Emulator {
@@ -28,7 +27,6 @@ class Emulator {
         Config *config;
         System *sys;
         M65816::Processor *cpu;
-        M65816::Debugger  *debugger;
 
         ADB   *adb;
         DOC   *doc;

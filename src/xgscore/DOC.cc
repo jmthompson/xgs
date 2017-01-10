@@ -19,7 +19,8 @@
 
 #include <SDL.h>
 
-#include "gstypes.h"
+#include "common.h"
+
 #include "DOC.h"
 #include "System.h"
 #include "Mega2.h"
@@ -231,9 +232,9 @@ void DOC::microtick(unsigned int mt)
     SDL_UnlockAudioDevice(sound_device_id);
 }
 
-void DOC::setOutputDevice(string& device)
+void DOC::setOutputDevice(const char *device)
 {
-    sound_device = device;
+    //sound_device = device;
 
     SDL_AudioSpec wanted, actual;
     int i;
@@ -247,9 +248,10 @@ void DOC::setOutputDevice(string& device)
     wanted.callback = &buffer_callback;
     wanted.userdata = this;
 
-    sound_device_id = SDL_OpenAudioDevice(sound_device.c_str(), 0, &wanted, &actual, 0);
+    sound_device_id = SDL_OpenAudioDevice(device, 0, &wanted, &actual, 0);
 
     if (sound_device_id == 0) {
+        std::cerr << SDL_GetError() << std::endl;
         throw std::runtime_error("Error opening audio device");
         //printSDLError("Error opening audio device");
     }

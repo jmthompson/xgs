@@ -3,7 +3,6 @@
 
 #include <cstdlib>
 
-#include "gstypes.h"
 #include "Device.h"
 #include "Disk35.h"
 #include "Disk525.h"

@@ -49,7 +49,7 @@ void System::installProcessor(M65816::Processor *theCpu)
     cpu->attach(this);
 }
 
-void System::installMemory(uint8_t *mem, const unsigned int start_page, const unsigned int num_pages, MemoryPageType type)
+void System::installMemory(uint8_t *mem, const unsigned int start_page, const unsigned int num_pages, mem_page_t type)
 {
     unsigned int i, page;
     uint8_t *p;

@@ -33,7 +33,7 @@
 #include "Smartport.h"
 #include "VGC.h"
 
-//#include "M65816/Debugger.h"
+#include "debugger/Debugger.h"
 #include "M65816/Processor.h"
 
 namespace fs = boost::filesystem;
@@ -66,7 +66,6 @@ Emulator::Emulator(Config *theConfig)
     }
 
     last_time = now();
-    last_time = 0;
 
     for (int i = 0 ; i < config->framerate; ++i) {
         times[i] = 0.0;
@@ -79,6 +78,10 @@ Emulator::Emulator(Config *theConfig)
 
     const unsigned int w = VGC::kVideoWidth  + (VGC::kBorderSize * 2);
     const unsigned int h = VGC::kVideoHeight + (VGC::kBorderSize * 2);
+
+    if (SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO|SDL_INIT_EVENTS|SDL_INIT_JOYSTICK) < 0) {
+        throw std::runtime_error("Failed to initialize SDL");
+    }
 
     sdl_window = SDL_CreateWindow("XGS", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, w, h, SDL_WINDOW_SHOWN);
     if (sdl_window == nullptr) {
@@ -109,9 +112,11 @@ Emulator::Emulator(Config *theConfig)
     vgc->setFont80(config->font_80col[0], config->font_80col[1]);
 
     adb  = new ADB();
-    doc  = new DOC();
     iwm  = new IWM();
     smpt = new Smartport();
+
+    doc  = new DOC();
+    doc->setOutputDevice(nullptr);
 
     sys->installProcessor(cpu);
 
@@ -126,13 +131,11 @@ Emulator::Emulator(Config *theConfig)
     sys->installDevice("iwm", iwm);
     sys->installDevice("smpt",smpt);
 
-#if 0
     if (config->use_debugger) {
-        debugger = new M65816::Debugger(cpu);
+        Debugger *dbg = new Debugger();
 
-        cpu->attachDebugger(debugger);
+        sys->installDebugger(dbg);
     }
-#endif
 
     target_speed = 2.6;
 
@@ -183,15 +186,17 @@ void Emulator::run()
 
 void Emulator::tick()
 {
+    unsigned int cycles_per = (1024000/(VGC::kLinesPerFrame * config->framerate)) * target_speed;
+
     for (unsigned int line = 0 ; line < VGC::kLinesPerFrame ; ++line) {
-        unsigned int num_cycles = cpu->runUntil(target_speed * 32);
+        unsigned int num_cycles = cpu->runUntil(cycles_per);
 
         sys->cycle_count += num_cycles;
 
         // The DOC tick period is 38us, but our video line tick period is 31.75us.
         // We skip one out of every six video line ticks to compensate for this.
         if (doc_ticks++ % 6) {
-            //doc->microtick(doc_ticks);
+            doc->microtick(doc_ticks);
         }
 
         vgc->microtick(line);
@@ -207,7 +212,8 @@ void Emulator::tick()
         current_frame = 0;
     }
 
-    long diff_cycles = sys->cycle_count - last_cycles;
+    cycles_t diff_cycles = sys->cycle_count - last_cycles;
+
     last_cycles = sys->cycle_count;
 
     this_time = now();

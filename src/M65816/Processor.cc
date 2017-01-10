@@ -11,11 +11,9 @@
 #include <boost/format.hpp>
 
 #include "Processor.h"
-#include "xgscore/System.h"
+#include "cycle_counts.h"
 
 namespace M65816 {
-
-#include "cycle_counts.h"
 
 Processor::Processor()
 {
@@ -98,7 +96,7 @@ unsigned int Processor::runUntil(const unsigned int max_cycles)
             return max_cycles;
         }
 
-        unsigned int opcode     = system->cpuRead(PBR, PC);
+        unsigned int opcode     = system->cpuRead(PBR, PC, INSTR);
         unsigned int new_cycles = cycle_counts[opcode];
 
         // We must never go over our max cycle count

@@ -18,7 +18,8 @@
 
 #include <SDL.h>
 
-#include "gstypes.h"
+#include "common.h"
+
 #include "IWM.h"
 #include "DiskTrack.h"
 #include "Disk35.h"

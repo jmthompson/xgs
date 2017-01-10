@@ -5,21 +5,20 @@
 #include <map>
 #include <boost/format.hpp>
 
-#include "gstypes.h"
-#include "Device.h"
+#include "common.h"
 
-using std::map;
+#include "Device.h"
+#include "debugger/Debugger.h"
+
 using std::uint8_t;
 using std::uint16_t;
 
-namespace M65816 {
-    class Processor;
-}
+namespace M65816 { class Processor; }
 
 class Mega2;
 class VGC;
 
-enum MemoryPageType {
+enum mem_page_t {
     UNMAPPED = 0,
     ROM,
     FAST,
@@ -31,7 +30,7 @@ struct MemoryPage {
     uint8_t *write   = nullptr;
     bool    shadowed = false;
 
-    MemoryPageType type = UNMAPPED;
+    mem_page_t type = UNMAPPED;
 };
 
 class System {
@@ -59,13 +58,15 @@ class System {
 
         MemoryPage memory[kNumPages];
 
-        map<string, Device *> devices;
+        std::map<std::string, Device *> devices;
 
         Device *io_read[kPageSize];
         Device *io_write[kPageSize];
 
         Device *cop_handler[256];
         Device *wdm_handler[256];
+
+        Debugger *debugger;
 
     public:
         cycles_t cycle_count = 0;
@@ -77,10 +78,17 @@ class System {
         ~System();
 
         void installProcessor(M65816::Processor *);
-        void installMemory(uint8_t *, const unsigned int, const unsigned int, MemoryPageType);
-        void installDevice(const string&, Device *);
+        void installMemory(uint8_t *, const unsigned int, const unsigned int, mem_page_t);
+        void installDevice(const std::string&, Device *);
 
-        Device *getDevice(const string& name) { return devices[name]; }
+        void installDebugger(Debugger *dbg)
+        {
+            this->debugger = dbg;
+
+            dbg->attach(this);
+        }
+
+        Device *getDevice(const std::string& name) { return devices[name]; }
 
         void reset();
 
@@ -143,21 +151,17 @@ class System {
             return memory[page];
         }
 
-        uint8_t cpuRead(uint8_t bank, uint16_t address)
+        /**
+         * Read the value from a memory location, honoring page remapping, but
+         * ignoring I/O areas. Used internally by the emulator to access memory.
+         */
+        uint8_t sysRead(const uint8_t bank, const uint16_t address)
         {
             const unsigned int page_no = read_map[(bank << 8) | (address >> 8)];
             const unsigned int offset  = address & 0xFF;
             MemoryPage& page = memory[page_no];
 
-            if (page_no == kIOPage) {
-                if (Device *dev = io_read[offset]) {
-                    return dev->read(offset);
-                }
-                else {
-                    return 0; // FIXME: should be random
-                }
-            }
-            else if (page.read) {
+            if (page.read) {
                 return page.read[offset];
             }
             else {
@@ -165,11 +169,64 @@ class System {
             }
         }
 
-        void cpuWrite(uint8_t bank, uint16_t address, uint8_t val)
+        /**
+         * Write a value from a memory location, honoring page remapping, but
+         * ignoring I/O areas. Used internally by the emulator to access memory.
+         */
+        void sysWrite(const uint8_t bank, const uint16_t address, uint8_t val)
         {
             const unsigned int page_no = write_map[(bank << 8) | (address >> 8)];
             const unsigned int offset  = address & 0xFF;
             MemoryPage& page = memory[page_no];
+
+            if (page.write) {
+                page.write[offset] = val;
+
+                if (page.shadowed) {
+                    MemoryPage& spage = memory[(page_no & 0x01FF) | 0xE000];
+
+                    spage.write[offset] = val;
+                }
+            }
+        }
+
+        uint8_t cpuRead(const uint8_t bank, const uint16_t address, const M65816::mem_access_t type)
+        {
+            const unsigned int page_no = read_map[(bank << 8) | (address >> 8)];
+            const unsigned int offset  = address & 0xFF;
+            MemoryPage& page = memory[page_no];
+            uint8_t val;
+
+            if (page_no == kIOPage) {
+                if (Device *dev = io_read[offset]) {
+                    val = dev->read(offset);
+                }
+                else {
+                    val = 0; // FIXME: should be random
+                }
+            }
+            else if (page.read) {
+                val = page.read[offset];
+            }
+            else {
+                val = 0;
+            }
+
+            if (debugger) {
+                return debugger->memoryRead(bank, address, val, type);
+            }
+            else {
+                return val;
+            }
+        }
+
+        void cpuWrite(const uint8_t bank, const uint16_t address, uint8_t val, const M65816::mem_access_t type)
+        {
+            const unsigned int page_no = write_map[(bank << 8) | (address >> 8)];
+            const unsigned int offset  = address & 0xFF;
+            MemoryPage& page = memory[page_no];
+
+            if (debugger) { val = debugger->memoryWrite(bank, address, val, type); }
 
             if (page_no == kIOPage) {
                 if (Device *dev = io_write[offset]) {

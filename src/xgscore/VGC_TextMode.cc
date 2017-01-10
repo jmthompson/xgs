@@ -14,7 +14,8 @@
 #include <cstdlib>
 #include <stdexcept>
 
-#include "gstypes.h"
+#include "common.h"
+
 #include "System.h"
 #include "VGC.h"
 

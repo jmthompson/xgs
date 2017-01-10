@@ -1,22 +1,22 @@
 inline void stackPush(const uint8_t& v)
 {
-    system->cpuWrite(0, S-- + StackOffset, v);
+    system->cpuWrite(0, S-- + StackOffset, v, STACK);
 }
 
 inline void stackPush(const uint16_t& v)
 {
-    system->cpuWrite(0, S-- + StackOffset, v >> 8);
-    system->cpuWrite(0, S-- + StackOffset, v);
+    system->cpuWrite(0, S-- + StackOffset, v >> 8, STACK);
+    system->cpuWrite(0, S-- + StackOffset, v, STACK);
 }
 
 inline void stackPull(uint8_t& v)
 {
-    v = system->cpuRead(0, ++S + StackOffset);
+    v = system->cpuRead(0, ++S + StackOffset, STACK);
 }
 
 inline void stackPull(uint16_t& v)
 {
-    v = system->cpuRead(0, ++S + StackOffset) | (system->cpuRead(0, ++S + StackOffset) << 8);
+    v = system->cpuRead(0, ++S + StackOffset, STACK) | (system->cpuRead(0, ++S + StackOffset, STACK) << 8);
 }
 
 inline void jumpTo(const uint16_t& addr)
@@ -53,33 +53,34 @@ inline void checkDirectPageAlignment()
 
 inline void fetchImmediateOperand(uint8_t &op)
 {
-    op = system->cpuRead(PBR, PC++);
+    op = system->cpuRead(PBR, PC++, INSTR);
 }
 
 inline void fetchImmediateOperand(uint16_t &op)
 {
-    op = system->cpuRead(PBR, PC++) | (system->cpuRead(PBR, PC++) << 8);
+    op = system->cpuRead(PBR, PC++, INSTR) | (system->cpuRead(PBR, PC++, INSTR) << 8);
 }
 
 inline void fetchOperand(uint8_t &op)
 {
-    op = system->cpuRead(operand_bank, operand_addr);
+    op = system->cpuRead(operand_bank, operand_addr, OPERAND);
 }
 
 inline void fetchOperand(uint16_t &op)
 {
-    op = system->cpuRead(operand_bank, operand_addr) | (system->cpuRead(operand_bank, operand_addr + 1) << 8);
+    op = system->cpuRead(operand_bank, operand_addr, OPERAND)
+         | (system->cpuRead(operand_bank, operand_addr + 1, OPERAND) << 8);
 }
 
 inline void storeOperand(uint8_t &op)
 {
-    system->cpuWrite(operand_bank, operand_addr, op);
+    system->cpuWrite(operand_bank, operand_addr, op, OPERAND);
 }
 
 inline void storeOperand(uint16_t &op)
 {
-    system->cpuWrite(operand_bank, operand_addr, op);
-    system->cpuWrite(operand_bank, operand_addr + 1, op >> 8);
+    system->cpuWrite(operand_bank, operand_addr, op, OPERAND);
+    system->cpuWrite(operand_bank, operand_addr + 1, op >> 8, OPERAND);
 }
 
 inline void checkIfNegative(const uint8_t &v) { SR.N = v & 0x80; }
@@ -233,12 +234,12 @@ inline void op_CPY()
 
 void op_MVP()
 {
-    uint8_t src_bank = system->cpuRead(PBR, PC + 1);
+    uint8_t src_bank = system->cpuRead(PBR, PC + 1, INSTR);
 
-    DBR = system->cpuRead(PBR, PC);
+    DBR = system->cpuRead(PBR, PC, INSTR);
 
     if (cpu->A.W != 0xFFFF) {
-        system->cpuWrite(DBR, cpu->Y.W, system->cpuRead(src_bank, cpu->X.W));
+        system->cpuWrite(DBR, cpu->Y.W, system->cpuRead(src_bank, cpu->X.W, DATA), DATA);
 
         --cpu->A.W;
         --cpu->X.W;
@@ -253,12 +254,12 @@ void op_MVP()
 
 void op_MVN()
 {
-    uint8_t src_bank = system->cpuRead(PBR, PC + 1);
+    uint8_t src_bank = system->cpuRead(PBR, PC + 1, INSTR);
 
-    DBR = system->cpuRead(PBR, PC);
+    DBR = system->cpuRead(PBR, PC, INSTR);
 
     if (cpu->A.W != 0xFFFF) {
-        system->cpuWrite(DBR, cpu->Y.W, system->cpuRead(src_bank, cpu->X.W));
+        system->cpuWrite(DBR, cpu->Y.W, system->cpuRead(src_bank, cpu->X.W, DATA), DATA);
 
         --cpu->A.W;
         ++cpu->X.W;
@@ -299,37 +300,37 @@ inline void op_LDY()
 
 inline void op_STA()
 {
-    system->cpuWrite(operand_bank, operand_addr, A);
+    system->cpuWrite(operand_bank, operand_addr, A, DATA);
 
     if (sizeof(MemSizeType) == 2) {
-        system->cpuWrite(operand_bank, operand_addr + 1, A >> 8);
+        system->cpuWrite(operand_bank, operand_addr + 1, A >> 8, DATA);
     }
 }
 
 inline void op_STX()
 {
-    system->cpuWrite(operand_bank, operand_addr, X);
+    system->cpuWrite(operand_bank, operand_addr, X, DATA);
 
     if (sizeof(IndexSizeType) == 2) {
-        system->cpuWrite(operand_bank, operand_addr + 1, X >> 8);
+        system->cpuWrite(operand_bank, operand_addr + 1, X >> 8, DATA);
     }
 }
 
 inline void op_STY()
 {
-    system->cpuWrite(operand_bank, operand_addr, Y);
+    system->cpuWrite(operand_bank, operand_addr, Y, DATA);
 
     if (sizeof(IndexSizeType) == 2) {
-        system->cpuWrite(operand_bank, operand_addr + 1, Y >> 8);
+        system->cpuWrite(operand_bank, operand_addr + 1, Y >> 8, DATA);
     }
 }
 
 inline void op_STZ()
 {
-    system->cpuWrite(operand_bank, operand_addr, 0);
+    system->cpuWrite(operand_bank, operand_addr, 0, DATA);
 
     if (sizeof(MemSizeType) == 2) {
-        system->cpuWrite(operand_bank, operand_addr + 1, 0);
+        system->cpuWrite(operand_bank, operand_addr + 1, 0, DATA);
     }
 }
 

@@ -15,7 +15,7 @@
 #include <cstdlib>
 #include <stdexcept>
 
-#include "gstypes.h"
+#include "common.h"
 
 #include "VGC.h"
 
@@ -513,7 +513,7 @@ void VGC::setRtcControlReg(uint8_t val)
                     if (!clk_addr) {
                         clk_curr_time.L = time(NULL) + kClockOffset;
                     }
-#ifdef WORDS_BIGENDIAN
+#ifdef BIGENDIAN
                     clk_data_reg = clk_curr_time.B[3 - clk_addr];
 #else
                     clk_data_reg = clk_curr_time.B[clk_addr];
