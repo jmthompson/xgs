@@ -72,8 +72,6 @@ void Processor::modeSwitch()
 
 unsigned int Processor::runUntil(const unsigned int max_cycles)
 {
-    unsigned int opcode;
-
     num_cycles = 0;
 
     while (num_cycles < max_cycles) {
@@ -87,7 +85,7 @@ unsigned int Processor::runUntil(const unsigned int max_cycles)
 
             return 0;
         }
-        else if (irq_pending) {
+        else if (irq_pending && !SR.I) {
             engine->executeOpcode(0x100);
 
             return 0;
@@ -100,7 +98,7 @@ unsigned int Processor::runUntil(const unsigned int max_cycles)
         unsigned int new_cycles = cycle_counts[opcode];
 
         // We must never go over our max cycle count
-        if ((num_cycles + new_cycles) > max_cycles) break;
+        //if ((num_cycles + new_cycles) > max_cycles) break;
 
         ++PC;
 

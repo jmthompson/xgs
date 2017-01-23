@@ -179,7 +179,7 @@ class Processor {
         void lowerInterrupt() { if (irq_pending) --irq_pending; }
 
         // Load the contents of a vector into the PC and PBR
-        inline void loadVector(uint16_t va)
+        inline void loadVector(const uint16_t va)
         {
             PC  = system->cpuRead(0, va, VECTOR) | (system->cpuRead(0, va + 1, VECTOR) << 8);
             PBR = 0;
