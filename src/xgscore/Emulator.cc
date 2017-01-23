@@ -31,7 +31,8 @@
 #include "IWM.h"
 #include "Mega2.h"
 #include "Smartport.h"
-#include "VGC.h"
+#include "video/VGC.h"
+#include "VirtualDisk.h"
 
 #include "debugger/Debugger.h"
 #include "M65816/Processor.h"
@@ -76,8 +77,8 @@ Emulator::Emulator(Config *theConfig)
     total_cycles = 0;
     last_cycles  = 0;
 
-    const unsigned int w = VGC::kVideoWidth  + (VGC::kBorderSize * 2);
-    const unsigned int h = VGC::kVideoHeight + (VGC::kBorderSize * 2);
+    const unsigned int w = 800;
+    const unsigned int h = 600;
 
     if (SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO|SDL_INIT_EVENTS|SDL_INIT_JOYSTICK) < 0) {
         throw std::runtime_error("Failed to initialize SDL");
@@ -97,6 +98,11 @@ Emulator::Emulator(Config *theConfig)
         throw std::runtime_error("SDL_CreateRenderer() failed");
     }
 
+    dest_rect.w = VGC::kVideoWidth;
+    dest_rect.h = VGC::kVideoHeight * 2; // otherwise it will look stretched
+    dest_rect.x = (w - dest_rect.w) / 2;
+    dest_rect.y = (h - dest_rect.h) / 2;
+
     SDL_RenderSetLogicalSize(sdl_renderer, w, h);
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 
@@ -106,7 +112,7 @@ Emulator::Emulator(Config *theConfig)
     mega2 = new Mega2();
 
     vgc = new VGC();
-    vgc->setRenderer(sdl_renderer);
+    vgc->setRenderer(sdl_renderer, &dest_rect);
     vgc->setMemory(config->slow_ram);
     vgc->setFont40(config->font_40col[0], config->font_40col[1]);
     vgc->setFont80(config->font_80col[0], config->font_80col[1]);
@@ -131,6 +137,9 @@ Emulator::Emulator(Config *theConfig)
     sys->installDevice("iwm", iwm);
     sys->installDevice("smpt",smpt);
 
+    sys->setWdmHandler(0xC7, smpt);
+    sys->setWdmHandler(0xC8, smpt);
+
     if (config->use_debugger) {
         Debugger *dbg = new Debugger();
 
@@ -140,6 +149,11 @@ Emulator::Emulator(Config *theConfig)
     target_speed = 2.6;
 
     sys->reset();
+
+    if (config->vdisks.smartport[0].length()) {
+        VirtualDisk *hd0 = new VirtualDisk(config->vdisks.smartport[0]);
+        smpt->mountImage(0, hd0);
+    }
 }
 
 Emulator::~Emulator()
@@ -186,18 +200,15 @@ void Emulator::run()
 
 void Emulator::tick()
 {
-    unsigned int cycles_per = (1024000/(VGC::kLinesPerFrame * config->framerate)) * target_speed;
+    unsigned int cycles_per = (1024000/(262 * config->framerate)) * target_speed;
 
-    for (unsigned int line = 0 ; line < VGC::kLinesPerFrame ; ++line) {
+    for (unsigned int line = 0; line < VGC::kLinesPerFrame ; ++line) {
         unsigned int num_cycles = cpu->runUntil(cycles_per);
 
         sys->cycle_count += num_cycles;
 
-        // The DOC tick period is 38us, but our video line tick period is 31.75us.
-        // We skip one out of every six video line ticks to compensate for this.
-        if (doc_ticks++ % 6) {
-            doc->microtick(doc_ticks);
-        }
+        doc->microtick(doc_ticks);
+        doc->microtick(++doc_ticks);
 
         vgc->microtick(line);
     }

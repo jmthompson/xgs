@@ -7,15 +7,10 @@
 #include <boost/filesystem/path.hpp>
 
 namespace fs = boost::filesystem;
-
-using std::string;
-using std::uint8_t;
-using std::uint16_t;
-using std::uint32_t;
 using fs::path;
 
-const uint32_t kTwoImgMagic   = 0x32494d47; // "2IMG"
-const uint32_t kTwoImgCreator = 0x58475321; // "XGS!"
+const uint32_t kTwoImgMagic   = 0x474d4932; // "2IMG"
+const uint32_t kTwoImgCreator = 0x21534758; // "XGS!"
 const uint32_t kTwoImgVersion = 0x0100;     // Version 1.00
 
 // Image data format numbers. Do not change ordering.
@@ -97,7 +92,7 @@ class VirtualDisk {
         unsigned int num_chunks;
         unsigned int chunk_size;
 
-        VirtualDisk(path &filename) : image_path(filename) {}
+        VirtualDisk(path filename) : image_path(filename) {}
         ~VirtualDisk();
 
         void open();

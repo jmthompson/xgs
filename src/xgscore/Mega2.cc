@@ -18,7 +18,7 @@
 
 #include "ADB.h"
 #include "Mega2.h"
-#include "VGC.h"
+#include "video/VGC.h"
 #include "System.h"
 #include "M65816/Processor.h"
 

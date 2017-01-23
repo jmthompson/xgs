@@ -194,7 +194,7 @@ class System {
         {
             const unsigned int page_no = read_map[(bank << 8) | (address >> 8)];
             const unsigned int offset  = address & 0xFF;
-            MemoryPage& page = memory[page_no];
+            MemoryPage& page = (type == M65816::VECTOR)? memory[page_no|0xFF00] : memory[page_no];
             uint8_t val;
 
             if (page_no == kIOPage) {

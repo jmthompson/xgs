@@ -2,52 +2,33 @@
 #define VGC_H_
 
 #include <cstdlib>
-#include <iostream>
 #include <SDL.h>
 
+#include "common.h"
 #include "xgscore/Device.h"
-
-enum VideoModeType {
-    TEXT_40COL_1 = 0,
-    TEXT_40COL_2,
-    TEXT_80COL_1,
-    TEXT_80COL_2,
-    LORES_1,
-    LORES_2,
-    HIRES_1,
-    HIRES_2,
-    DBL_LORES_1,
-    DBL_LORES_2,
-    DBL_HIRES_1,
-    DBL_HIRES_2,
-    SUPER_HIRES
-};
-
-typedef std::uint32_t Pixel;
-
-static const Pixel text_colors[16] = {
-    0x000000,
-    0xDD0033,
-    0x000099,
-    0xDD22DD,
-    0x007722,
-    0x555555,
-    0x2222FF,
-    0x66AAFF,
-    0x885500,
-    0xFF6600,
-    0xAAAAAA,
-    0xFF9988,
-    0x00DD00,
-    0xFFFF00,
-    0x55FF99,
-    0xFFFFFF
-};
+#include "Text40Col.h"
+#include "Text80Col.h"
+#include "Lores.h"
+#include "DblLores.h"
+#include "Hires.h"
+#include "DblHires.h"
+#include "SuperHires.h"
 
 class Mega2;
 
 class VGC : public Device {
     friend class Mega2;
+
+    public:
+        // Number of video lines in a single frame
+        static const unsigned int kLinesPerFrame = 262;
+
+        // Border width. The border height is not fixed
+        static const unsigned int kBorderWidth = 40;
+
+        // This is how big the final output image will be.
+        static const unsigned int kVideoWidth  = 720;
+        static const unsigned int kVideoHeight = kLinesPerFrame;
 
     private:
         /**
@@ -61,14 +42,55 @@ class VGC : public Device {
 
         uint8_t *ram;
 
-        SDL_Renderer *renderer = nullptr;
-        SDL_Surface  *surface  = nullptr;
-        SDL_Texture  *texture  = nullptr;
+        SDL_Renderer *renderer  = nullptr;
+        SDL_Rect     *dest_rect = nullptr;
 
-        VideoModeType mode = TEXT_40COL_1;
+        SDL_Surface  *surface = nullptr;
+        SDL_Texture  *texture = nullptr;
 
         const uint8_t *font_40col[2];
         const uint8_t *font_80col[2];
+
+        VideoMode *modes[kLinesPerFrame];
+
+        Text40Col mode_text40;
+        Text80Col mode_text80;
+        Lores     mode_lores;
+        DblLores  mode_dbl_lores;
+        Hires     mode_hires;
+        DblHires  mode_dbl_hires;
+        SuperHires mode_super_hires;
+
+        // Pointers to the display buffers for each video page
+        struct {
+            uint8_t *text1_main;
+            uint8_t *text1_aux;
+            uint8_t *text2_main;
+            uint8_t *text2_aux;
+            uint8_t *hires1_main;
+            uint8_t *hires1_aux;
+            uint8_t *hires2_main;
+            uint8_t *hires2_aux;
+            uint8_t *super_hires;
+        } display_buffers;
+
+        // Actual size of the frames being generated (content + border)
+        unsigned int video_width;
+        unsigned int video_height;
+
+        // Dimensions of the border
+        unsigned int border_width;
+        unsigned int border_height;
+
+        // Dimensions of the current video mode
+        unsigned int content_width;
+        unsigned int content_height;
+
+        // Where the actual video content area begins and ends in the frame
+        unsigned int content_left;
+        unsigned int content_right;
+        unsigned int content_top;
+        unsigned int content_bottom;
 
         bool sw_super;
         bool sw_linear;
@@ -99,8 +121,8 @@ class VGC : public Device {
 
         bool in_vbl;
 
-        Pixel *scanlines[480];
-        Pixel border,textfg,textbg;
+        pixel_t *frame_buffer[kVideoHeight];
+        pixel_t border;
 
         uint8_t clk_data_reg;
         uint8_t clk_ctl_reg;
@@ -140,28 +162,22 @@ class VGC : public Device {
             time_t  L;
         } clk_curr_time;
 
+        void setRtcControlReg(uint8_t val);
         void setScreenSize(unsigned int w, unsigned int h);
         void modeChanged();
 
-        // Convert a byte from the text font files to a text foreground or background pixel
-        inline Pixel fontToPixel(const uint8_t font_byte) { return font_byte == 253? textbg : textfg; }
+        void updateBorderColor();
+        void updateTextColors();
+        void updateTextFont();
 
-        // Update the text & border pixels to match the current register values
-        void updateTextColors()
+        inline void drawBorder(pixel_t *line, const unsigned int len)
         {
-            textfg = text_colors[sw_textfgcolor];
-            textbg = text_colors[sw_textbgcolor];
-            border = text_colors[sw_bordercolor];
+            unsigned int i = 0;
+
+            for (unsigned int i = 0 ; i < len ; ++i) {
+                line[i] = border;
+            }
         }
-
-        void setRtcControlReg(uint8_t val);
-
-        void refreshText40Row(const unsigned int, uint16_t);
-        void refreshText40Page1();
-        void refreshText40Page2();
-        void refreshText80Row(const unsigned int, uint16_t);
-        void refreshText80Page1();
-        void refreshText80Page2();
 
     protected:
         std::vector<unsigned int>& ioReadList()
@@ -188,22 +204,12 @@ class VGC : public Device {
         }
 
     public:
-        // Size of the border.
-        static const unsigned int kBorderSize = 40;
-
-        // Dimensions of the usable video area. The height is doubled
-        // to make the aspect ratio square (an actual IIgs is 640x200)
-        static const unsigned int kVideoWidth  = 640;
-        static const unsigned int kVideoHeight = 400;
-
-        // Number of video lines in a single frame
-        static const unsigned int kLinesPerFrame = 525;
-
         VGC() = default;
         ~VGC() = default;
 
+        void setRenderer(SDL_Renderer *, SDL_Rect *);
+
         void setMemory(uint8_t *r) { ram = r; }
-        void setRenderer(SDL_Renderer *r) { renderer = r; }
 
         void setFont40(const uint8_t *main, const uint8_t *alt)
         {

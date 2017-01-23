@@ -12,11 +12,8 @@
  * variety of formats.
  */
 
-#include <cstdlib>
 #include <climits>
-#include <iostream>
 #include <stdexcept>
-#include <string>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/path.hpp>
 
@@ -26,7 +23,6 @@
 
 namespace fs = boost::filesystem;
 
-using std::uint8_t;
 using fs::path;
 using boost::uintmax_t;
 
@@ -63,20 +59,20 @@ void VirtualDisk::open()
     }
 
     try {
-        if (ext == ".2img") {
-    		return openTwoImgFile();
+        if (ext == ".2mg") {
+            openTwoImgFile();
         }
         else if ((ext == ".do") || (ext == ".dsk")) {
-    		return openRawFile(DOS);
+            openRawFile(DOS);
         }
         else if ((ext == ".po") || (ext == ".raw")) {
-    		return openRawFile(PRODOS);
+            openRawFile(PRODOS);
         }
         else if (ext == ".nib") {
-    		return openRawFile(NIBBLE);
+            openRawFile(NIBBLE);
         }
         else if (ext == ".dc") {
-    		return openDiskCopyFile();
+            openDiskCopyFile();
         }
         else {
             throw std::runtime_error("Unknown image extension");
@@ -124,6 +120,8 @@ void VirtualDisk::openTwoImgFile()
 #endif
 
     if (header.magic != kTwoImgMagic) {
+        std::cerr << boost::format("got magic %08X, expected %08X\n") % header.magic % kTwoImgMagic;
+
         throw std::runtime_error("Invalid magic number in 2IMG header");
     }
 
@@ -175,9 +173,9 @@ void VirtualDisk::openDiskCopyFile()
     header.unused        = swap_endian(header.unused);
 #endif /* BIGENDIAN */
 
-	if (header.unused != 0x0100) {
+    if (header.unused != 0x0100) {
         throw std::runtime_error("Invalid DiskCopy header");
-	}
+    }
 
     type           = DISKCOPY42;
     format         = PRODOS;
@@ -202,9 +200,9 @@ void VirtualDisk::close()
 
 int DSK_writeUnivImageHeader(FILE *fp, image_header *image)
 {
-	image_header	our_image;
+    image_header    our_image;
 
-	memcpy(&our_image,image,sizeof(image_header));
+    memcpy(&our_image,image,sizeof(image_header));
 #ifdef BIGENDIAN
     our_image.header_len     = swap_endian(our_image.header_len);
     our_image.version        = swap_endian(our_image.version);
@@ -218,8 +216,8 @@ int DSK_writeUnivImageHeader(FILE *fp, image_header *image)
     our_image.creator_offset = swap_endian(our_image.creator_offset);
     our_image.creator_len    = swap_endian(our_image.creator_len);
 #endif /* BIGENDIAN */
-	fwrite(&our_image, sizeof(image_header), 1, fp);
-	return errno;
+    fwrite(&our_image, sizeof(image_header), 1, fp);
+    return errno;
 }
 #endif
 

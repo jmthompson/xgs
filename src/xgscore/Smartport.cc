@@ -96,6 +96,8 @@ void Smartport::mountImage(const unsigned int drive, VirtualDisk *image)
 {
     unmountImage(drive);
 
+    image->open();
+
     units[drive] = image;
 }
 

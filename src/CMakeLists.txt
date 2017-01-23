@@ -20,6 +20,7 @@ include_directories(${Boost_INCLUDE_DIRS} ${SDL2_INCLUDE_DIRS})
 add_subdirectory(M65816)
 add_subdirectory(xgscore)
 add_subdirectory(debugger)
+add_subdirectory(video)
 
 add_executable(xgs main.cc)
-target_link_libraries(xgs xgscore M65816 debugger ${Boost_LIBRARIES} ${SDL2_LIBRARIES})
+target_link_libraries(xgs xgscore M65816 debugger video ${Boost_LIBRARIES} ${SDL2_LIBRARIES})

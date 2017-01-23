@@ -111,7 +111,7 @@ const opcode opcodes[256] = {
     {"AND", kAddrMode_alxx,        4                },
     {"RTI", kAddrMode_implied,     1                },
     {"EOR", kAddrMode_dxi,         2                },
-    {"???", kAddrMode_immediate,   2                },
+    {"WDM", kAddrMode_immediate,   2                },
     {"EOR", kAddrMode_sr,          2                },
     {"MVN", kAddrMode_blockmove,   3                },
     {"EOR", kAddrMode_d,           2                },

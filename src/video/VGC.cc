@@ -18,16 +18,17 @@
 #include "common.h"
 
 #include "VGC.h"
-
 #include "xgscore/System.h"
 #include "xgscore/Mega2.h"
 #include "M65816/Processor.h"
 
+#include "standard_colors.h"
+
 void VGC::reset()
 {
-    mega2 = (Mega2 *) system->getDevice("mega2");
+    uint8_t *buffer;
 
-    mode = SUPER_HIRES;
+    mega2 = (Mega2 *) system->getDevice("mega2");
 
     sw_vgcint           = false;
     sw_onesecirq_enable = false;
@@ -54,7 +55,20 @@ void VGC::reset()
     sw_vert_cnt  = 0;
     sw_horiz_cnt = 0;
 
+    display_buffers.text1_main = system->getPage(0xE004).read;
+    display_buffers.text1_aux  = system->getPage(0xE104).read;
+    display_buffers.text2_main = system->getPage(0xE008).read;
+    display_buffers.text2_aux  = system->getPage(0xE108).read;
+    display_buffers.hires1_main = system->getPage(0xE020).read;
+    display_buffers.hires1_aux  = system->getPage(0xE120).read;
+    display_buffers.hires2_main = system->getPage(0xE040).read;
+    display_buffers.hires2_aux  = system->getPage(0xE140).read;
+    display_buffers.super_hires = system->getPage(0xE120).read;
+
+    updateBorderColor();
     updateTextColors();
+    updateTextFont();
+
     modeChanged();
 
     clk_data_reg = 0;
@@ -125,7 +139,7 @@ uint8_t VGC::read(const unsigned int& offset)
 
             break;
         case 0x2E:
-            val = ((sw_vert_cnt + 0xFA) >> 1);
+            val = sw_vert_cnt >> 1;
             break;
         case 0x2F:
             sw_horiz_cnt = random() & 0x7F;
@@ -221,12 +235,12 @@ void VGC::write(const unsigned int& offset, const uint8_t& val)
             break;
         case 0x0E:
             sw_altcharset = false;
-            modeChanged();
+            updateTextFont();
 
             break;
         case 0x0F:
             sw_altcharset = true;
-            modeChanged();
+            updateTextFont();
 
             break;
         case 0x22:
@@ -346,71 +360,133 @@ void VGC::write(const unsigned int& offset, const uint8_t& val)
  */
 void VGC::modeChanged()
 {
-    VideoModeType old_mode = mode;
+    VideoMode *new_mode;
 
     if (sw_super) {
-        mode = SUPER_HIRES;
+        mode_super_hires.setDisplayBuffer(display_buffers.super_hires);
+
+        for (unsigned int i = 0 ; i < 200 ; ++i) modes[i] = &mode_super_hires;
     }
     else {
-        if (sw_text) {
-            if (sw_80col) {
-                mode = (!mega2->sw_80store && sw_page2)? TEXT_80COL_2 : TEXT_80COL_1;
-            }
-            else {
-                mode = (!mega2->sw_80store && sw_page2)? TEXT_40COL_2 : TEXT_40COL_1;
-            }
-        } else {
-            if (sw_hires) {
-                if (sw_dblres && sw_80col) {
-                    mode = (!mega2->sw_80store && sw_page2)? DBL_HIRES_2 : DBL_HIRES_1;
-                }
-                else {
-                    mode = (!mega2->sw_80store && sw_page2)? HIRES_2 : HIRES_1;
-                }
-            }
-            else {
-                if (sw_dblres && sw_80col) {
-                    mode = (!mega2->sw_80store && sw_page2)? DBL_LORES_2 : DBL_LORES_1;
-                }
-                else {
-                    mode = (!mega2->sw_80store && sw_page2)? LORES_2 : LORES_1;
-                }
-            }
-        }
-    }
-    if (old_mode != mode) {
-        if (mode == SUPER_HIRES) {
-            setScreenSize(640, 400);
+        VideoMode *new_mode, *mixed_mode;
+
+        if (!mega2->sw_80store && sw_page2) {
+            mode_text40.setDisplayBuffer(display_buffers.text2_main);
+            mode_text80.setDisplayBuffer(display_buffers.text2_aux, display_buffers.text2_main);
+
+            mode_lores.setDisplayBuffer(display_buffers.text2_main);
+            mode_dbl_lores.setDisplayBuffer(display_buffers.text2_aux, display_buffers.text2_main);
+
+            mode_hires.setDisplayBuffer(display_buffers.hires2_main);
+            mode_dbl_hires.setDisplayBuffer(display_buffers.hires2_aux, display_buffers.hires2_main);
         }
         else {
-            setScreenSize(560, 384);
+            mode_text40.setDisplayBuffer(display_buffers.text1_main);
+            mode_text80.setDisplayBuffer(display_buffers.text1_aux, display_buffers.text1_main);
+
+            mode_lores.setDisplayBuffer(display_buffers.text1_main);
+            mode_dbl_lores.setDisplayBuffer(display_buffers.text1_aux, display_buffers.text1_main);
+
+            mode_hires.setDisplayBuffer(display_buffers.hires1_main);
+            mode_dbl_hires.setDisplayBuffer(display_buffers.hires1_aux, display_buffers.hires1_main);
         }
+
+        if (sw_text) {
+            if (sw_80col) {
+                new_mode = mixed_mode = &mode_text80;
+            }
+            else {
+                new_mode = mixed_mode = &mode_text40;
+            }
+        }
+        else {
+            if (sw_hires) {
+                if (sw_80col && sw_dblres) {
+                    new_mode = &mode_dbl_hires;
+                }
+                else {
+                    new_mode = &mode_hires;
+                }
+            }
+            else {
+                if (sw_80col && sw_dblres) {
+                    new_mode = &mode_dbl_lores;
+                }
+                else {
+                    new_mode = &mode_lores;
+                }
+            }
+
+            if (sw_mixed) {
+                if (sw_80col) {
+                    mixed_mode = &mode_text80;
+                }
+                else {
+                    mixed_mode = &mode_text40;
+                }
+            }
+            else {
+                mixed_mode = new_mode;
+            }
+        }
+
+        for (unsigned int i = 0 ; i < 160 ; ++i) modes[i] = new_mode;
+        for (unsigned int i = 160 ; i < 192 ; ++i) modes[i] = mixed_mode;
     }
+
+    setScreenSize(modes[0]->getWidth(), modes[0]->getHeight());
+}
+
+void VGC::setRenderer(SDL_Renderer *new_renderer, SDL_Rect *drect) {
+    renderer  = new_renderer;
+    dest_rect = drect;
 }
 
 void VGC::setScreenSize(unsigned int w, unsigned int h) {
-    unsigned int full_height = h + (kBorderSize * 2);
-    unsigned int full_width  = w + (kBorderSize * 2);
+    content_width  = w;
+    content_height = h;
+
+    border_width  = 40;
+    border_height = (kLinesPerFrame - content_height) / 2;
+
+    content_top    = border_height;
+    content_left   = border_width;
+    content_bottom = content_top + content_height - 1;
+    content_right  = content_left + content_width - 1;
+
+    video_width  = content_width + (border_width * 2);
+    video_height = kLinesPerFrame;
 
     if (surface != nullptr) {
         SDL_FreeSurface(surface);
     }
 
-    surface = SDL_CreateRGBSurface(0, full_width, full_height, 32, 0, 0, 0, 0);
+    if (texture != nullptr) {
+        SDL_DestroyTexture(texture);
+    }
+
+    surface = SDL_CreateRGBSurface(0, video_width, kLinesPerFrame, 32, 0, 0, 0, 0);
+
     if (surface == nullptr) {
         throw std::runtime_error("SDL_CreateRGBSurface() failed");
     }
 
-    texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, full_width, full_height);
+    frame_buffer[0] = (pixel_t *) surface->pixels;
+
+    for (unsigned int i = 1 ; i < kLinesPerFrame ; i++) {
+        frame_buffer[i] = frame_buffer[i - 1] + video_width;
+    }
+
+    texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, video_width, video_height);
     if (texture == nullptr) {
         throw std::runtime_error("SDL_CreateTexture() failed");
     }
 
-    Pixel *last = scanlines[0] = (Pixel *) surface->pixels + (full_width * kBorderSize) + kBorderSize;
-
-    for (unsigned int i = 1 ; i < full_height ; i++) {
-        last = scanlines[i] = last + full_width;
-    }
+    std::cerr << format("New video mode = %dx%d, border = %dx%d, content area = %dx%d / %d,%d,%d,%d\n")
+                    % video_width % video_height
+                    % border_width % border_height
+                    % content_width % content_height
+                    % content_top % content_left % content_bottom % content_right;
 }
 
 /**
@@ -418,13 +494,10 @@ void VGC::setScreenSize(unsigned int w, unsigned int h) {
  */
 void VGC::tick(const unsigned int frame_number)
 {
-    //(*VID_updateRoutine)();
-    refreshText40Page1();
-
     SDL_UpdateTexture(texture, NULL, surface->pixels, surface->pitch);
 
     SDL_RenderClear(renderer);
-    SDL_RenderCopy(renderer, texture, NULL, NULL);
+    SDL_RenderCopy(renderer, texture, NULL, dest_rect);
     SDL_RenderPresent(renderer);
 
     if (sw_vblirq_enable) {
@@ -456,11 +529,28 @@ void VGC::tick(const unsigned int frame_number)
 
 void VGC::microtick(const unsigned int line_number)
 {
-    sw_vert_cnt = line_number >> 1;
+    pixel_t *line = frame_buffer[line_number];
 
-    in_vbl = (line_number >= 400);
+    if ((line_number < content_top) || (line_number > content_bottom)) {
+        drawBorder(line, video_width);
+    }
+    else {
+        drawBorder(line, content_left);
 
-    if (sw_scanirq_enable && (sw_vert_cnt < 200) && (ram[0x019D00 + sw_vert_cnt] & 0x40)) {
+        modes[line_number - content_top]->renderLine(line_number - content_top, line + content_left);
+
+        drawBorder(line + content_right + 1, video_width - content_right);
+    }
+
+    // VBLs start at scan line 192 even in SHR mode
+    in_vbl = (line_number >= 192);
+
+    sw_vert_cnt = line_number + 256;
+
+    // Wrap vertical count so that 512-517 maps to 250-255.
+    if (sw_vert_cnt > 511) sw_vert_cnt -= kLinesPerFrame;
+
+    if (sw_scanirq_enable && (line_number < 200) && (ram[0x019D00 + line_number] & 0x40)) {
         if (!(sw_vgcint & 0x20)) {
             sw_vgcint |= 0xA0;
             system->cpu->raiseInterrupt();
@@ -470,7 +560,7 @@ void VGC::microtick(const unsigned int line_number)
 
 void VGC::setRtcControlReg(uint8_t val)
 {
-    updateTextColors();
+    updateBorderColor();
 
     clk_ctl_reg = val & 0xF0;
 
@@ -535,4 +625,27 @@ void VGC::setRtcControlReg(uint8_t val)
     }
 
     clk_ctl_reg &= 0x7F;    // Clear transaction bit since we're done
+}
+
+void VGC::updateBorderColor()
+{
+    border = standard_colors[sw_bordercolor];
+}
+
+void VGC::updateTextColors()
+{
+    pixel_t textfg = standard_colors[sw_textfgcolor];
+    pixel_t textbg = standard_colors[sw_textbgcolor];
+
+    mode_text40.setForeground(textfg);
+    mode_text80.setForeground(textfg);
+
+    mode_text40.setBackground(textbg);
+    mode_text80.setBackground(textbg);
+}
+
+void VGC::updateTextFont()
+{
+    mode_text40.setTextFont(font_40col[sw_altcharset]);
+    mode_text80.setTextFont(font_80col[sw_altcharset]);
 }

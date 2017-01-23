@@ -56,6 +56,7 @@ bool buildConfig(Config& config, unsigned int argc, char **argv)
     string rom_file;
     string font40_file;
     string font80_file;
+    string hd0;
 
     if (p = std::getenv("XGS_DATA_DIR")) {
         data_dir = path(p);
@@ -86,9 +87,14 @@ bool buildConfig(Config& config, unsigned int argc, char **argv)
         ("font40",   po::value<string>(&font40_file)->default_value("xgs40.fnt"), "Name of 40-column font to load")
         ("font80",   po::value<string>(&font80_file)->default_value("xgs80.fnt"), "Name of 80-column font to load");
 
+    po::options_description vdisks("Virtual Disk Options");
+    vdisks.add_options()
+        ("hd0", po::value(&hd0), "Set HD #0 image");
+
     po::options_description cli_options("Allowed Options");
     cli_options.add(generic);
     cli_options.add(emulator);
+    cli_options.add(vdisks);
 
     po::variables_map vm; 
 
@@ -121,6 +127,8 @@ bool buildConfig(Config& config, unsigned int argc, char **argv)
 
         bytes = loadFile(font80_file, &config.font_80col[0], kFont80Bytes * 2);
         config.font_80col[1] = config.font_80col[0] + kFont80Bytes;
+
+        config.vdisks.smartport[0] = hd0;
     }
     catch (std::exception& e) { 
         cerr << "ERROR: " << e.what() << endl << endl;

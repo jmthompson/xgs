@@ -35,7 +35,9 @@ uint8_t Debugger::memoryRead(const uint8_t bank, const uint16_t address, const u
     switch (type) {
         case M65816::INSTR:
             handleInstructionRead(bank, address, val);
-
+            break;
+        case M65816::VECTOR:
+            handleVectorRead(bank, address, val);
             break;
         default:
              break;
@@ -59,7 +61,6 @@ uint8_t Debugger::memoryWrite(const uint8_t bank, const uint16_t address, const 
 
 void Debugger::handleInstructionRead(const uint8_t bank, const uint16_t address, const uint8_t val)
 {
-
     if (ins_fetch) {
         cpu_instr.bytes.push_back(val);
     }
@@ -92,8 +93,7 @@ void Debugger::handleInstructionRead(const uint8_t bank, const uint16_t address,
         cout << format("%02X/%04X:%-12s  %3s  %-18s |%c%c%c%c%c%c%c%c| E=%1d DBR=%02X A=%04X X=%04X Y=%04X S=%04X D=%04X\n")
                         % (int) cpu_instr.pbr
                         % cpu_instr.pc
-                        //% renderBytes(ins)
-                        % " "
+                        % renderBytes()
                         % opcodes[cpu_instr.bytes[0]].mnemonic
                         % renderArgument()
                         % (system->cpu->SR.N? 'n' : '-')
@@ -111,6 +111,21 @@ void Debugger::handleInstructionRead(const uint8_t bank, const uint16_t address,
                         % system->cpu->Y.W
                         % system->cpu->S.W
                         % system->cpu->D;
+    }
+}
+
+void Debugger::handleVectorRead(const uint8_t bank, const uint16_t address, const uint8_t val)
+{
+    if (vector_fetch) {
+        vector_fetch = false;
+        vector_data |= (val << 8);
+
+        std::cerr << format("Fetch new PC %04X from vector %04X\n") % vector_data % vector_addr;
+    }
+    else {
+        vector_fetch = true;
+        vector_addr  = address;
+        vector_data  = val;
     }
 }
 
@@ -235,7 +250,7 @@ std::string Debugger::renderBytes()
     std::stringstream buffer;
 
     for (const int &b : cpu_instr.bytes) {
-        buffer << format{" %02X"} % b;
+        buffer << format(" %02X") % b;
     }
 
     return buffer.str();

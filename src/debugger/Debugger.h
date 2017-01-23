@@ -30,6 +30,10 @@ class Debugger {
          */
         bool ins_fetch = false;
 
+        bool vector_fetch = false;
+        uint16_t vector_addr;
+        uint16_t vector_data;
+
         /**
          * The instruction being fetched
          */
@@ -43,6 +47,7 @@ class Debugger {
         } cpu_instr;
 
         void handleInstructionRead(const std::uint8_t, const std::uint16_t, const std::uint8_t);
+        void handleVectorRead(const std::uint8_t, const std::uint16_t, const std::uint8_t);
 
         std::string renderArgument();
         std::string renderBytes();
