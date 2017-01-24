@@ -359,9 +359,9 @@ void executeOpcode(unsigned int opcode)
                 stackPull(v);
 
                 SR = v;
-            }
 
-            cpu->modeSwitch();
+                cpu->modeSwitch();
+            }
 
             break;
 
@@ -565,6 +565,8 @@ void executeOpcode(unsigned int opcode)
                 stackPull(v);
 
                 SR = v;
+
+                cpu->modeSwitch();
 
                 stackPull(PC);
 
