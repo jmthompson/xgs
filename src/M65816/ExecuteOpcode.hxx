@@ -570,7 +570,9 @@ void executeOpcode(unsigned int opcode)
 
                 stackPull(PC);
 
-                if (!StackOffset) {
+                // cannot use StackOffset check here because we may have changed
+                // out of the mode this version of the template is compiled for.
+                if (!SR.E) {
                     stackPull(PBR);
                 }
             }

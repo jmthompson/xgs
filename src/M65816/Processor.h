@@ -122,7 +122,7 @@ class Processor {
         bool nmi_pending;
         bool abort_pending;
 
-        unsigned int irq_pending;
+        bool irq_pending;
 
     public:
 
@@ -172,11 +172,8 @@ class Processor {
         // Raise the ABORT signal
         void abort() { abort_pending = true; }
 
-        // Raise an interrupt
-        void raiseInterrupt() { ++irq_pending; }
-
-        // Lower an interrupt
-        void lowerInterrupt() { if (irq_pending) --irq_pending; }
+        // Set IRQ line state
+        void setIRQ(bool state) { irq_pending = state; }
 
         // Load the contents of a vector into the PC and PBR
         inline void loadVector(const uint16_t va)

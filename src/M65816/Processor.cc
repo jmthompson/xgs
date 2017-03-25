@@ -17,6 +17,9 @@ namespace M65816 {
 
 Processor::Processor()
 {
+    nmi_pending   = false;
+    abort_pending = false;
+    irq_pending   = false;
 }
 
 Processor::~Processor()
@@ -46,8 +49,6 @@ void Processor::modeSwitch()
     }
     else {
         if (SR.X) { // x = 1
-            X.B.H = Y.B.H = 0;
-
             if (SR.M) { // m=1, x=1
                 engine = engine_e0m1x1;
                 cycle_counts = cycle_counts_e0m1x1;
@@ -68,6 +69,8 @@ void Processor::modeSwitch()
             }
         }
     }
+
+    if (SR.X) X.B.H = Y.B.H = 0;
 }
 
 unsigned int Processor::runUntil(const unsigned int max_cycles)
@@ -114,10 +117,6 @@ void Processor::reset(void)
 {
     stopped = false;
     waiting = false;
-
-    nmi_pending   = false;
-    abort_pending = false;
-    irq_pending   = 0;
 
     SR.E = true;
     SR.M = true;
