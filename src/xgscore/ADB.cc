@@ -573,6 +573,7 @@ void ADB::triggerPaddles()
 void ADB::handleKeyDown(SDL_KeyboardEvent *event)
 {
     SDL_Keycode sym = event->keysym.sym;
+    char key = 0x00;
 
     switch(sym) {
         case SDLK_CAPSLOCK:
@@ -591,40 +592,6 @@ void ADB::handleKeyDown(SDL_KeyboardEvent *event)
             break;
         case SDLK_RALT:
             ski_modifier_reg |= 0x40;
-            break;
-        default:
-            break;
-    }
-}
-
-void ADB::handleKeyUp(SDL_KeyboardEvent *event)
-{
-    SDL_Keycode sym = event->keysym.sym;
-    char key = 0x00;
-
-    switch(sym) {
-        case SDLK_CAPSLOCK:
-            ski_modifier_reg &= ~0x04;
-            break;
-        case SDLK_LSHIFT:
-        case SDLK_RSHIFT:
-            ski_modifier_reg &= ~0x01;
-            break;
-        case SDLK_LCTRL:
-        case SDLK_RCTRL:
-            ski_modifier_reg &= ~0x02;
-            break;
-        case SDLK_LALT:    
-            ski_modifier_reg &= ~0x80;
-            break;
-        case SDLK_RALT:
-            ski_modifier_reg &= ~0x40;
-            break;
-        case SDLK_F5:
-            mouse_grabbed = !mouse_grabbed;
-
-            SDL_SetRelativeMouseMode(mouse_grabbed? SDL_TRUE : SDL_FALSE);
-
             break;
 #if 0
         case SDLK_F11:
@@ -721,6 +688,7 @@ void ADB::handleKeyUp(SDL_KeyboardEvent *event)
             else {
                 key = 0x1B;
             }
+
             break;
         default:
             if (!(sym & 0x40000000)) {
@@ -734,6 +702,40 @@ void ADB::handleKeyUp(SDL_KeyboardEvent *event)
         ski_input_buffer[ski_input_index++] = applyModifiers(key, ski_modifier_reg);
 
         if (ski_input_index == kInputBufferSize) ski_input_index = 0;
+    }
+}
+
+void ADB::handleKeyUp(SDL_KeyboardEvent *event)
+{
+    SDL_Keycode sym = event->keysym.sym;
+
+    switch(sym) {
+        case SDLK_CAPSLOCK:
+            ski_modifier_reg &= ~0x04;
+            break;
+        case SDLK_LSHIFT:
+        case SDLK_RSHIFT:
+            ski_modifier_reg &= ~0x01;
+            break;
+        case SDLK_LCTRL:
+        case SDLK_RCTRL:
+            ski_modifier_reg &= ~0x02;
+            break;
+        case SDLK_LALT:    
+            ski_modifier_reg &= ~0x80;
+            break;
+        case SDLK_RALT:
+            ski_modifier_reg &= ~0x40;
+            break;
+        case SDLK_F5:
+            mouse_grabbed = !mouse_grabbed;
+
+            SDL_SetRelativeMouseMode(mouse_grabbed? SDL_TRUE : SDL_FALSE);
+
+            break;
+
+        default:
+            break;
     }
 }
 
