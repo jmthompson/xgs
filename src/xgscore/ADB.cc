@@ -271,7 +271,7 @@ uint8_t ADB::readMouse()
 
         ski_status_reg &= ~0x82;
 
-        if (ski_status_reg & 0x40) system->cpu->lowerInterrupt();
+        if (ski_status_reg & 0x40) system->lowerInterrupt(ADB_IRQ);
     }
     else {
         delta  = ski_xdelta;
@@ -315,7 +315,7 @@ uint8_t ADB::readCommand()
 
         ski_status_irq = false;
 
-        system->cpu->lowerInterrupt();
+        system->lowerInterrupt(ADB_IRQ);
 
         return val;
     }
@@ -715,7 +715,7 @@ void ADB::handleKeyUp(SDL_KeyboardEvent *event)
                     ski_status_irq = 0x20;
                     key = 0x1B;
 
-                    system->cpu->raiseInterrupt();
+                    system->raiseInterrupt(ADB_IRQ);
                 }
             }
             else {
@@ -800,7 +800,7 @@ void ADB::handleMouseBtnDown(SDL_MouseButtonEvent *event)
     ski_ydelta = 0;
 
     if (ski_status_reg & 0x40) {
-        system->cpu->raiseInterrupt();
+        system->raiseInterrupt(ADB_IRQ);
     }
 
     ski_status_reg |= 0x80;
@@ -832,7 +832,7 @@ void ADB::handleMouseBtnUp(SDL_MouseButtonEvent *event)
     ski_ydelta = 0;
 
     if (ski_status_reg & 0x40) {
-        system->cpu->raiseInterrupt();
+        system->raiseInterrupt(ADB_IRQ);
     }
 
     ski_status_reg |= 0x80;
@@ -856,7 +856,7 @@ void ADB::handleMouseMotion(SDL_MouseMotionEvent *event)
     ski_button1 = (event->state & SDL_BUTTON_RMASK)? 1 : 0;
 
     if (ski_status_reg & 0x40) {
-        system->cpu->raiseInterrupt();
+        system->raiseInterrupt(ADB_IRQ);
     }
 
     ski_status_reg |= 0x80;

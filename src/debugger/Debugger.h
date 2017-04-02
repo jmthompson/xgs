@@ -46,6 +46,8 @@ class Debugger {
             std::vector<unsigned int> bytes;
         } cpu_instr;
 
+        bool trace = false;
+
         void handleInstructionRead(const std::uint8_t, const std::uint16_t, const std::uint8_t);
         void handleVectorRead(const std::uint8_t, const std::uint16_t, const std::uint8_t);
 
@@ -60,6 +62,8 @@ class Debugger {
         {
             system = theSystem;
         }
+
+        void enableTrace() { trace = true; }
 
         std::uint8_t memoryRead(const uint8_t bank, const uint16_t address, const uint8_t val, const M65816::mem_access_t type);
         std::uint8_t memoryWrite(const uint8_t bank, const uint16_t address, const uint8_t val, const M65816::mem_access_t type);

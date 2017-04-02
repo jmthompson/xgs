@@ -110,6 +110,7 @@ uint8_t Disk35::status(const unsigned int state)
 
 uint8_t Disk35::read(const cycles_t cycle_count)
 {
+    return (cycle_count & 0xFF) | 0x80;
 }
 
 void Disk35::write(const cycles_t cycle_count, const uint8_t val)

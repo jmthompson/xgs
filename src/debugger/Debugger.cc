@@ -34,7 +34,7 @@ uint8_t Debugger::memoryRead(const uint8_t bank, const uint16_t address, const u
 {
     switch (type) {
         case M65816::INSTR:
-            handleInstructionRead(bank, address, val);
+            if (trace) handleInstructionRead(bank, address, val);
             break;
         case M65816::VECTOR:
             handleVectorRead(bank, address, val);
@@ -65,6 +65,30 @@ void Debugger::handleInstructionRead(const uint8_t bank, const uint16_t address,
         cpu_instr.bytes.push_back(val);
     }
     else {
+        if (cpu_instr.bytes.size()) {
+            cout << format("%02X/%04X:%-12s  %3s  %-18s |%c%c%c%c%c%c%c%c| E=%1d DBR=%02X A=%04X X=%04X Y=%04X S=%04X D=%04X\n")
+                            % (int) cpu_instr.pbr
+                            % cpu_instr.pc
+                            % renderBytes()
+                            % opcodes[cpu_instr.bytes[0]].mnemonic
+                            % renderArgument()
+                            % (system->cpu->SR.N? 'n' : '-')
+                            % (system->cpu->SR.V? 'v' : '-')
+                            % (system->cpu->SR.M? 'm' : '-')
+                            % (system->cpu->SR.X? 'x' : '-')
+                            % (system->cpu->SR.D? 'd' : '-')
+                            % (system->cpu->SR.I? 'i' : '-')
+                            % (system->cpu->SR.Z? 'z' : '-')
+                            % (system->cpu->SR.C? 'c' : '-')
+                            % (int) system->cpu->SR.E
+                            % (int) system->cpu->DBR
+                            % system->cpu->A.W
+                            % system->cpu->X.W
+                            % system->cpu->Y.W
+                            % system->cpu->S.W
+                            % system->cpu->D;
+        }
+
         cpu_instr.bytes.clear();
 
         cpu_instr.pbr = bank;
@@ -89,28 +113,6 @@ void Debugger::handleInstructionRead(const uint8_t bank, const uint16_t address,
 
     if (cpu_instr.bytes.size() == cpu_instr.len) {
         ins_fetch = false;
-
-        cout << format("%02X/%04X:%-12s  %3s  %-18s |%c%c%c%c%c%c%c%c| E=%1d DBR=%02X A=%04X X=%04X Y=%04X S=%04X D=%04X\n")
-                        % (int) cpu_instr.pbr
-                        % cpu_instr.pc
-                        % renderBytes()
-                        % opcodes[cpu_instr.bytes[0]].mnemonic
-                        % renderArgument()
-                        % (system->cpu->SR.N? 'n' : '-')
-                        % (system->cpu->SR.V? 'v' : '-')
-                        % (system->cpu->SR.M? 'm' : '-')
-                        % (system->cpu->SR.X? 'x' : '-')
-                        % (system->cpu->SR.D? 'd' : '-')
-                        % (system->cpu->SR.I? 'i' : '-')
-                        % (system->cpu->SR.Z? 'z' : '-')
-                        % (system->cpu->SR.C? 'c' : '-')
-                        % (int) system->cpu->SR.E
-                        % (int) system->cpu->DBR
-                        % system->cpu->A.W
-                        % system->cpu->X.W
-                        % system->cpu->Y.W
-                        % system->cpu->S.W
-                        % system->cpu->D;
     }
 }
 
@@ -120,7 +122,7 @@ void Debugger::handleVectorRead(const uint8_t bank, const uint16_t address, cons
         vector_fetch = false;
         vector_data |= (val << 8);
 
-        std::cerr << format("Fetch new PC %04X from vector %04X\n") % vector_data % vector_addr;
+        //std::cerr << format("Fetch new PC %04X from vector %04X\n") % vector_data % vector_addr;
     }
     else {
         vector_fetch = true;

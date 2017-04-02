@@ -43,6 +43,9 @@ void Mega2::reset()
 
     sw_intcxrom = false;
 
+    sw_qtrsecirq_enable = false;
+    sw_vblirq_enable    = false;
+
     last_access = 0;
 
     sw_shadow_text   = true;
@@ -78,7 +81,7 @@ void Mega2::updateMemoryMaps()
         system->mapRead(page, sw_altzp? page + 0x0100 : page);
         system->mapWrite(page, sw_altzp? page + 0x0100 : page);
     }
-    for (page = 0x0002 ; page < 0x0003 ; page++) {
+    for (page = 0x0002 ; page < 0x0004 ; page++) {
         system->mapRead(page,  sw_auxrd? page + 0x0100 : page);
         system->mapWrite(page, sw_auxwr? page + 0x0100 : page);
     }
@@ -285,6 +288,10 @@ uint8_t Mega2::read(const unsigned int& offset)
             val = sw_80store? 0x80 : 0x00;
             break;
 
+        case 0x19:
+            val = in_vbl? 0x80 : 0x00;
+            break;
+
         case 0x2D:
             for (int i = 7 ; i >= 0 ; --i) {
                 val <<= 1;
@@ -314,8 +321,8 @@ uint8_t Mega2::read(const unsigned int& offset)
             break;
 
         case 0x41:
-            if (vgc->sw_qtrsecirq_enable) val |= 0x10;
-            if (vgc->sw_vblirq_enable)    val |= 0x08;
+            if (sw_qtrsecirq_enable) val |= 0x10;
+            if (sw_vblirq_enable)    val |= 0x08;
             if (adb->sw_m2mouseswirq)     val |= 0x04;
             if (adb->sw_m2mousemvirq)     val |= 0x02;
             if (adb->sw_m2mouseenable)    val |= 0x01;
@@ -496,6 +503,17 @@ void Mega2::write(const unsigned int& offset, const uint8_t& val)
             sw_slotc3rom = true;
             break;
 
+        case 0x19:
+            if (sw_diagtype & 0x08) {
+                sw_diagtype &= ~0x08;
+            
+                if (!(sw_diagtype & 0x18)) {
+                    system->lowerInterrupt(MEGA2_IRQ);
+                }
+            }
+
+            break;
+
         case 0x2D:
             for (int i = 0 ; i < 8 ; ++i) {
                 sw_slot_reg[i] = val & (1 << i);
@@ -535,17 +553,17 @@ void Mega2::write(const unsigned int& offset, const uint8_t& val)
             break;
 
         case 0x41:
-            adb->sw_m2mouseenable    = val & 0x01;
-            adb->sw_m2mousemvirq     = val & 0x02;
-            adb->sw_m2mouseswirq     = val & 0x04;
-            vgc->sw_vblirq_enable    = val & 0x08;
-            vgc->sw_qtrsecirq_enable = val & 0x10;
+            adb->sw_m2mouseenable = val & 0x01;
+            adb->sw_m2mousemvirq  = val & 0x02;
+            adb->sw_m2mouseswirq  = val & 0x04;
+            sw_vblirq_enable      = val & 0x08;
+            sw_qtrsecirq_enable   = val & 0x10;
 
             break;
 
         case 0x47:
-            if (sw_diagtype & 0x10) system->cpu->lowerInterrupt();
-            if (sw_diagtype & 0x08) system->cpu->lowerInterrupt();
+            if (sw_diagtype & 0x10) system->lowerInterrupt(MEGA2_IRQ);
+            if (sw_diagtype & 0x08) system->lowerInterrupt(MEGA2_IRQ);
 
             sw_diagtype &= ~0x18;
 
@@ -640,4 +658,26 @@ void Mega2::write(const unsigned int& offset, const uint8_t& val)
     }
 
     last_access = offset;
+}
+
+void Mega2::tick(const unsigned int frame_number)
+{
+    if (sw_qtrsecirq_enable && !(frame_number % 15) && !(sw_diagtype & 0x10)) {
+        sw_diagtype |= 0x10;
+
+        system->raiseInterrupt(MEGA2_IRQ);
+    }
+}
+
+void Mega2::microtick(const unsigned int line_number)
+{
+    if (line_number == 192) {
+        in_vbl = true;
+
+        if (sw_vblirq_enable && !(sw_diagtype & 0x08)) {
+            sw_diagtype |= 0x08;
+
+            system->raiseInterrupt(MEGA2_IRQ);
+        }
+    }
 }

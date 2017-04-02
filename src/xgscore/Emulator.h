@@ -44,6 +44,9 @@ class Emulator {
         unsigned int timer_interval;
         int timer_fd;
 
+        // The number of frames to produce every second
+        unsigned int framerate;
+
         float target_speed;
         float actual_speed;
 

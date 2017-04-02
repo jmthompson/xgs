@@ -22,7 +22,7 @@ struct Config {
 
         bool rom03;
         bool use_debugger;
-        unsigned int framerate;
+        bool pal;
 
         uint8_t *font_40col[2];
         uint8_t *font_80col[2];
@@ -30,6 +30,10 @@ struct Config {
         struct {
             string smartport[8];
         } vdisks;
+
+        struct {
+            bool trace;
+        } debugger;
 };
 
 #endif // CONFIG_H_

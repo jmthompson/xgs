@@ -25,6 +25,14 @@ enum mem_page_t {
     SLOW
 };
 
+enum irq_source_t {
+    UNKNOWN = 0,
+    MEGA2_IRQ,
+    VGC_IRQ,
+    DOC_IRQ,
+    ADB_IRQ
+};
+
 struct MemoryPage {
     uint8_t *read    = nullptr;
     uint8_t *write   = nullptr;
@@ -66,7 +74,13 @@ class System {
         Device *cop_handler[256];
         Device *wdm_handler[256];
 
+#ifdef ENABLE_DEBUGGER
         Debugger *debugger;
+#endif
+
+        bool irq_states[16];
+
+        void updateIRQ();
 
     public:
         cycles_t cycle_count = 0;
@@ -81,12 +95,14 @@ class System {
         void installMemory(uint8_t *, const unsigned int, const unsigned int, mem_page_t);
         void installDevice(const std::string&, Device *);
 
+#ifdef ENABLE_DEBUGGER
         void installDebugger(Debugger *dbg)
         {
             this->debugger = dbg;
 
             dbg->attach(this);
         }
+#endif
 
         Device *getDevice(const std::string& name) { return devices[name]; }
 
@@ -151,98 +167,14 @@ class System {
             return memory[page];
         }
 
-        /**
-         * Read the value from a memory location, honoring page remapping, but
-         * ignoring I/O areas. Used internally by the emulator to access memory.
-         */
-        uint8_t sysRead(const uint8_t bank, const uint16_t address)
-        {
-            const unsigned int page_no = read_map[(bank << 8) | (address >> 8)];
-            const unsigned int offset  = address & 0xFF;
-            MemoryPage& page = memory[page_no];
+        uint8_t sysRead(const uint8_t, const uint16_t);
+        void sysWrite(const uint8_t, const uint16_t, uint8_t);
 
-            if (page.read) {
-                return page.read[offset];
-            }
-            else {
-                return 0;
-            }
-        }
+        uint8_t cpuRead(const uint8_t, const uint16_t, const M65816::mem_access_t);
+        void cpuWrite(const uint8_t, const uint16_t, uint8_t, const M65816::mem_access_t);
 
-        /**
-         * Write a value from a memory location, honoring page remapping, but
-         * ignoring I/O areas. Used internally by the emulator to access memory.
-         */
-        void sysWrite(const uint8_t bank, const uint16_t address, uint8_t val)
-        {
-            const unsigned int page_no = write_map[(bank << 8) | (address >> 8)];
-            const unsigned int offset  = address & 0xFF;
-            MemoryPage& page = memory[page_no];
-
-            if (page.write) {
-                page.write[offset] = val;
-
-                if (page.shadowed) {
-                    MemoryPage& spage = memory[(page_no & 0x01FF) | 0xE000];
-
-                    spage.write[offset] = val;
-                }
-            }
-        }
-
-        uint8_t cpuRead(const uint8_t bank, const uint16_t address, const M65816::mem_access_t type)
-        {
-            const unsigned int page_no = read_map[(bank << 8) | (address >> 8)];
-            const unsigned int offset  = address & 0xFF;
-            MemoryPage& page = (type == M65816::VECTOR)? memory[page_no|0xFF00] : memory[page_no];
-            uint8_t val;
-
-            if (page_no == kIOPage) {
-                if (Device *dev = io_read[offset]) {
-                    val = dev->read(offset);
-                }
-                else {
-                    val = 0; // FIXME: should be random
-                }
-            }
-            else if (page.read) {
-                val = page.read[offset];
-            }
-            else {
-                val = 0;
-            }
-
-            if (debugger) {
-                return debugger->memoryRead(bank, address, val, type);
-            }
-            else {
-                return val;
-            }
-        }
-
-        void cpuWrite(const uint8_t bank, const uint16_t address, uint8_t val, const M65816::mem_access_t type)
-        {
-            const unsigned int page_no = write_map[(bank << 8) | (address >> 8)];
-            const unsigned int offset  = address & 0xFF;
-            MemoryPage& page = memory[page_no];
-
-            if (debugger) { val = debugger->memoryWrite(bank, address, val, type); }
-
-            if (page_no == kIOPage) {
-                if (Device *dev = io_write[offset]) {
-                    dev->write(offset, val);
-                }
-            }
-            else if (page.write) {
-                page.write[offset] = val;
-
-                if (page.shadowed) {
-                    MemoryPage& spage = memory[(page_no & 0x01FF) | 0xE000];
-
-                    spage.write[offset] = val;
-                }
-            }
-        }
+        void raiseInterrupt(irq_source_t);
+        void lowerInterrupt(irq_source_t);
 };
 
 #endif // SYSTEM_H_

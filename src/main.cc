@@ -52,7 +52,6 @@ bool buildConfig(Config& config, unsigned int argc, char **argv)
 {
     const char *p;
     unsigned int ram_size;
-    bool is_pal;
     string rom_file;
     string font40_file;
     string font80_file;
@@ -79,13 +78,13 @@ bool buildConfig(Config& config, unsigned int argc, char **argv)
 
     po::options_description emulator("Emulator Options");
     emulator.add_options()
-        ("debugger", po::bool_switch(&config.use_debugger)->default_value(false), "Enable the debugger")
-        ("rom03,3",  po::bool_switch(&config.rom03)->default_value(false),        "Enable ROM 03 emulation")
-        ("pal",      po::bool_switch(&is_pal)->default_value(false),              "Enable PAL (50 Hz) mode")
-        ("romfile",  po::value<string>(&rom_file)->default_value("xgs.rom"),      "Name of ROM file to load")
-        ("ram",      po::value<unsigned int>(&ram_size)->default_value(1024),     "Set RAM size in KB")
-        ("font40",   po::value<string>(&font40_file)->default_value("xgs40.fnt"), "Name of 40-column font to load")
-        ("font80",   po::value<string>(&font80_file)->default_value("xgs80.fnt"), "Name of 80-column font to load");
+        ("trace",    po::bool_switch(&config.debugger.trace)->default_value(false), "Enable trace")
+        ("rom03,3",  po::bool_switch(&config.rom03)->default_value(false),          "Enable ROM 03 emulation")
+        ("pal",      po::bool_switch(&config.pal)->default_value(false),            "Enable PAL (50 Hz) mode")
+        ("romfile",  po::value<string>(&rom_file)->default_value("xgs.rom"),        "Name of ROM file to load")
+        ("ram",      po::value<unsigned int>(&ram_size)->default_value(1024),       "Set RAM size in KB")
+        ("font40",   po::value<string>(&font40_file)->default_value("xgs40.fnt"),   "Name of 40-column font to load")
+        ("font80",   po::value<string>(&font80_file)->default_value("xgs80.fnt"),   "Name of 80-column font to load");
 
     po::options_description vdisks("Virtual Disk Options");
     vdisks.add_options()
@@ -110,8 +109,6 @@ bool buildConfig(Config& config, unsigned int argc, char **argv)
             po::notify(vm);
         } 
 
-        config.framerate = is_pal? 50 : 60;
-
         unsigned int bytes;
 
         bytes = loadFile(rom_file, &config.rom, config.rom03? kRom03Bytes : kRom01Bytes);
@@ -119,7 +116,7 @@ bool buildConfig(Config& config, unsigned int argc, char **argv)
         config.rom_start_page = 0x10000 - config.rom_pages;
 
         config.slow_ram = new uint8_t[65536*2];
-        config.fast_ram = new uint8_t[ram_size * 1048576];
+        config.fast_ram = new uint8_t[ram_size * 1024];
         config.fast_ram_pages = ram_size << 2;
 
         bytes = loadFile(font40_file, &config.font_40col[0], kFont40Bytes * 2);

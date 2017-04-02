@@ -81,3 +81,131 @@ void System::reset()
     // language card, otherwise the CPU will fetch an invalid reset vector
     cpu->reset();
 }
+
+/**
+ * Read the value from a memory location, honoring page remapping, but
+ * ignoring I/O areas. Used internally by the emulator to access memory.
+ */
+uint8_t System::sysRead(const uint8_t bank, const uint16_t address)
+{
+    const unsigned int page_no = read_map[(bank << 8) | (address >> 8)];
+    const unsigned int offset  = address & 0xFF;
+    MemoryPage& page = memory[page_no];
+
+    if (page.read) {
+        return page.read[offset];
+    }
+    else {
+        return 0;
+    }
+}
+
+/**
+ * Write a value from a memory location, honoring page remapping, but
+ * ignoring I/O areas. Used internally by the emulator to access memory.
+ */
+void System::sysWrite(const uint8_t bank, const uint16_t address, uint8_t val)
+{
+    const unsigned int page_no = write_map[(bank << 8) | (address >> 8)];
+    const unsigned int offset  = address & 0xFF;
+    MemoryPage& page = memory[page_no];
+
+    if (page.write) {
+        page.write[offset] = val;
+
+        if (page.shadowed) {
+            MemoryPage& spage = memory[(page_no & 0x01FF) | 0xE000];
+
+            spage.write[offset] = val;
+        }
+    }
+}
+
+uint8_t System::cpuRead(const uint8_t bank, const uint16_t address, const M65816::mem_access_t type)
+{
+    const unsigned int page_no = read_map[(bank << 8) | (address >> 8)];
+    const unsigned int offset  = address & 0xFF;
+    MemoryPage& page = (type == M65816::VECTOR)? memory[page_no|0xFF00] : memory[page_no];
+    uint8_t val;
+
+    if (page_no == kIOPage) {
+        if (Device *dev = io_read[offset]) {
+            val = dev->read(offset);
+        }
+        else {
+            val = 0; // FIXME: should be random
+        }
+    }
+    else if (page.read) {
+        val = page.read[offset];
+    }
+    else {
+        val = 0;
+    }
+
+#ifdef ENABLE_DEBUGGER
+    if (debugger) {
+        return debugger->memoryRead(bank, address, val, type);
+    }
+    else {
+        return val;
+    }
+#else
+    return val;
+#endif
+}
+
+void System::cpuWrite(const uint8_t bank, const uint16_t address, uint8_t val, const M65816::mem_access_t type)
+{
+    const unsigned int page_no = write_map[(bank << 8) | (address >> 8)];
+    const unsigned int offset  = address & 0xFF;
+    MemoryPage& page = memory[page_no];
+
+#ifdef ENABLE_DEBUGGER
+    if (debugger) { val = debugger->memoryWrite(bank, address, val, type); }
+#endif
+
+    if (page_no == kIOPage) {
+        if (Device *dev = io_write[offset]) {
+            dev->write(offset, val);
+        }
+    }
+    else if (page.write) {
+        page.write[offset] = val;
+
+        if (page.shadowed) {
+            MemoryPage& spage = memory[(page_no & 0x01FF) | 0xE000];
+
+            spage.write[offset] = val;
+        }
+    }
+}
+
+void System::raiseInterrupt(irq_source_t source)
+{
+    irq_states[source] = true;
+
+//    cerr << boost::format("raiseInterrupt(%d)\n") % source;
+
+    updateIRQ();
+}
+
+void System::lowerInterrupt(irq_source_t source)
+{
+    irq_states[source] = false;
+
+//    cerr << boost::format("lowerInterrupt(%d)\n") % source;
+
+    updateIRQ();
+}
+
+void System::updateIRQ()
+{
+    bool raised = false;
+
+    for (unsigned int i = 0 ; i < 16 ; i++) {
+        raised |= irq_states[i];
+    }
+
+    cpu->setIRQ(raised);
+}

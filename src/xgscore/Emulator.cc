@@ -68,7 +68,9 @@ Emulator::Emulator(Config *theConfig)
 
     last_time = now();
 
-    for (int i = 0 ; i < config->framerate; ++i) {
+    framerate = config->pal? 50 : 60;
+
+    for (int i = 0 ; i < framerate; ++i) {
         times[i] = 0.0;
         cycles[i] = 0;
     }
@@ -140,11 +142,15 @@ Emulator::Emulator(Config *theConfig)
     sys->setWdmHandler(0xC7, smpt);
     sys->setWdmHandler(0xC8, smpt);
 
-    if (config->use_debugger) {
-        Debugger *dbg = new Debugger();
+#ifdef ENABLE_DEBUGGER
+    Debugger *dbg = new Debugger();
 
-        sys->installDebugger(dbg);
+    if (config->debugger.trace) {
+        dbg->enableTrace();
     }
+
+    sys->installDebugger(dbg);
+#endif
 
     target_speed = 2.6;
 
@@ -172,8 +178,8 @@ void Emulator::run()
 
     current_frame = doc_ticks = 0;
 
-    timer_interval = 1000000000 / config->framerate;
-    cerr << boost::format("Timer period is %d Hz (%d ns)\n") % config->framerate % timer_interval;
+    timer_interval = 1000000000 / framerate;
+    cerr << boost::format("Timer period is %d Hz (%d ns)\n") % framerate % timer_interval;
 
     timer.it_interval.tv_sec  = 0;
     timer.it_interval.tv_nsec = timer_interval;
@@ -200,26 +206,27 @@ void Emulator::run()
 
 void Emulator::tick()
 {
-    unsigned int cycles_per = (1024000/(262 * config->framerate)) * target_speed;
+    unsigned int cycles_per = (1024000/(VGC::kLinesPerFrame * framerate)) * target_speed;
 
     for (unsigned int line = 0; line < VGC::kLinesPerFrame ; ++line) {
         unsigned int num_cycles = cpu->runUntil(cycles_per);
 
         sys->cycle_count += num_cycles;
 
-        doc->microtick(doc_ticks);
-        doc->microtick(++doc_ticks);
+        if (++doc_ticks % 12) {
+            doc->microtick(doc_ticks);
+            doc->microtick(doc_ticks);
+        }
 
         vgc->microtick(line);
+        mega2->microtick(line);
     }
 
+    mega2->tick(current_frame);
     vgc->tick(current_frame);
     iwm->tick(current_frame);
 
-    ++current_frame;
-
-    if (current_frame == config->framerate) {
-        doc_ticks = 0;
+    if (++current_frame == framerate) {
         current_frame = 0;
     }
 

@@ -18,7 +18,7 @@ class VirtualDisk;
 
 class Smartport : public Device {
     private:
-        constexpr static unsigned int kNumUnits = 8;
+        constexpr static unsigned int kNumUnits = 14;
 
         VirtualDisk *units[kNumUnits];
 

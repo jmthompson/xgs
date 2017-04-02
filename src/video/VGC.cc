@@ -24,6 +24,8 @@
 
 #include "standard_colors.h"
 
+using std::cerr;
+
 void VGC::reset()
 {
     uint8_t *buffer;
@@ -32,8 +34,6 @@ void VGC::reset()
 
     sw_vgcint           = false;
     sw_onesecirq_enable = false;
-    sw_qtrsecirq_enable = false;
-    sw_vblirq_enable    = false;
     sw_scanirq_enable   = false;
 
     sw_80col      = false;
@@ -100,9 +100,6 @@ uint8_t VGC::read(const unsigned int& offset)
             sw_altcharset = true;
             modeChanged();
 
-            break;
-        case 0x19:
-            val = in_vbl? 0x80  : 0x00;
             break;
         case 0x1A:
             val = sw_text? 0x80 : 0x00;
@@ -260,24 +257,23 @@ void VGC::write(const unsigned int& offset, const uint8_t& val)
             sw_linear = val & 0x40;
             sw_a2mono = val & 0x20;
 
+            if (!(val & 0x01)) {
+                cerr << format("WARNING: attempt to enable the A17 bank latch in NEWVIDEO\n");
+            }
+
             modeChanged();
 
             break;
 
         case 0x32:
-            if (!(val & 0x40)) {
-                if (sw_vgcint & 0x40) system->cpu->lowerInterrupt();
+            if (!(val & 0x40)) sw_vgcint &= ~0x40;
+            if (!(val & 0x20)) sw_vgcint &= ~0x20;
 
-                sw_vgcint &= ~0x40;
+            if (!(sw_vgcint & 0x60) && (sw_vgcint & 0x80)) {
+                system->lowerInterrupt(VGC_IRQ);
+
+                sw_vgcint &= ~0x80;
             }
-
-            if (!(val & 0x20)) {
-                if (sw_vgcint & 0x20) system->cpu->lowerInterrupt();
-
-                sw_vgcint &= ~0x20;
-            }
-
-            if (!(sw_vgcint & 0x60)) sw_vgcint &= ~0x80;
 
             break;
 
@@ -482,11 +478,13 @@ void VGC::setScreenSize(unsigned int w, unsigned int h) {
         throw std::runtime_error("SDL_CreateTexture() failed");
     }
 
+/*
     std::cerr << format("New video mode = %dx%d, border = %dx%d, content area = %dx%d / %d,%d,%d,%d\n")
                     % video_width % video_height
                     % border_width % border_height
                     % content_width % content_height
                     % content_top % content_left % content_bottom % content_right;
+*/
 }
 
 /**
@@ -500,29 +498,11 @@ void VGC::tick(const unsigned int frame_number)
     SDL_RenderCopy(renderer, texture, NULL, dest_rect);
     SDL_RenderPresent(renderer);
 
-    if (sw_vblirq_enable) {
-        if (!(mega2->sw_diagtype & 0x08)) {
-            mega2->sw_diagtype |= 0x08;
-
-            system->cpu->raiseInterrupt();
-        }
-    }
-
-    if (!(frame_number % 15)) {
-        if (sw_qtrsecirq_enable) {
-            if (!(mega2->sw_diagtype & 0x10)) {
-                mega2->sw_diagtype |= 0x10;
-
-                system->cpu->raiseInterrupt();
-            }
-        }
-    }
-
     if (sw_onesecirq_enable && !frame_number) {
         if (!(sw_vgcint & 0x40)) {
             sw_vgcint |= 0xC0;
 
-            system->cpu->raiseInterrupt();
+            system->raiseInterrupt(VGC_IRQ);
         }
     }
 } 
@@ -542,9 +522,6 @@ void VGC::microtick(const unsigned int line_number)
         drawBorder(line + content_right + 1, video_width - content_right);
     }
 
-    // VBLs start at scan line 192 even in SHR mode
-    in_vbl = (line_number >= 192);
-
     sw_vert_cnt = line_number + 256;
 
     // Wrap vertical count so that 512-517 maps to 250-255.
@@ -553,7 +530,7 @@ void VGC::microtick(const unsigned int line_number)
     if (sw_scanirq_enable && (line_number < 200) && (ram[0x019D00 + line_number] & 0x40)) {
         if (!(sw_vgcint & 0x20)) {
             sw_vgcint |= 0xA0;
-            system->cpu->raiseInterrupt();
+            system->raiseInterrupt(VGC_IRQ);
         }
     }
 }
@@ -591,24 +568,22 @@ void VGC::setRtcControlReg(uint8_t val)
             if (clk_state & 0x40) {
                 if (clk_state & 0x80) {
                     clk_data_reg = bram[clk_addr];
-                    //std::cerr << boost::format("rtc bram read : %04X = %02X\n") % clk_addr % (unsigned int) clk_data_reg;
                 }
                 else {
                     bram[clk_addr] = clk_data_reg;
-                    //std::cerr << boost::format("rtc bram write : %04X = %02X\n") % clk_addr % (unsigned int) clk_data_reg;
                 }
             }
             else {
                 if (clk_state & 0x80) {
                     if (!clk_addr) {
-                        clk_curr_time.L = time(NULL) + kClockOffset;
+                        //clk_curr_time.L = time(NULL) + kClockOffset;
+                        clk_curr_time.L = kClockOffset;
                     }
 #ifdef BIGENDIAN
                     clk_data_reg = clk_curr_time.B[3 - clk_addr];
 #else
                     clk_data_reg = clk_curr_time.B[clk_addr];
 #endif
-                    //std::cerr << boost::format("rtc clock read : %04X = %02X\n") % clk_addr % (unsigned int) clk_data_reg;
                 }
                 else {
                     // Setting system time not implemented

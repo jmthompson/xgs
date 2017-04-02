@@ -443,7 +443,7 @@ void DOC::pushIRQ(const unsigned int osc_num)
 {
     if (irq_index == kInterruptStackSize) return;
 
-    if (!irq_index) system->cpu->raiseInterrupt();
+    if (!irq_index) system->raiseInterrupt(DOC_IRQ);
 
     irq_stack[irq_index++] = osc_num;
 }
@@ -453,7 +453,7 @@ const int DOC::pullIRQ()
     if (!irq_index) return -1;
 
     int osc_num = irq_stack[--irq_index];
-    if (!irq_index) system->cpu->lowerInterrupt();
+    if (!irq_index) system->lowerInterrupt(DOC_IRQ);
 
     return osc_num;
 }
