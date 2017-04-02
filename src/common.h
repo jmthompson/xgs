@@ -52,4 +52,7 @@ typedef std::uint64_t cycles_t;
 // Typedef representing pixel data in the video driver (32-bit color)
 typedef std::uint32_t pixel_t;
 
+// Maximum number of Smartport units
+const unsigned int kSmartportUnits = 8;
+
 #endif // COMMON_H_
