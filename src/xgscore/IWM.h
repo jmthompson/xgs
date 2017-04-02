@@ -46,7 +46,7 @@ class IWM : public Device {
         bool slot7_motor;
 
         bool iwm_motor_on;
-        bool iwm_motor_off;
+        bool iwm_motor_spindown;
 
         unsigned int motor_off_frame;
 

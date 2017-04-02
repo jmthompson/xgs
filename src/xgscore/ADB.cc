@@ -66,6 +66,9 @@ static char applyModifiers(char key, uint8_t modifiers)
             key -= 32;
         }
         switch (key) {
+            case '`':
+                key = '~';
+                break;
             case '1':
                 key = '!';
                 break;
@@ -102,8 +105,29 @@ static char applyModifiers(char key, uint8_t modifiers)
             case ']':
                 key = '}';
                 break;
+            case '-':
+                key = '_';
+                break;
+            case '=':
+                key = '+';
+                break;
+            case ';':
+                key = ':';
+                break;
+            case '\'':
+                key = '"';
+                break;
             case '\\':
                 key = '|';
+                break;
+            case ',':
+                key = '<';
+                break;
+            case '.':
+                key = '>';
+                break;
+            case '/':
+                key = '?';
                 break;
             default:
                 break;
@@ -584,7 +608,6 @@ void ADB::handleKeyDown(SDL_KeyboardEvent *event)
             ski_modifier_reg |= 0x01;
             break;
         case SDLK_LCTRL:
-        case SDLK_RCTRL:
             ski_modifier_reg |= 0x02;
             break;
         case SDLK_LALT:
@@ -593,24 +616,28 @@ void ADB::handleKeyDown(SDL_KeyboardEvent *event)
         case SDLK_RALT:
             ski_modifier_reg |= 0x40;
             break;
+        case SDLK_RCTRL:
+            mouse_grabbed = !mouse_grabbed;
+
+            SDL_SetRelativeMouseMode(mouse_grabbed? SDL_TRUE : SDL_FALSE);
+
+            break;
+#ifdef ENABLE_DEBUGGER
+        case SDLK_PAUSE:
+            system->debugger->toggleTrace();
+
+            break;
+        case SDLK_F12:
+            system->cpu->nmi();
+
+            break;
+#endif
 #if 0
         case SDLK_F11:
             fullscreen ^= 0x01;
             videoSetFullscreen(fullscreen);
-        case SDLK_PAGEDOWN:
-            if (ski_modifier_reg & 0x02) hardwareSetTrace(1);
-            break;
-        case SDLK_PAGEUP:
-            if (ski_modifier_reg & 0x02) hardwareSetTrace(0);
-            break;
         case SDLK_HOME:
             if (ski_modifier_reg & 0x02) hardwareReset();
-            break;
-        case SDLK_END:
-            if (ski_modifier_reg & 0x02) schedulerStop();
-            break;
-        case SDLK_PAUSE:
-            hardwareRaiseNMI();
             break;
 #endif
         case SDLK_LEFT:
@@ -718,7 +745,6 @@ void ADB::handleKeyUp(SDL_KeyboardEvent *event)
             ski_modifier_reg &= ~0x01;
             break;
         case SDLK_LCTRL:
-        case SDLK_RCTRL:
             ski_modifier_reg &= ~0x02;
             break;
         case SDLK_LALT:    
@@ -727,13 +753,6 @@ void ADB::handleKeyUp(SDL_KeyboardEvent *event)
         case SDLK_RALT:
             ski_modifier_reg &= ~0x40;
             break;
-        case SDLK_F5:
-            mouse_grabbed = !mouse_grabbed;
-
-            SDL_SetRelativeMouseMode(mouse_grabbed? SDL_TRUE : SDL_FALSE);
-
-            break;
-
         default:
             break;
     }

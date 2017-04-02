@@ -15,23 +15,10 @@
  * Used with permission.
  */
 
-#include <cstdlib>
-#include <iostream>
-#include <stdexcept>
-#include <boost/format.hpp>
-
-#include <SDL.h>
-
 #include "common.h"
 
 #include "IWM.h"
 #include "System.h"
-
-using std::cerr;
-using std::endl;
-using std::uint8_t;
-using std::uint16_t;
-using std::uint32_t;
 
 static const uint8_t iwm_35track_len[80] = {
     12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12,
@@ -76,7 +63,7 @@ void IWM::reset()
     iwm_q6        = false;
     iwm_q7        = false;
     iwm_motor_on  = false;
-    iwm_motor_off = false;
+    iwm_motor_spindown = false;
 
     motor_off_frame = 0;
 
@@ -221,13 +208,13 @@ void IWM::write(const unsigned int& offset, const uint8_t& val)
 
 void IWM::tick(const unsigned int frame_number)
 {
-    if (iwm_motor_on && iwm_motor_off) {
-        if (motor_off_frame <= frame_number) {
-            iwm_motor_on = iwm_motor_off = false;
+    if (iwm_motor_on && iwm_motor_spindown) {
+        if (motor_off_frame <= system->vbl_count) {
+            iwm_motor_on = iwm_motor_spindown = false;
         }
     }
 
-    if (!iwm_motor_on || iwm_motor_off) {
+    if (!iwm_motor_on || iwm_motor_spindown) {
         disks_35[0].flush();
         disks_35[1].flush();
 
@@ -260,12 +247,11 @@ void IWM::unloadDrive(const unsigned int slot, const unsigned int drive)
 
 void IWM::touchSwitches(const unsigned int loc)
 {
-    unsigned int phase = loc >> 1;
-    bool on = loc & 1;
-
     if (loc < 8) {
+        unsigned int phase = loc >> 1;
         unsigned int phase_up   = (phase - 1) & 3;
         unsigned int phase_down = (phase + 1) & 3;
+        bool on = loc & 1;
 
         iwm_phase[phase] = on;
 
@@ -284,7 +270,8 @@ void IWM::touchSwitches(const unsigned int loc)
                 disks_525[iwm_drive_select].phaseChange(phase);
             }
 
-        } else {
+        }
+        else {
             /* See if enable or reset is asserted */
             if (iwm_phase[0] && iwm_phase[2]) {
                 iwm_reset = 1;
@@ -297,40 +284,56 @@ void IWM::touchSwitches(const unsigned int loc)
                 iwm_enable2 = false;
             }
         }
-    } else {
-        /* loc >= 8 */
+    }
+    else {      // loc >= 8
         switch(loc) {
-        case 0x08:
-            if (iwm_mode & 0x04) {
-                /* Turn off immediately */
-                iwm_motor_off = false;
-                iwm_motor_on  = false;
-            } else {
-                /* 1 second delay */
-                if (iwm_motor_on && !iwm_motor_off) {
-                    iwm_motor_off = true;
-                    motor_off_frame = system->vbl_count + 60;
+            case 0x08:
+                if (iwm_mode & 0x04) {
+                    /* Turn off immediately */
+                    iwm_motor_spindown = false;
+                    iwm_motor_on  = false;
                 }
-            }
-            break;
-        case 0x09:
-            iwm_motor_on = true;
-            iwm_motor_off = false;
-            break;
-        case 0x0A:
-        case 0x0B:
-            iwm_drive_select = on;
-            break;
-        case 0x0C:
-        case 0x0D:
-            iwm_q6 = on;
-            break;
-        case 0x0E:
-        case 0x0F:
-            iwm_q7 = on;
-            break;
-        default:
-            break;
+                else {
+                    if (iwm_motor_on && !iwm_motor_spindown) {
+                        iwm_motor_spindown = true;
+
+                        /* 1 second delay */
+                        motor_off_frame = system->vbl_count + 60;
+                    }
+                }
+
+                break;
+            case 0x09:
+                iwm_motor_on = true;
+                iwm_motor_spindown = false;
+
+                break;
+            case 0x0A:
+                iwm_drive_select = 0;
+
+                break;
+            case 0x0B:
+                iwm_drive_select = 1;
+
+                break;
+            case 0x0C:
+                iwm_q6 = false;
+
+                break;
+            case 0x0D:
+                iwm_q6 = true;
+
+                break;
+            case 0x0E:
+                iwm_q7 = false;
+
+                break;
+            case 0x0F:
+                iwm_q7 = true;
+
+                break;
+            default:
+                break;
         }
     }
 }

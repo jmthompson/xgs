@@ -74,10 +74,6 @@ class System {
         Device *cop_handler[256];
         Device *wdm_handler[256];
 
-#ifdef ENABLE_DEBUGGER
-        Debugger *debugger;
-#endif
-
         bool irq_states[16];
 
         void updateIRQ();
@@ -87,6 +83,10 @@ class System {
         vbls_t   vbl_count   = 0;
 
         M65816::Processor *cpu;
+
+#ifdef ENABLE_DEBUGGER
+        Debugger *debugger;
+#endif
 
         System(const bool);
         ~System();

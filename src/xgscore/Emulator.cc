@@ -226,6 +226,8 @@ void Emulator::tick()
     vgc->tick(current_frame);
     iwm->tick(current_frame);
 
+    sys->vbl_count++;
+
     if (++current_frame == framerate) {
         current_frame = 0;
     }
@@ -253,11 +255,6 @@ void Emulator::tick()
     if (current_frame == 0) {
         cerr << boost::format("Current speed = %0.1f MHz (%ld cycles, %ld ms)\n") % actual_speed % total_cycles % total_time;
     }
-}
-
-void Emulator::generateFrame(const unsigned int frame)
-{
-    sys->vbl_count++;
 }
 
 void Emulator::handleWindowEvent(SDL_WindowEvent *event)

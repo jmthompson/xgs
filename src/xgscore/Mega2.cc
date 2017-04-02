@@ -680,4 +680,7 @@ void Mega2::microtick(const unsigned int line_number)
             system->raiseInterrupt(MEGA2_IRQ);
         }
     }
+    else {
+        in_vbl = false;
+    }
 }

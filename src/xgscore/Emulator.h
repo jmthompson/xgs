@@ -65,8 +65,6 @@ class Emulator {
 
         long getTime();
 
-        void generateFrame(const unsigned int);
-
         void handleWindowEvent(SDL_WindowEvent *);
         void pollForEvents();
 
