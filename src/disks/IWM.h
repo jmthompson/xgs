@@ -3,9 +3,10 @@
 
 #include <cstdlib>
 
-#include "Device.h"
-#include "Disk35.h"
-#include "Disk525.h"
+#include "xgscore/Device.h"
+
+#include "disks/Disk35.h"
+#include "disks/Disk525.h"
 
 class Mega2;
 

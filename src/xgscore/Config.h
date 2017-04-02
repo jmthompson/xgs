@@ -28,7 +28,7 @@ struct Config {
         uint8_t *font_80col[2];
 
         struct {
-            string smartport[8];
+            string smartport[kSmartportUnits];
         } vdisks;
 
         struct {

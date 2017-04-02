@@ -3,7 +3,7 @@
 
 #include <cstdlib>
 
-#include "DiskTrack.h"
+#include "disks/DiskTrack.h"
 
 class VirtualDisk;
 

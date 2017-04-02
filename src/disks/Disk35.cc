@@ -20,11 +20,12 @@
 
 #include "common.h"
 
-#include "IWM.h"
-#include "DiskTrack.h"
-#include "Disk35.h"
-#include "System.h"
-#include "VirtualDisk.h"
+#include "disks/IWM.h"
+#include "disks/DiskTrack.h"
+#include "disks/Disk35.h"
+#include "disks/VirtualDisk.h"
+
+#include "xgscore/System.h"
 
 using std::uint32_t;
 

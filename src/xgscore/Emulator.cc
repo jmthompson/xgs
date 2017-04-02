@@ -26,13 +26,15 @@
 #include "Emulator.h"
 #include "System.h"
 
-#include "ADB.h"
-#include "DOC.h"
-#include "IWM.h"
-#include "Mega2.h"
-#include "Smartport.h"
+#include "xgscore/ADB.h"
+#include "xgscore/DOC.h"
+#include "xgscore/Mega2.h"
+
+#include "disks/IWM.h"
+#include "disks/Smartport.h"
+#include "disks/VirtualDisk.h"
+
 #include "video/VGC.h"
-#include "VirtualDisk.h"
 
 #include "debugger/Debugger.h"
 #include "M65816/Processor.h"
@@ -130,9 +132,11 @@ Emulator::Emulator(Config *theConfig)
 
     sys->reset();
 
-    if (config->vdisks.smartport[0].length()) {
-        VirtualDisk *hd0 = new VirtualDisk(config->vdisks.smartport[0]);
-        smpt->mountImage(0, hd0);
+    for (unsigned int i = 0 ; i < kSmartportUnits ; ++i) {
+        if (config->vdisks.smartport[i].length()) {
+            VirtualDisk *hd = new VirtualDisk(config->vdisks.smartport[i]);
+            smpt->mountImage(i, hd);
+        }
     }
 }
 

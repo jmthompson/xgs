@@ -19,7 +19,7 @@
 
 #include "common.h"
 
-#include "VirtualDisk.h"
+#include "disks/VirtualDisk.h"
 
 namespace fs = boost::filesystem;
 

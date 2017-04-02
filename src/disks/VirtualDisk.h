@@ -1,8 +1,6 @@
 #ifndef IMAGEFILE_H_
 #define IMAGEFILE_H_
 
-#include <cstdlib>
-#include <string>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/filesystem/path.hpp>
 

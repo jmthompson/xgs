@@ -4,7 +4,7 @@
 #include <iostream>
 #include <vector>
 
-#include "Device.h"
+#include "xgscore/Device.h"
 
 using std::uint8_t;
 
@@ -18,9 +18,7 @@ class VirtualDisk;
 
 class Smartport : public Device {
     private:
-        constexpr static unsigned int kNumUnits = 14;
-
-        VirtualDisk *units[kNumUnits];
+        VirtualDisk *units[kSmartportUnits];
 
         std::vector<unsigned int>& ioReadList()
         {

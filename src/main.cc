@@ -55,7 +55,7 @@ bool buildConfig(Config& config, unsigned int argc, char **argv)
     string rom_file;
     string font40_file;
     string font80_file;
-    string hd0;
+    string hd[kSmartportUnits];
 
     if (p = std::getenv("XGS_DATA_DIR")) {
         data_dir = path(p);
@@ -87,8 +87,14 @@ bool buildConfig(Config& config, unsigned int argc, char **argv)
         ("font80",   po::value<string>(&font80_file)->default_value("xgs80.fnt"),   "Name of 80-column font to load");
 
     po::options_description vdisks("Virtual Disk Options");
-    vdisks.add_options()
-        ("hd0", po::value(&hd0), "Set HD #0 image");
+
+    for (unsigned int i = 1 ; i <= kSmartportUnits ; ++i) {
+        string name = (format("hd%d") % i).str();
+        string desc = (format("Set HD #%d image") % i).str();
+
+        vdisks.add_options()
+            (name.c_str(), po::value(&hd[i - 1]), desc.c_str());
+    }
 
     po::options_description cli_options("Allowed Options");
     cli_options.add(generic);
@@ -125,7 +131,9 @@ bool buildConfig(Config& config, unsigned int argc, char **argv)
         bytes = loadFile(font80_file, &config.font_80col[0], kFont80Bytes * 2);
         config.font_80col[1] = config.font_80col[0] + kFont80Bytes;
 
-        config.vdisks.smartport[0] = hd0;
+        for (unsigned int i = 0 ; i < kSmartportUnits ; ++i) {
+            config.vdisks.smartport[i] = hd[i];
+        }
     }
     catch (std::exception& e) { 
         cerr << "ERROR: " << e.what() << endl << endl;

@@ -17,10 +17,10 @@
 
 #include "common.h"
 
-#include "VirtualDisk.h"
-#include "Smartport.h"
-#include "System.h"
+#include "disks/Smartport.h"
+#include "disks/VirtualDisk.h"
 #include "M65816/Processor.h"
+#include "xgscore/System.h"
 
 using std::uint8_t;
 using std::uint16_t;
@@ -50,21 +50,21 @@ static const uint8_t smartport_rom[256] = {
 
 Smartport::Smartport()
 {
-    for (unsigned int i = 0 ; i < kNumUnits ; ++i) {
+    for (unsigned int i = 0 ; i < kSmartportUnits ; ++i) {
         units[i] = nullptr;
     }
 }
 
 Smartport::~Smartport()
 {
-    for (unsigned int i = 0 ; i < kNumUnits ; ++i) {
+    for (unsigned int i = 0 ; i < kSmartportUnits ; ++i) {
         unmountImage(i);
     }
 }
 
 void Smartport::reset()
 {
-    for (unsigned int i = 0 ; i < kNumUnits ; ++i) {
+    for (unsigned int i = 0 ; i < kSmartportUnits ; ++i) {
         unmountImage(i);
     }
 }
@@ -284,7 +284,7 @@ void Smartport::statusCmd(const uint8_t pbank, const uint16_t paddr)
 
     unsigned int unit_num = system->sysRead(pbank, paddr + 1);
 
-    if ((unit_num < 0) || (unit_num > kNumUnits)) {
+    if ((unit_num < 0) || (unit_num > kSmartportUnits)) {
         cpu->A.B.L = 0x28;
 
         return;
@@ -298,7 +298,7 @@ void Smartport::statusCmd(const uint8_t pbank, const uint16_t paddr)
     switch(status_code) {
         case 0x00:
             if (!unit_num) {
-                system->sysWrite(0, status_addr, kNumUnits);
+                system->sysWrite(0, status_addr, kSmartportUnits);
 
                 for (unsigned int i = 1 ; i < 8 ; ++i) {
                     system->sysWrite(0, status_addr + i, 0);
@@ -379,7 +379,7 @@ void Smartport::readBlockCmd(const uint8_t pbank, const uint16_t paddr)
 
     unsigned int unit_num = system->sysRead(pbank, paddr + 1);
 
-    if ((unit_num < 0) || (unit_num > kNumUnits)) {
+    if ((unit_num < 0) || (unit_num > kSmartportUnits)) {
         cpu->A.B.L = 0x28;
 
         return;
@@ -427,7 +427,7 @@ void Smartport::writeBlockCmd(const uint8_t pbank, const uint16_t paddr)
 
     unsigned int unit_num = system->sysRead(pbank, paddr + 1);
 
-    if ((unit_num < 0) || (unit_num > kNumUnits)) {
+    if ((unit_num < 0) || (unit_num > kSmartportUnits)) {
         cpu->A.B.L = 0x28;
 
         return;
@@ -522,7 +522,7 @@ void Smartport::statusCmdExt(const uint8_t pbank, const uint16_t paddr)
 
     unsigned int unit_num = system->sysRead(pbank, paddr + 1);
 
-    if ((unit_num < 0) || (unit_num > kNumUnits)) {
+    if ((unit_num < 0) || (unit_num > kSmartportUnits)) {
         cpu->A.B.L = 0x28;
 
         return;
@@ -537,7 +537,7 @@ void Smartport::statusCmdExt(const uint8_t pbank, const uint16_t paddr)
     switch (status_code) {
         case 0x00:
             if (!unit_num) {
-                system->sysWrite(0, status_addr, kNumUnits);
+                system->sysWrite(0, status_addr, kSmartportUnits);
 
                 for (unsigned int i = 1 ; i < 8 ; ++i) {
                     system->sysWrite(status_bank, status_addr + i, 0);
@@ -622,7 +622,7 @@ void Smartport::readBlockCmdExt(const uint8_t pbank, const uint16_t paddr)
 
     unsigned int unit_num = system->sysRead(pbank, paddr + 1);
 
-    if ((unit_num < 0) || (unit_num > kNumUnits)) {
+    if ((unit_num < 0) || (unit_num > kSmartportUnits)) {
         cpu->A.B.L = 0x28;
 
         return;
@@ -674,7 +674,7 @@ void Smartport::writeBlockCmdExt(const uint8_t pbank, const uint16_t paddr)
 
     unsigned int unit_num = system->sysRead(pbank, paddr + 1);
 
-    if ((unit_num < 0) || (unit_num > kNumUnits)) {
+    if ((unit_num < 0) || (unit_num > kSmartportUnits)) {
         cpu->A.B.L = 0x28;
 
         return;
