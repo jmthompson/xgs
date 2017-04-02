@@ -64,6 +64,8 @@ class Debugger {
         }
 
         void enableTrace() { trace = true; }
+        void disableTrace() { trace = false; }
+        void toggleTrace() { trace = !trace; }
 
         std::uint8_t memoryRead(const uint8_t bank, const uint16_t address, const uint8_t val, const M65816::mem_access_t type);
         std::uint8_t memoryWrite(const uint8_t bank, const uint16_t address, const uint8_t val, const M65816::mem_access_t type);

@@ -42,9 +42,9 @@ class VGC : public Device {
 
         uint8_t *ram;
 
-        SDL_Renderer *renderer  = nullptr;
-        SDL_Rect     *dest_rect = nullptr;
-
+        SDL_Rect     dest_rect;
+        SDL_Window   *window;
+        SDL_Renderer *renderer;
         SDL_Surface  *surface = nullptr;
         SDL_Texture  *texture = nullptr;
 
@@ -73,6 +73,9 @@ class VGC : public Device {
             uint8_t *hires2_aux;
             uint8_t *super_hires;
         } display_buffers;
+
+        // fullscreen state
+        bool fullscreen = false;
 
         // Actual size of the frames being generated (content + border)
         unsigned int video_width;
@@ -183,10 +186,8 @@ class VGC : public Device {
         }
 
     public:
-        VGC() = default;
+        VGC();
         ~VGC() = default;
-
-        void setRenderer(SDL_Renderer *, SDL_Rect *);
 
         void setMemory(uint8_t *r) { ram = r; }
 
@@ -208,6 +209,8 @@ class VGC : public Device {
 
         void tick(const unsigned int);
         void microtick(const unsigned int);
+
+        void toggleFullscreen(void);
 };
 
 #endif // VGC_H_

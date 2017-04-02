@@ -79,34 +79,9 @@ Emulator::Emulator(Config *theConfig)
     total_cycles = 0;
     last_cycles  = 0;
 
-    const unsigned int w = 800;
-    const unsigned int h = 600;
-
     if (SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO|SDL_INIT_EVENTS|SDL_INIT_JOYSTICK) < 0) {
         throw std::runtime_error("Failed to initialize SDL");
     }
-
-    sdl_window = SDL_CreateWindow("XGS", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, w, h, SDL_WINDOW_SHOWN);
-    if (sdl_window == nullptr) {
-        //printSDLError("Failed to create window");
-
-        throw std::runtime_error("SDL_CreateWindow() failed");
-    }
-
-    sdl_renderer = SDL_CreateRenderer(sdl_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-    if (sdl_renderer == nullptr) {
-        //printSDLError("Failed to create renderer");
-
-        throw std::runtime_error("SDL_CreateRenderer() failed");
-    }
-
-    dest_rect.w = VGC::kVideoWidth;
-    dest_rect.h = VGC::kVideoHeight * 2; // otherwise it will look stretched
-    dest_rect.x = (w - dest_rect.w) / 2;
-    dest_rect.y = (h - dest_rect.h) / 2;
-
-    SDL_RenderSetLogicalSize(sdl_renderer, w, h);
-    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 
     cpu = new M65816::Processor();
     sys = new System(config->rom03);
@@ -114,7 +89,6 @@ Emulator::Emulator(Config *theConfig)
     mega2 = new Mega2();
 
     vgc = new VGC();
-    vgc->setRenderer(sdl_renderer, &dest_rect);
     vgc->setMemory(config->slow_ram);
     vgc->setFont40(config->font_40col[0], config->font_40col[1]);
     vgc->setFont80(config->font_80col[0], config->font_80col[1]);

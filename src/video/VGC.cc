@@ -26,6 +26,34 @@
 
 using std::cerr;
 
+VGC::VGC()
+{
+    const unsigned int w = 800;
+    const unsigned int h = 600;
+
+    window = SDL_CreateWindow("XGS", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, w, h, SDL_WINDOW_SHOWN);
+    if (window == nullptr) {
+        //printSDLError("Failed to create window");
+
+        throw std::runtime_error("SDL_CreateWindow() failed");
+    }
+
+    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    if (renderer == nullptr) {
+        //printSDLError("Failed to create renderer");
+
+        throw std::runtime_error("SDL_CreateRenderer() failed");
+    }
+
+    dest_rect.w = kVideoWidth;
+    dest_rect.h = kVideoHeight * 2; // otherwise it will look stretched
+    dest_rect.x = (w - dest_rect.w) / 2;
+    dest_rect.y = (h - dest_rect.h) / 2;
+
+    SDL_RenderSetLogicalSize(renderer, w, h);
+    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+}
+
 void VGC::reset()
 {
     uint8_t *buffer;
@@ -433,11 +461,6 @@ void VGC::modeChanged()
     setScreenSize(modes[0]->getWidth(), modes[0]->getHeight());
 }
 
-void VGC::setRenderer(SDL_Renderer *new_renderer, SDL_Rect *drect) {
-    renderer  = new_renderer;
-    dest_rect = drect;
-}
-
 void VGC::setScreenSize(unsigned int w, unsigned int h) {
     content_width  = w;
     content_height = h;
@@ -495,7 +518,7 @@ void VGC::tick(const unsigned int frame_number)
     SDL_UpdateTexture(texture, NULL, surface->pixels, surface->pitch);
 
     SDL_RenderClear(renderer);
-    SDL_RenderCopy(renderer, texture, NULL, dest_rect);
+    SDL_RenderCopy(renderer, texture, NULL, &dest_rect);
     SDL_RenderPresent(renderer);
 
     if (sw_onesecirq_enable && !frame_number) {
@@ -623,4 +646,11 @@ void VGC::updateTextFont()
 {
     mode_text40.setTextFont(font_40col[sw_altcharset]);
     mode_text80.setTextFont(font_80col[sw_altcharset]);
+}
+
+void VGC::toggleFullscreen()
+{
+    fullscreen = !fullscreen;
+
+    SDL_SetWindowFullscreen(window, fullscreen? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
 }

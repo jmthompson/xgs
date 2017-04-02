@@ -21,11 +21,6 @@ namespace M65816 {
 
 class Emulator {
     private:
-        SDL_Window   *sdl_window = nullptr;
-        SDL_Renderer *sdl_renderer = nullptr;
-
-        SDL_Rect dest_rect;
-
         Config *config;
         System *sys;
         M65816::Processor *cpu;

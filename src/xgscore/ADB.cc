@@ -20,6 +20,7 @@
 #include "ADB.h"
 #include "System.h"
 #include "M65816/Processor.h"
+#include "video/VGC.h"
 
 using std::uint8_t;
 
@@ -632,14 +633,19 @@ void ADB::handleKeyDown(SDL_KeyboardEvent *event)
 
             break;
 #endif
-#if 0
         case SDLK_F11:
-            fullscreen ^= 0x01;
-            videoSetFullscreen(fullscreen);
-        case SDLK_HOME:
-            if (ski_modifier_reg & 0x02) hardwareReset();
+            {
+                VGC *vgc = (VGC *) system->getDevice("vgc");
+
+                vgc->toggleFullscreen();
+            }
             break;
-#endif
+        case SDLK_HOME:
+            // Control-Home
+            if (ski_modifier_reg & 0x02) {
+                system->reset();
+            }
+            break;
         case SDLK_LEFT:
             key = 0x08;
             break;
