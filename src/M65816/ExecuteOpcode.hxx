@@ -1132,7 +1132,7 @@ void executeOpcode(unsigned int opcode)
             break;
 
         case 0x8A:  /* TXA i */
-            A = X;
+            A = static_cast<MemSizeType> (cpu->X);
 
             checkIfNegative(A);
             checkIfZero(A);
@@ -1235,7 +1235,7 @@ void executeOpcode(unsigned int opcode)
             break;
 
         case 0x98:  /* TYA i */
-            A = Y;
+            A = static_cast<MemSizeType> (cpu->Y);
 
             checkIfNegative(A);
             checkIfZero(A);
@@ -2055,12 +2055,15 @@ void executeOpcode(unsigned int opcode)
         case 0x100: /* irq */
             cpu->waiting = false;
 
-            if (!StackOffset) {
-                stackPush(PBR);
+            if (StackOffset) {
+                stackPush(PC);
+                stackPush((uint8_t) (SR & ~0x10));
             }
-
-            stackPush(PC);
-            stackPush(SR);
+            else {
+                stackPush(PBR);
+                stackPush(PC);
+                stackPush(SR);
+            }
 
             SR.D = false;
             SR.I = true;

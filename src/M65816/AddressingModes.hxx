@@ -28,8 +28,9 @@ void getAddress_dix()
     operand_bank = DBR;
 
     tmp = operand_addr;
-
     operand_addr += Y;
+
+    if (operand_addr < tmp) operand_bank++;
 
     checkDataPageCross(tmp);
 }
@@ -43,7 +44,10 @@ void getAddress_dixl()
     operand_addr = system->cpuRead(0, tmp, OPADDR) | (system->cpuRead(0, tmp + 1, OPADDR) << 8);
     operand_bank = system->cpuRead(0, tmp + 2, OPADDR);
 
+    tmp = operand_addr;
     operand_addr += Y;
+
+    if (operand_addr < tmp) operand_bank++;
 }
 
 void getAddress_dxi()
@@ -78,8 +82,9 @@ void getAddress_axx()
     operand_bank = DBR;
 
     uint16_t tmp = operand_addr;
-
     operand_addr += X;
+
+    if (operand_addr < tmp) operand_bank++;
 
     checkDataPageCross(tmp);
 
@@ -94,6 +99,8 @@ void getAddress_axy()
     uint16_t tmp = operand_addr;
 
     operand_addr += Y;
+
+    if (operand_addr < tmp) operand_bank++;
 
     checkDataPageCross(tmp);
 
@@ -193,5 +200,8 @@ void getAddress_srix()
     operand_addr = system->cpuRead(0, tmp, OPADDR) | (system->cpuRead(0, tmp + 1, OPADDR) << 8);
     operand_bank = DBR;
 
+    tmp = operand_addr;
     operand_addr += Y;
+
+    if (operand_addr < tmp) operand_bank++;
 }
