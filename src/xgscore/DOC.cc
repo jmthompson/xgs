@@ -193,10 +193,6 @@ void DOC::write(const unsigned int& offset, const uint8_t& val)
 
 void DOC::microtick(unsigned int mt)
 {
-    if (buffer_index == buffer_max) {
-        return;
-    }
-
     SDL_LockAudioDevice(sound_device_id);
 
     last_sample.left = last_sample.right = click_sample;
@@ -224,10 +220,12 @@ void DOC::microtick(unsigned int mt)
         last_sample.right = -1.0;
     }
 
-    sample_buffer[buffer_index].left  = last_sample.left;
-    sample_buffer[buffer_index].right = last_sample.right;
+    if (buffer_index < buffer_max) {
+        sample_buffer[buffer_index].left  = last_sample.left;
+        sample_buffer[buffer_index].right = last_sample.right;
 
-    buffer_index++;
+        ++buffer_index;
+    }
 
     SDL_UnlockAudioDevice(sound_device_id);
 }
