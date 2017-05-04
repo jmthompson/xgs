@@ -33,7 +33,7 @@ cmake ..
 make 
 ```
 
-The binary will be compiled to build/src/xgs.
+The binary will be compiled to build/xgs.
 
 # Usage
 
@@ -56,13 +56,13 @@ cp PATH_TO_YOUR_ROM_FILE ~/.xgs/xgs.rom
 Now you can start XGS as follows (-3 is only needed if your ROM image is v03):
 
 ```
-./build/src/xgs -3
+./build/xgs -3
 ```
 
 You can also display the help text if you need help with the command-line options:
 
 ```
-./build/src/xgs --help
+./build/xgs --help
 ```
 
 # Status
