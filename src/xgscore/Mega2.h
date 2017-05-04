@@ -46,7 +46,6 @@ class Mega2 : public Device {
         bool sw_qtrsecirq_enable;
         bool sw_vblirq_enable;
 
-        bool sw_fastmode;
         bool sw_slot7_motor;
         bool sw_slot6_motor;
         bool sw_slot5_motor;
@@ -85,6 +84,8 @@ class Mega2 : public Device {
         }
 
     public:
+        bool sw_fastmode;
+
         Mega2() = default;
         ~Mega2() = default;
 

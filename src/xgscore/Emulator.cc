@@ -128,8 +128,6 @@ Emulator::Emulator(Config *theConfig)
     sys->installDebugger(dbg);
 #endif
 
-    target_speed = 2.6;
-
     sys->reset();
 
     for (unsigned int i = 0 ; i < kSmartportUnits ; ++i) {
@@ -154,7 +152,7 @@ void Emulator::run()
 {
     uint64_t exp;
 
-    current_frame = doc_ticks = 0;
+    current_frame = 0;
 
     timer_interval = 1000000000 / framerate;
     cerr << boost::format("Timer period is %d Hz (%d ns)\n") % framerate % timer_interval;
@@ -184,6 +182,8 @@ void Emulator::run()
 
 void Emulator::tick()
 {
+    target_speed = mega2->sw_fastmode? 2.7 : 1.0;
+
     unsigned int cycles_per = (1024000/(VGC::kLinesPerFrame * framerate)) * target_speed;
 
     for (unsigned int line = 0; line < VGC::kLinesPerFrame ; ++line) {
@@ -191,9 +191,8 @@ void Emulator::tick()
 
         sys->cycle_count += num_cycles;
 
-        if (++doc_ticks % 12) {
-            doc->microtick(doc_ticks);
-            doc->microtick(doc_ticks);
+        for (unsigned int dt = 0 ; dt < doc_ticks[line % 19] ; ++dt) {
+            doc->microtick(0);
         }
 
         vgc->microtick(line);

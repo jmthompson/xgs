@@ -47,7 +47,18 @@ class Emulator {
 
         unsigned int current_frame;
 
-        long doc_ticks;
+        /**
+         * To maintain sync we need 32 DOC cycles (38us) 
+         * for every 19 microticks (63.7u). Each integer
+         * in this area is how many DOC ticks to run
+         * during that microtick.
+         */
+        unsigned int doc_ticks[19] = {
+            2, 1, 2, 1, 3, 1,
+            2, 1, 2, 1, 3, 1,
+            2, 1, 2, 1, 3, 1,
+            2
+        };
 
         long times[60];
         long last_time;

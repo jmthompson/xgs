@@ -15,9 +15,6 @@ using std::uint16_t;
 
 namespace M65816 { class Processor; }
 
-class Mega2;
-class VGC;
-
 enum mem_page_t {
     UNMAPPED = 0,
     ROM,
