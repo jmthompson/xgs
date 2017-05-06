@@ -17,7 +17,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/path.hpp>
 
-#include "common.h"
+#include "emulator/common.h"
 
 #include "disks/VirtualDisk.h"
 

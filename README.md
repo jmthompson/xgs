@@ -44,7 +44,7 @@ First, from the source directory run:
 
 ```
 mkdir ~/.xgs
-cp xgs40.fnt xgs80.fnt ~/.xgs/
+cp fonts/xgs{4,8}0.fnt ~/.xgs/
 ```
 
 You'll need an Apple IIGS ROM file (either v01 or v03 will work):

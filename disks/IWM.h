@@ -3,7 +3,7 @@
 
 #include <cstdlib>
 
-#include "xgscore/Device.h"
+#include "emulator/Device.h"
 
 #include "disks/Disk35.h"
 #include "disks/Disk525.h"

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.6)
 
 project(xgs)
-add_executable(xgs main.cc)
+add_executable(xgs emulator/main.cc)
 
 include_directories(${PROJECT_SOURCE_DIR})
 
@@ -12,6 +12,7 @@ add_definitions(-DENABLE_DEBUGGER)
 
 # Test endianness of the target system
 INCLUDE (${CMAKE_ROOT}/Modules/TestBigEndian.cmake)
+
 TEST_BIG_ENDIAN(WORDS_BIGENDIAN)
 if(WORDS_BIGENDIAN)
     add_definitions(-DBIGENDIAN)
@@ -34,9 +35,12 @@ if(SDL2_FOUND)
 endif()
 
 add_subdirectory(M65816)
-add_subdirectory(xgscore)
+add_subdirectory(emulator)
 add_subdirectory(debugger)
+add_subdirectory(adb)
 add_subdirectory(disks)
-add_subdirectory(video)
+add_subdirectory(doc)
+add_subdirectory(mega2)
+add_subdirectory(vgc)
 
-target_link_libraries(xgs xgscore M65816 debugger disks video)
+target_link_libraries(xgs emulator M65816 debugger disks adb doc mega2 vgc)

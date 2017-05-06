@@ -11,7 +11,7 @@
 #define PROCESSOR_H
 
 #include "types.h"
-#include "xgscore/System.h"
+#include "emulator/System.h"
 
 using std::uint8_t;
 using std::uint16_t;

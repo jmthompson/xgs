@@ -18,14 +18,14 @@
 
 #include <SDL.h>
 
-#include "common.h"
+#include "emulator/common.h"
 
 #include "disks/IWM.h"
 #include "disks/DiskTrack.h"
 #include "disks/Disk35.h"
 #include "disks/VirtualDisk.h"
 
-#include "xgscore/System.h"
+#include "emulator/System.h"
 
 using std::uint32_t;
 

@@ -4,7 +4,7 @@
 #include <iostream>
 #include <vector>
 
-#include "xgscore/Device.h"
+#include "emulator/Device.h"
 
 using std::uint8_t;
 

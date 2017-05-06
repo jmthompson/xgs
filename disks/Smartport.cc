@@ -15,12 +15,12 @@
 #include <cstdlib>
 #include <stdexcept>
 
-#include "common.h"
+#include "emulator/common.h"
 
 #include "disks/Smartport.h"
 #include "disks/VirtualDisk.h"
 #include "M65816/Processor.h"
-#include "xgscore/System.h"
+#include "emulator/System.h"
 
 using std::uint8_t;
 using std::uint16_t;

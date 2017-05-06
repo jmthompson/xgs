@@ -15,11 +15,11 @@
  * Used with permission.
  */
 
-#include "common.h"
+#include "emulator/common.h"
 
 #include "disks/IWM.h"
 
-#include "xgscore/System.h"
+#include "emulator/System.h"
 
 static const uint8_t iwm_35track_len[80] = {
     12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12,
