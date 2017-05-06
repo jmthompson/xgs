@@ -32,6 +32,7 @@ using std::string;
 using fs::path;
 
 static fs::path data_dir;
+static fs::path config_file;
 
 /**
  * Load the entirety of a file into a uint8_t buffer.
@@ -85,6 +86,8 @@ bool buildConfig(Config& config, unsigned int argc, char **argv)
 
     cerr << "Using " << data_dir << " as XGS home directory" << endl;
 
+    config_file = data_dir / "xgs.conf";
+
     po::options_description generic("Generic Options");
     generic.add_options()
         ("help",      "Print help message")
@@ -115,9 +118,21 @@ bool buildConfig(Config& config, unsigned int argc, char **argv)
     cli_options.add(emulator);
     cli_options.add(vdisks);
 
-    po::variables_map vm; 
+    po::options_description config_file_options("Config File Options");
+    config_file_options.add(emulator);
+    config_file_options.add(vdisks);
 
+    po::variables_map vm; 
+        
     try { 
+        fs::ifstream cfs{config_file};
+
+        if (cfs.is_open()) {
+        	po::store(po::parse_config_file(cfs, config_file_options), vm);
+
+            cfs.close();
+        }
+
         po::store(po::command_line_parser(argc, argv).options(cli_options).run(), vm);
  
         if (vm.count("help")) { 
