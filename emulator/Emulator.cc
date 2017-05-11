@@ -85,7 +85,7 @@ Emulator::Emulator(Config *theConfig)
         throw std::runtime_error("Failed to initialize SDL");
     }
 
-    video = new Video(800, 600);
+    Video::initialize(1280, 720);
 
     cpu = new M65816::Processor();
     sys = new System(config->rom03);
@@ -215,7 +215,7 @@ void Emulator::tick()
 
     last_cycles = sys->cycle_count;
 
-    video->drawFrame(vgc->frame_buffer, vgc->video_width, vgc->video_height);
+    Video::drawFrame(vgc->frame_buffer, vgc->video_width, vgc->video_height);
 
     this_time = now();
 

@@ -34,6 +34,18 @@ if(SDL2_FOUND)
   target_link_libraries(xgs ${SDL2_LIBRARIES})
 endif()
 
+find_package(OpenGL REQUIRED)
+if (OPENGL_FOUND)
+    include_directories($(OPENGL_INCLUDE_DIRS))
+    target_link_libraries(xgs ${OPENGL_LIBRARIES})
+endif()
+
+find_package(GLEW REQUIRED)
+if (GLEW_FOUND)
+    include_directories($(GLEW_INCLUDE_DIRS))
+    target_link_libraries(xgs ${GLEW_LIBRARIES})
+endif()
+
 add_subdirectory(M65816)
 add_subdirectory(emulator)
 add_subdirectory(debugger)

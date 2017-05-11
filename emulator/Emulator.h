@@ -14,7 +14,6 @@ class IWM;
 class Mega2;
 class Smartport;
 class VGC;
-class Video;
 
 namespace M65816 {
     class Processor;
@@ -44,8 +43,6 @@ class Emulator {
         Mega2 *mega2;
         Smartport *smpt;
         VGC   *vgc;
-
-        Video *video;
 
         bool running;
 
