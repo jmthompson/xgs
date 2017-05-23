@@ -186,7 +186,7 @@ void Emulator::tick()
 {
     target_speed = mega2->sw_fastmode? 2.7 : 1.0;
 
-    unsigned int cycles_per = (1024000/(VGC::kLinesPerFrame * framerate)) * target_speed;
+    unsigned int cycles_per = (1000000/(VGC::kLinesPerFrame * framerate)) * target_speed;
 
     for (unsigned int line = 0; line < VGC::kLinesPerFrame ; ++line) {
         unsigned int num_cycles = cpu->runUntil(cycles_per);
