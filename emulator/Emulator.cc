@@ -18,12 +18,13 @@
 #include <iostream>
 #include <stdexcept>
 #include <boost/format.hpp>
-#include <boost/filesystem/path.hpp>
+#include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
+#include <boost/program_options.hpp>
 
 #include <SDL.h>
 #include "imgui/imgui.h"
 
-#include "Config.h"
 #include "Emulator.h"
 #include "GUI.h"
 #include "System.h"
@@ -42,10 +43,11 @@
 #include "M65816/Processor.h"
 
 namespace fs = boost::filesystem;
+namespace po = boost::program_options;
 
 using std::cerr;
 using std::endl;
-using fs::path;
+using std::string;
 
 // avoid having to constantly reallocate this
 static struct timeval tv;
@@ -57,9 +59,29 @@ static long now()
     return (long) (tv.tv_sec * 1000) + (tv.tv_usec / 1000);
 }
 
-Emulator::Emulator(Config *theConfig)
+Emulator::Emulator()
 {
-    config = theConfig;
+}
+
+Emulator::~Emulator()
+{
+    close(timer_fd);
+
+    delete cpu;
+    delete sys;
+    delete mega2;
+    delete vgc;
+
+    delete [] rom;
+    delete [] fast_ram;
+    delete [] slow_ram;
+}
+
+bool Emulator::setup(const int argc, const char** argv)
+{
+    if (!loadConfig(argc, argv)) {
+        return false;
+    }
 
     struct timespec ts;
 
@@ -73,7 +95,7 @@ Emulator::Emulator(Config *theConfig)
     last_time = now();
 
     maximum_speed = 2.8;
-    framerate = config->pal? 50 : 60;
+    framerate = pal? 50 : 60;
 
     for (int i = 0 ; i < framerate; ++i) {
         times[i] = 0.0;
@@ -93,14 +115,14 @@ Emulator::Emulator(Config *theConfig)
     GUI::initialize();
 
     cpu = new M65816::Processor();
-    sys = new System(config->rom03);
+    sys = new System(rom03);
 
     mega2 = new Mega2();
 
     vgc = new VGC();
-    vgc->setMemory(config->slow_ram);
-    vgc->setFont40(config->font_40col[0], config->font_40col[1]);
-    vgc->setFont80(config->font_80col[0], config->font_80col[1]);
+    vgc->setMemory(slow_ram);
+    vgc->setFont40(font_40col, font_40col + kFont40Bytes);
+    vgc->setFont80(font_80col, font_80col + kFont80Bytes);
 
     adb  = new ADB();
     iwm  = new IWM();
@@ -111,9 +133,9 @@ Emulator::Emulator(Config *theConfig)
 
     sys->installProcessor(cpu);
 
-    sys->installMemory(config->rom, config->rom_start_page, config->rom_pages, ROM);
-    sys->installMemory(config->fast_ram, 0, config->fast_ram_pages, FAST);
-    sys->installMemory(config->slow_ram, 0xE000, 512, SLOW);
+    sys->installMemory(rom, rom_start_page, rom_pages, ROM);
+    sys->installMemory(fast_ram, 0, fast_ram_pages, FAST);
+    sys->installMemory(slow_ram, 0xE000, 512, SLOW);
 
     sys->installDevice("mega2", mega2);
     sys->installDevice("vgc", vgc);
@@ -128,7 +150,7 @@ Emulator::Emulator(Config *theConfig)
 #ifdef ENABLE_DEBUGGER
     Debugger *dbg = new Debugger();
 
-    if (config->debugger.trace) {
+    if (debugger.trace) {
         dbg->enableTrace();
     }
 
@@ -138,21 +160,13 @@ Emulator::Emulator(Config *theConfig)
     sys->reset();
 
     for (unsigned int i = 0 ; i < kSmartportUnits ; ++i) {
-        if (config->vdisks.smartport[i].length()) {
-            VirtualDisk *hd = new VirtualDisk(config->vdisks.smartport[i]);
-            smpt->mountImage(i, hd);
+        if (hd[i].length()) {
+            VirtualDisk *vd = new VirtualDisk(hd[i]);
+            smpt->mountImage(i, vd);
         }
     }
-}
 
-Emulator::~Emulator()
-{
-    close(timer_fd);
-
-    delete cpu;
-    delete sys;
-    delete mega2;
-    delete vgc;
+    return true;
 }
 
 void Emulator::run()
@@ -317,4 +331,133 @@ void Emulator::pollForEvents()
             adb->processEvent(event);
         }
     }
+}
+
+/**
+ * Load the entirety of a file into a uint8_t buffer.
+ */
+unsigned int Emulator::loadFile(const std::string& filename, const unsigned int expected_size, uint8_t *buffer)
+{
+    fs::path p = data_dir / filename;
+
+    if (!fs::exists(p)) {
+        p = filename;
+    }
+
+    boost::uintmax_t bytes = fs::file_size(p);
+    fs::ifstream ifs;
+
+    //*buffer = new uint8_t[bytes];
+
+    ifs.open(p, std::ifstream::binary);
+    ifs.read((char *) buffer, bytes);
+    ifs.close();
+
+    if (bytes != expected_size) {
+        string err = (boost::format("Error loading %s: expected %d bytes, but read %d\n") % filename % expected_size % bytes).str();
+
+        throw std::runtime_error(err);
+    }
+
+    return bytes;
+}
+
+bool Emulator::loadConfig(const int argc, const char **argv)
+{
+    const char *p;
+    unsigned int ram_size;
+    string rom_file;
+    string font40_file;
+    string font80_file;
+
+    if (p = std::getenv("XGS_DATA_DIR")) {
+        data_dir = path(p);
+    }
+    else if (p = std::getenv("HOME")) {
+        data_dir = path(p) / ".xgs";
+    }
+    else {
+        return false;
+    }
+
+    cerr << "Using " << data_dir << " as XGS home directory" << endl;
+
+    config_file = data_dir / "xgs.conf";
+
+    po::options_description generic("Generic Options");
+    generic.add_options()
+        ("help",      "Print help message")
+        ("version,v", "Print version string");
+
+    po::options_description emulator("Emulator Options");
+    emulator.add_options()
+        ("trace",    po::bool_switch(&debugger.trace)->default_value(false), "Enable trace")
+        ("rom03,3",  po::bool_switch(&rom03)->default_value(false),          "Enable ROM 03 emulation")
+        ("pal",      po::bool_switch(&pal)->default_value(false),            "Enable PAL (50 Hz) mode")
+        ("romfile",  po::value<string>(&rom_file)->default_value("xgs.rom"),        "Name of ROM file to load")
+        ("ram",      po::value<unsigned int>(&ram_size)->default_value(1024),       "Set RAM size in KB")
+        ("font40",   po::value<string>(&font40_file)->default_value("xgs40.fnt"),   "Name of 40-column font to load")
+        ("font80",   po::value<string>(&font80_file)->default_value("xgs80.fnt"),   "Name of 80-column font to load");
+
+    po::options_description vdisks("Virtual Disk Options");
+
+    for (unsigned int i = 1 ; i <= kSmartportUnits ; ++i) {
+        string name = (format("hd%d") % i).str();
+        string desc = (format("Set HD #%d image") % i).str();
+
+        vdisks.add_options()
+            (name.c_str(), po::value(&hd[i - 1]), desc.c_str());
+    }
+
+    po::options_description cli_options("Allowed Options");
+    cli_options.add(generic);
+    cli_options.add(emulator);
+    cli_options.add(vdisks);
+
+    po::options_description config_file_options("Config File Options");
+    config_file_options.add(emulator);
+    config_file_options.add(vdisks);
+
+    po::variables_map vm; 
+        
+    try { 
+        fs::ifstream cfs{config_file};
+
+        if (cfs.is_open()) {
+        	po::store(po::parse_config_file(cfs, config_file_options), vm);
+
+            cfs.close();
+        }
+
+        po::store(po::command_line_parser(argc, argv).options(cli_options).run(), vm);
+ 
+        if (vm.count("help")) { 
+            cerr << cli_options << endl << endl;
+
+            return false;
+        }
+        else {
+            po::notify(vm);
+        } 
+
+        rom_pages      = rom03? 1024 : 512;
+        rom_start_page = 0x10000 - rom_pages;
+        rom = new uint8_t[rom_pages * 256];
+
+        loadFile(rom_file, rom_pages * 256, rom);
+
+        slow_ram = new uint8_t[65536*2];
+        fast_ram = new uint8_t[ram_size * 1024];
+        fast_ram_pages = ram_size << 2;
+
+        loadFile(font40_file, sizeof(font_40col), font_40col);
+        loadFile(font80_file, sizeof(font_80col), font_80col);
+    }
+    catch (std::exception& e) { 
+        cerr << "ERROR: " << e.what() << endl << endl;
+
+        return false;
+    } 
+
+    return true;
 }

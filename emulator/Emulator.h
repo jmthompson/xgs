@@ -2,6 +2,8 @@
 #define EMULATOR_H_
 
 #include <stdexcept>
+#include <boost/filesystem/path.hpp>
+
 #include <SDL.h>
 
 #include "emulator/common.h"
@@ -21,11 +23,18 @@ namespace M65816 {
     class Processor;
 }
 
+const unsigned int kRom01Bytes = 131072;
+const unsigned int kRom03Bytes = 262144;
+
+const unsigned int kFont40Bytes = 28672;
+const unsigned int kFont80Bytes = 14336;
+
 class Emulator {
     public:
-        Emulator(Config *);
+        Emulator();
         ~Emulator();
 
+        bool setup(const int, const char **);
         void run();
         void tick();
 
@@ -42,7 +51,9 @@ class Emulator {
         float getMaxSpeed() { return maximum_speed; }
 
     private:
-        Config* config;
+        boost::filesystem::path data_dir;
+        boost::filesystem::path config_file;
+
         System* sys;
         M65816::Processor* cpu;
 
@@ -54,6 +65,32 @@ class Emulator {
         Mega2* mega2;
         Smartport* smpt;
         VGC*   vgc;
+
+        uint8_t *rom;
+        unsigned int rom_start_page;
+        unsigned int rom_pages;
+
+        uint8_t *fast_ram;
+        unsigned int fast_ram_pages;
+
+        uint8_t *slow_ram;
+
+        bool rom03;
+        bool use_debugger;
+        bool pal;
+
+        uint8_t font_40col[kFont40Bytes * 2];
+        uint8_t font_80col[kFont80Bytes * 2];
+
+        std::string s5d1;
+        std::string s5d2;
+        std::string s6d1;
+        std::string s6d2;
+        std::string hd[kSmartportUnits];
+
+        struct {
+            bool trace;
+        } debugger;
 
         bool running;
         bool fullscreen;
@@ -97,6 +134,9 @@ class Emulator {
         cycles_t total_cycles;
 
         void pollForEvents();
+
+        unsigned int loadFile(const std::string&, const unsigned int, uint8_t *);
+        bool loadConfig(const int, const char **);
 };
 
 class EmulatorTimerException : public std::runtime_error {};
