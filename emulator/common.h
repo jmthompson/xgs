@@ -55,4 +55,7 @@ typedef std::uint32_t pixel_t;
 // Maximum number of Smartport units
 const unsigned int kSmartportUnits = 8;
 
+const unsigned int kVersionMajor = VERSION_MAJOR;
+const unsigned int kVersionMinor = VERSION_MINOR;
+
 #endif // COMMON_H_

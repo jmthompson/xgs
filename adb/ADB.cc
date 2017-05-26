@@ -617,32 +617,6 @@ void ADB::handleKeyDown(SDL_KeyboardEvent *event)
         case SDLK_RALT:
             ski_modifier_reg |= 0x40;
             break;
-        case SDLK_RCTRL:
-            mouse_grabbed = !mouse_grabbed;
-
-            SDL_SetRelativeMouseMode(mouse_grabbed? SDL_TRUE : SDL_FALSE);
-
-            break;
-#ifdef ENABLE_DEBUGGER
-        case SDLK_PAUSE:
-            system->debugger->toggleTrace();
-
-            break;
-        case SDLK_F12:
-            system->cpu->nmi();
-
-            break;
-#endif
-        case SDLK_F11:
-            //system->emulator->toggleFullscreen();
-
-            break;
-        case SDLK_HOME:
-            // Control-Home
-            if (ski_modifier_reg & 0x02) {
-                system->reset();
-            }
-            break;
         case SDLK_LEFT:
             key = 0x08;
             break;
@@ -882,30 +856,39 @@ void ADB::handleMouseMotion(SDL_MouseMotionEvent *event)
     ski_status_reg &= ~0x02;
 }
 
-void ADB::processEvent(SDL_Event *event)
+bool ADB::processEvent(SDL_Event& event)
 {
-    switch (event->type) {
+    switch (event.type) {
         case SDL_KEYDOWN:
-            handleKeyDown(&event->key);
-            break;
+            handleKeyDown(&event.key);
+
+            return true;
         case SDL_KEYUP:
-            handleKeyUp(&event->key);
-            break;
+            handleKeyUp(&event.key);
+
+            return true;
         case SDL_JOYBUTTONDOWN:
         case SDL_JOYBUTTONUP:
-            handleJoyButton(&event->jbutton);
-            break;
+            handleJoyButton(&event.jbutton);
+
+            return true;
         case SDL_JOYAXISMOTION:
-            handleJoyMotion(&event->jaxis);
-            break;
+            handleJoyMotion(&event.jaxis);
+
+            return true;
         case SDL_MOUSEBUTTONDOWN:
-            handleMouseBtnDown(&event->button);
-            break;
+            handleMouseBtnDown(&event.button);
+
+            return true;
         case SDL_MOUSEBUTTONUP:
-            handleMouseBtnUp(&event->button);
-            break;
+            handleMouseBtnUp(&event.button);
+
+            return true;
         case SDL_MOUSEMOTION:
-            handleMouseMotion(&event->motion);
-            break;
+            handleMouseMotion(&event.motion);
+
+            return true;
     }
+
+    return false;
 }

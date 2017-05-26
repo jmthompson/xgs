@@ -7,6 +7,8 @@
 #include "emulator/common.h"
 
 class Config;
+class Video;
+
 class System;
 class ADB;
 class DOC;
@@ -27,24 +29,40 @@ class Emulator {
         void run();
         void tick();
 
-        float getTargetSpeed() { return target_speed; }
-        float getActualSpeed() { return actual_speed; }
+        Video* getVideo() { return video; }
 
-        void setTargetSpeed(float mhz) { target_speed = mhz; }
+        M65816::Processor* getCpu() { return cpu; }
+        System* getSys() { return sys; }
+        ADB* getAdb() { return adb; }
+        DOC* getDoc() { return doc; }
+        IWM* getIwm() { return iwm; }
+        Smartport* getSmartport() { return smpt; }
+
+        float getSpeed() { return actual_speed; }
+        float getMaxSpeed() { return maximum_speed; }
 
     private:
-        Config *config;
-        System *sys;
-        M65816::Processor *cpu;
+        Config* config;
+        System* sys;
+        M65816::Processor* cpu;
 
-        ADB   *adb;
-        DOC   *doc;
-        IWM   *iwm;
-        Mega2 *mega2;
-        Smartport *smpt;
-        VGC   *vgc;
+        Video *video;
+
+        ADB*   adb;
+        DOC*   doc;
+        IWM*   iwm;
+        Mega2* mega2;
+        Smartport* smpt;
+        VGC*   vgc;
 
         bool running;
+        bool fullscreen;
+        bool show_status_bar = true;
+        bool show_menu = false;
+
+        float maximum_speed;
+        float actual_speed;
+        float target_speed;
 
         // The timer we use for scheduling
         struct itimerspec timer;
@@ -53,9 +71,6 @@ class Emulator {
 
         // The number of frames to produce every second
         unsigned int framerate;
-
-        float target_speed;
-        float actual_speed;
 
         unsigned int current_frame;
 
@@ -81,14 +96,7 @@ class Emulator {
         cycles_t last_cycles;
         cycles_t total_cycles;
 
-        void initVideo();
-
-        long getTime();
-
-        void handleWindowEvent(SDL_WindowEvent *);
         void pollForEvents();
-
-        void renderFrame(pixel_t *, const unsigned int, const unsigned int);
 };
 
 class EmulatorTimerException : public std::runtime_error {};

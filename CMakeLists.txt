@@ -7,7 +7,9 @@ include_directories(${PROJECT_SOURCE_DIR})
 
 set(xgs_VERSION_MAJOR 0)
 set(xgs_VERSION_MINOR 60)
+add_definitions(-DVERSION_MAJOR=${xgs_VERSION_MAJOR} -DVERSION_MINOR=${xgs_VERSION_MINOR})
 
+# enable the debugger
 add_definitions(-DENABLE_DEBUGGER)
 
 # Test endianness of the target system
@@ -55,4 +57,6 @@ add_subdirectory(doc)
 add_subdirectory(mega2)
 add_subdirectory(vgc)
 
-target_link_libraries(xgs emulator M65816 debugger disks adb doc mega2 vgc)
+add_subdirectory(imgui)
+
+target_link_libraries(xgs emulator M65816 debugger disks adb doc mega2 vgc imgui)

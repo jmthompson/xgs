@@ -21,9 +21,11 @@
 #include <boost/filesystem/path.hpp>
 
 #include <SDL.h>
+#include "imgui/imgui.h"
 
 #include "Config.h"
 #include "Emulator.h"
+#include "GUI.h"
 #include "System.h"
 #include "Video.h"
 
@@ -70,6 +72,7 @@ Emulator::Emulator(Config *theConfig)
 
     last_time = now();
 
+    maximum_speed = 2.8;
     framerate = config->pal? 50 : 60;
 
     for (int i = 0 ; i < framerate; ++i) {
@@ -85,7 +88,9 @@ Emulator::Emulator(Config *theConfig)
         throw std::runtime_error("Failed to initialize SDL");
     }
 
-    Video::initialize(1280, 720);
+    video = new Video(VGC::kPixelsPerLine, VGC::kLinesPerFrame * 2);
+
+    GUI::initialize();
 
     cpu = new M65816::Processor();
     sys = new System(config->rom03);
@@ -184,7 +189,7 @@ void Emulator::run()
 
 void Emulator::tick()
 {
-    target_speed = mega2->sw_fastmode? 2.7 : 1.0;
+    target_speed = mega2->sw_fastmode? maximum_speed : 1.0;
 
     unsigned int cycles_per = (1000000/(VGC::kLinesPerFrame * framerate)) * target_speed;
 
@@ -215,7 +220,21 @@ void Emulator::tick()
 
     last_cycles = sys->cycle_count;
 
-    Video::drawFrame(vgc->frame_buffer, vgc->video_width, vgc->video_height);
+    video->startFrame();
+    video->drawFrame(vgc->frame_buffer, vgc->video_width, vgc->video_height);
+
+    GUI::newFrame(video->window);
+
+    if (show_status_bar) {
+        GUI::drawStatusBar(*this);
+    }
+
+    if (show_menu) {
+        GUI::drawMenu(*this);
+    }
+
+    ImGui::Render();
+    video->endFrame();
 
     this_time = now();
 
@@ -232,28 +251,6 @@ void Emulator::tick()
     total_cycles += diff_cycles;
 
     actual_speed = ((float) total_cycles / (float) total_time) / 1000.0;
-
-    if (current_frame == 0) {
-        cerr << boost::format("Current speed = %0.1f MHz (%ld cycles, %ld ms)\n") % actual_speed % total_cycles % total_time;
-    }
-}
-
-void Emulator::handleWindowEvent(SDL_WindowEvent *event)
-{
-    switch (event->event) {
-        case SDL_WINDOWEVENT_CLOSE:
-            running = false;
-
-            break;
-        case SDL_WINDOWEVENT_ENTER:
-            //SDL_ShowCursor(SDL_DISABLE);
-
-            break;
-        case SDL_WINDOWEVENT_LEAVE:
-            //SDL_ShowCursor(SDL_ENABLE);
-
-            break;
-    }
 }
 
 void Emulator::pollForEvents()
@@ -261,26 +258,63 @@ void Emulator::pollForEvents()
     SDL_Event event;
 
     while (SDL_PollEvent(&event)) {
-        switch (event.type) {
-            case SDL_KEYDOWN:
-            case SDL_KEYUP:
-            case SDL_JOYBUTTONDOWN:
-            case SDL_JOYBUTTONUP:
-            case SDL_JOYAXISMOTION:
-            case SDL_MOUSEBUTTONDOWN:
-            case SDL_MOUSEBUTTONUP:
-            case SDL_MOUSEMOTION:
-                adb->processEvent(&event);
 
-                break;
-            case SDL_WINDOWEVENT:
-                handleWindowEvent(&event.window);
+        if (event.type == SDL_KEYDOWN) {
+            switch (event.key.keysym.sym) {
+                case SDLK_HOME: // Control-Home
+                    if (event.key.keysym.mod & KMOD_LCTRL) {
+                        sys->reset();
+                    }
 
-                break;
-            case SDL_QUIT:
-                running = false;
+                    continue;
+                case SDLK_RCTRL:
+                    //mouse_grabbed = !mouse_grabbed;
 
-                break;
+                    //SDL_SetRelativeMouseMode(mouse_grabbed? SDL_TRUE : SDL_FALSE);
+
+                    continue;
+                case SDLK_F1:
+                    show_menu = !show_menu;
+
+                    continue;
+                case SDLK_F3:
+                    show_status_bar = !show_status_bar;
+
+                    continue;
+                case SDLK_F11:
+                    fullscreen = !fullscreen;
+
+                    video->setFullscreen(fullscreen);
+
+                    continue;
+#ifdef ENABLE_DEBUGGER
+                case SDLK_PAUSE:
+                    sys->debugger->toggleTrace();
+
+                    continue;
+
+                case SDLK_F12:
+                    sys->cpu->nmi();
+
+                    continue;
+#endif
+                default:
+                    break;
+            }
+        }
+
+        if ((event.type == SDL_WINDOWEVENT) && (event.window.event == SDL_WINDOWEVENT_RESIZED)) {
+            video->onResize((unsigned int) event.window.data1, (unsigned int) event.window.data2);
+        }
+        else if ((event.type == SDL_QUIT) ||
+            ((event.type == SDL_WINDOWEVENT) && (event.window.event == SDL_WINDOWEVENT_CLOSE))) {
+
+            running = false;
+
+            break;
+        }
+        else {
+            adb->processEvent(event);
         }
     }
 }

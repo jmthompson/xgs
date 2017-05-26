@@ -128,7 +128,7 @@ class ADB : public Device {
         void tick(const unsigned int);
         void microtick(const unsigned int);
 
-        void processEvent(SDL_Event *);
+        bool processEvent(SDL_Event&);
 };
 
 #endif // ADB_H_

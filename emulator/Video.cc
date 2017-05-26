@@ -13,22 +13,14 @@
  */
 
 #include <SDL.h>
-#include <GL/glew.h>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
+
 #include <glm/gtc/type_ptr.hpp>
 
 #include "emulator/common.h"
 
+#include "Emulator.h"
 #include "Video.h"
 #include "shader_utils.h"
-
-namespace Video {
-
-struct TriangleVertex {
-    GLfloat coord[2];
-    GLfloat tex[2];
-};
 
 static const char vertex_shader_source[] = 
     "#version 120\n"
@@ -53,33 +45,142 @@ static const char fragment_shader_source[] =
     "   gl_FragColor = vec4(tex.r, tex.g, tex.b, 1.0);\n"
     "}\n";
 
-static SDL_Window    *window;
-static SDL_GLContext context;
-
-static GLuint vertex_shader;
-static GLuint fragment_shader;
-static GLuint program;
-static GLuint texture;
-static GLuint vbo;
-
-static GLint attribute_coord;
-static GLint attribute_tex_coord;
-static GLint uniform_transform;
-static GLint uniform_sampler;
-
-static glm::mat4 projection;
-
-static bool fullscreen = false;
-
-static unsigned int win_width;
-static unsigned int win_height;
-static float win_aspect;
-
-static void initResources()
+Video::Video(const unsigned int width, const unsigned int height)
 {
-    //projection = glm::ortho(-1, 1, 1, -1);
-    projection = glm::ortho(0.0f, (float) win_width, (float) win_height, 0.0f);
+    video_width  = width;
+    video_height = height;
 
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+    SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
+    SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
+    SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
+    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 1);
+
+    window = SDL_CreateWindow("XGS", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, SDL_WINDOW_OPENGL);
+    if (window == nullptr) {
+        //printSDLError("Failed to create window");
+
+        throw std::runtime_error("SDL_CreateWindow() failed");
+    }
+
+    context = SDL_GL_CreateContext(window);
+    if (context == nullptr) {
+        throw std::runtime_error("SDL_GL_CreateContext() failed");
+    }
+
+    GLenum glew_status = glewInit();
+    if (glew_status != GLEW_OK) {
+        //cerr << "Error: glewInit: " << glewGetErrorString(glew_status) << endl;
+
+        throw std::runtime_error("glewInit() failed");
+    }
+
+    initResources();
+    onResize(width, height);
+}
+
+/**
+ * Prepare the window for a new video frame
+ */
+void Video::startFrame()
+{
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+}
+
+/**
+ * This method actually draws the current frame from the VGC on the screen.
+ * It just converts the frame buffer into a texture, and uses the texture to
+ * draw a pair of triangles that fills the entire window.
+ */
+void Video::drawFrame(const pixel_t *frame, const unsigned int width, const unsigned int height)
+{
+    projection = glm::ortho(0.0f, (float) width, (float) height, 0.0f);
+
+    TriangleVertex triangles[4] = {
+        { { 0, 0}, { 0.0f, 0.0f } },
+        { { 0, height }, { 0.0f, 1.0f } },
+        { { width, 0 },  { 1.0f, 0.0f } },
+        { { width, height }, { 1.0f, 1.0f } }
+    };
+
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(triangles), triangles, GL_DYNAMIC_DRAW);
+
+    glUseProgram(program);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_BGRA, GL_UNSIGNED_BYTE, frame);
+
+    glUniform1i(uniform_sampler, 0 /* GL_TEXTURE0 */);
+    glUniformMatrix4fv(uniform_transform, 1, GL_FALSE, glm::value_ptr(projection));
+
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glVertexAttribPointer(
+        attribute_coord,
+        2,
+        GL_UNSIGNED_INT,
+        GL_FALSE,
+        sizeof(TriangleVertex),
+        0
+    );
+    glVertexAttribPointer(
+        attribute_tex_coord,
+        2,
+        GL_FLOAT,
+        GL_FALSE,
+        sizeof(TriangleVertex),
+        (GLvoid *) offsetof(struct TriangleVertex, tex)
+    );
+
+    glEnableVertexAttribArray(attribute_coord);
+    glEnableVertexAttribArray(attribute_tex_coord);
+
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    glDisableVertexAttribArray(attribute_coord);
+    glDisableVertexAttribArray(attribute_tex_coord);
+}
+
+void Video::endFrame()
+{
+    SDL_GL_SwapWindow(window);
+}
+
+void Video::setFullscreen(bool enabled)
+{
+    SDL_SetWindowFullscreen(window, enabled? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+}
+
+void Video::onResize(const unsigned int width, const unsigned int height)
+{
+    win_width  = width;
+    win_height = height;
+
+    float hscale = win_width / video_width;
+    float vscale = win_height / video_height;
+
+    if (hscale < vscale) {
+        frame_height = video_height * hscale;
+        frame_width  = video_width * hscale;
+    }
+    else {
+        frame_height = video_height * vscale;
+        frame_width  = video_width * vscale;
+    }
+
+    frame_left   = (win_width - frame_width) / 2;
+    frame_right  = frame_left + frame_width - 1;
+    frame_top    = (win_height - frame_height) / 2;
+    frame_bottom = frame_top + frame_height - 1;
+
+    glViewport(frame_left, frame_top, frame_width, frame_height);
+}
+
+void Video::initResources()
+{
     // Set up the VBO for our triangle strip
     glGenBuffers(1, &vbo);
 
@@ -105,120 +206,3 @@ static void initResources()
     uniform_transform   = glGetUniformLocation(program, "transform");
     uniform_sampler     = glGetUniformLocation(program, "sampler");
 }
-
-void initialize(const unsigned int width, const unsigned int height)
-{
-    win_width  = width;
-    win_height = height;
-    win_aspect = (float) width / (float) height;
-
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
-    SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
-    SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
-    SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
-
-    window = SDL_CreateWindow("XGS", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, win_width, win_height, SDL_WINDOW_OPENGL);
-    if (window == nullptr) {
-        //printSDLError("Failed to create window");
-
-        throw std::runtime_error("SDL_CreateWindow() failed");
-    }
-
-    context = SDL_GL_CreateContext(window);
-    if (context == nullptr) {
-        throw std::runtime_error("SDL_GL_CreateContext() failed");
-    }
-
-    GLenum glew_status = glewInit();
-    if (glew_status != GLEW_OK) {
-        //cerr << "Error: glewInit: " << glewGetErrorString(glew_status) << endl;
-
-        throw std::runtime_error("glewInit() failed");
-    }
-
-    initResources();
-}
-
-/**
- * This method actually draws the current frame from the VGC on the screen.
- * It just converts the frame buffer into a texture, and uses the texture to
- * draw a pair of triangles that fills the entire window.
- */
-void drawFrame(const pixel_t *frame, const unsigned int width, const unsigned int height)
-{
-    unsigned int actualWidth, actualHeight;
-    float leftX, rightX, topY, bottomY;
-
-    if (win_aspect > 1.33) {
-        actualHeight = win_height;
-        actualWidth  = actualHeight * 1.33;
-    }
-    else {
-        actualHeight = height * 2;
-        actualWidth  = actualHeight / 1.33;
-    }
-
-    leftX   = (win_width - actualWidth) / 2;
-    rightX  = leftX + actualWidth - 1;
-    topY    = (win_height - actualHeight) / 2;
-    bottomY = topY + actualHeight - 1;
-
-    TriangleVertex triangles[4] = {
-        { { leftX, topY }, { 0.0f, 0.0f } },
-        { { leftX, bottomY }, { 0.0f, 1.0f } },
-        { { rightX, topY },  { 1.0f, 0.0f } },
-        { { rightX, bottomY }, { 1.0f, 1.0f } }
-    };
-
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(triangles), triangles, GL_STATIC_DRAW);
-
-    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
- 
-    glUseProgram(program);
-
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_BGRA, GL_UNSIGNED_BYTE, frame);
-
-    glUniform1i(uniform_sampler, 0 /* GL_TEXTURE0 */);
-    glUniformMatrix4fv(uniform_transform, 1, GL_FALSE, glm::value_ptr(projection));
-
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glVertexAttribPointer(
-        attribute_coord,
-        2,
-        GL_FLOAT,
-        GL_FALSE,
-        sizeof(TriangleVertex),
-        0
-    );
-    glVertexAttribPointer(
-        attribute_tex_coord,
-        2,
-        GL_FLOAT,
-        GL_FALSE,
-        sizeof(TriangleVertex),
-        (GLvoid *) offsetof(struct TriangleVertex, tex)
-    );
-    glEnableVertexAttribArray(attribute_coord);
-    glEnableVertexAttribArray(attribute_tex_coord);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-    glDisableVertexAttribArray(attribute_coord);
-    glDisableVertexAttribArray(attribute_tex_coord);
-
-    SDL_GL_SwapWindow(window);
-}
-
-void toggleFullscreen()
-{
-    fullscreen = !fullscreen;
-
-    SDL_SetWindowFullscreen(window, fullscreen? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
-}
-
-}; // namespace Video
