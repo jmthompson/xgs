@@ -775,7 +775,6 @@ void ADB::handleJoyMotion(SDL_JoyAxisEvent *event)
 
 void ADB::handleMouseBtnDown(SDL_MouseButtonEvent *event)
 {
-    if (!mouse_grabbed) return;
     if (ski_status_reg & 0x80) return; // Mouse reg still full
 
     switch (event->button) {
@@ -802,10 +801,6 @@ void ADB::handleMouseBtnDown(SDL_MouseButtonEvent *event)
 
 void ADB::handleMouseBtnUp(SDL_MouseButtonEvent *event)
 {
-    if (!mouse_grabbed) {
-        return;
-    }
-
     if (ski_status_reg & 0x80) { /* Mouse reg still full */
         return;
     }
@@ -834,10 +829,6 @@ void ADB::handleMouseBtnUp(SDL_MouseButtonEvent *event)
 
 void ADB::handleMouseMotion(SDL_MouseMotionEvent *event)
 {
-    if (!mouse_grabbed) {
-        return;
-    }
-
     if (ski_status_reg & 0x80) { /* Mouse reg still full */
         return;
     }

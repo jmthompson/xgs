@@ -34,8 +34,6 @@ class ADB : public Device {
         // Size of the SKI buffer
         static const unsigned int kInputBufferSize = 128;
 
-        bool mouse_grabbed;
-
         bool sw_m2mouseenable;
         bool sw_m2mousemvirq;
         bool sw_m2mouseswirq;

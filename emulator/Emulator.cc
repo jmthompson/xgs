@@ -270,6 +270,7 @@ void Emulator::tick()
 void Emulator::pollForEvents()
 {
     SDL_Event event;
+    static bool mouse_grabbed =false;
 
     while (SDL_PollEvent(&event)) {
 
@@ -282,9 +283,9 @@ void Emulator::pollForEvents()
 
                     continue;
                 case SDLK_RCTRL:
-                    //mouse_grabbed = !mouse_grabbed;
+                    mouse_grabbed = !mouse_grabbed;
 
-                    //SDL_SetRelativeMouseMode(mouse_grabbed? SDL_TRUE : SDL_FALSE);
+                    SDL_SetRelativeMouseMode(mouse_grabbed? SDL_TRUE : SDL_FALSE);
 
                     continue;
                 case SDLK_F1:
