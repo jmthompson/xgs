@@ -359,28 +359,29 @@ inline void op_ADC()
     unsigned int sum = 0;
 
     if (SR.D) {
-        int op1[4], op2[4];
-        bool carry = SR.C;
+        int AL, tempA = A, tempB = operand.m, tempC = SR.C;
 
-        bcdToNibbles(A, op1);
-        bcdToNibbles(operand.m, op2);
+        sum = 0;
 
-        for (unsigned int i = 0 ; i < sizeof(MemSizeType) * 2 ; i++) {
-            unsigned int digit = op1[i] + op2[i] + carry;
+        for (unsigned int i = 0 ; i < m_nibbles ; ++i) {
+            AL = (tempA & 0x0F) + (tempB & 0x0F) + tempC;
 
-            if (digit >= 10) {
-                digit -= 10;
+            if (AL >= 0x0A) {
+                AL = (AL + 0x06) & 0x0F;
 
-                carry = true;
+                tempC = 1;
             }
             else {
-                carry = false;
+                tempC = 0;
             }
 
-            sum = (sum << 4) | (digit & 0x0F);
+            sum |= (AL << (4 * i));
+
+            tempA >>= 4;
+            tempB >>= 4;
         }
 
-        SR.C = carry;
+        SR.C = tempC;
     }
     else {
         sum = A + operand.m + SR.C;
@@ -402,27 +403,27 @@ inline void op_SBC()
     bool borrow = !SR.C;
 
     if (SR.D) {
-        int op1[4], op2[4];
+        int AL, tempA = A, tempB = operand.m, tempC = SR.C;
 
-        bcdToNibbles(A, op1);
-        bcdToNibbles(operand.m, op2);
+        for (unsigned int i = 0 ; i < m_nibbles ; ++i) {
+            AL = (tempA & 0x0F) - (tempB & 0x0F) + tempC - 1;
 
-        for (unsigned int i = 0 ; i < sizeof(MemSizeType) * 2 ; i++) {
-            int digit = op2[i] - op1[i] - borrow;
+            if (AL < 0) {
+                AL = (AL - 0x06) & 0x0F;
 
-            if (digit < 0) {
-                digit += 10;
-
-                borrow = true;
+                tempC = 0;
             }
             else {
-                borrow = false;
+                tempC = 1;
             }
 
-            diff = (diff << 4) | (digit & 0x0F);
+            diff |= (AL << (4 * i));
+
+            tempA >>= 4;
+            tempB >>= 4;
         }
 
-        SR.C = borrow;
+        SR.C = tempC;
     }
     else {
         diff = A - operand.m - borrow;
@@ -436,13 +437,4 @@ inline void op_SBC()
 
     checkIfNegative(A);
     checkIfZero(A);
-}
-
-inline void bcdToNibbles(MemSizeType in, int *out)
-{
-    for (unsigned int i = 0 ; i < sizeof(MemSizeType) * 2; i++) {
-        out[i] = in & 0x0F;
-
-        in >>= 4;
-    }
 }

@@ -24,7 +24,15 @@ class LogicEngine : public LogicEngineBase {
         const MemSizeType n_bit = 1 << ((sizeof(MemSizeType) * 8) - 1);
         const MemSizeType v_bit = 1 << ((sizeof(MemSizeType) * 8) - 2);
 
+        /**
+         * Maximum value that can be stored in MemSizeType
+         */
         const unsigned int m_max = sizeof(MemSizeType) == 2? 0xFFFF : 0xFF;
+
+        /**
+         * Number of nibbles in MemSizeType. Used by the BCD routines
+         */
+        const unsigned int m_nibbles = sizeof(MemSizeType) * 2;
 
         /**
         * Should be 0 for native mode or 0x0100 for emulation mode.
