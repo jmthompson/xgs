@@ -13,6 +13,32 @@ class Mega2;
 class IWM : public Device {
     friend class Mega2;
 
+    public:
+        IWM();
+        ~IWM();
+
+        void reset();
+        std::uint8_t read(const unsigned int& offset);
+        void write(const unsigned int& offset, const std::uint8_t& value);
+
+        void tick(const unsigned int);
+
+        void loadDrive(const unsigned int, const unsigned int, VirtualDisk *);
+        void unloadDrive(const unsigned int, const unsigned int);
+
+        // Return the ID of the drive whose motor is on,  as 0xsd where
+        // s = slot (5 or 6) and d = drive (0 or 1). Returns 0 if the motor
+        // is not currently on
+
+        const unsigned int getMotorState() {
+            if (iwm_motor_on) {
+                return (iwm_35sel? 0x50 : 0x60) | iwm_drive_select;
+            }
+            else {
+                return 0;
+            }
+        }
+
     private:
         static const unsigned int kNumDevices = 4;
 
@@ -66,19 +92,6 @@ class IWM : public Device {
         bool iwm_35ctl = false;
 
         void touchSwitches(const unsigned int);
-
-    public:
-        IWM();
-        ~IWM();
-
-        void reset();
-        std::uint8_t read(const unsigned int& offset);
-        void write(const unsigned int& offset, const std::uint8_t& value);
-
-        void tick(const unsigned int);
-
-        void loadDrive(const unsigned int, const unsigned int, VirtualDisk *);
-        void unloadDrive(const unsigned int, const unsigned int);
 };
 
 #endif // IWM_H_

@@ -14,6 +14,8 @@
 #include "GUI.h"
 #include "Video.h"
 
+#include "disks/IWM.h"
+
 namespace GUI {
 
 // Data
@@ -265,7 +267,7 @@ void newFrame(SDL_Window *window)
     io.MouseWheel = g_MouseWheel;
     g_MouseWheel = 0.0f;
 
-    // Hide OS mouse cursor if ImGui is drawing it
+    // Hide OS mouse cursor if imgui is drawing it
     SDL_ShowCursor(io.MouseDrawCursor ? 0 : 1);
 
     // Start the frame
@@ -379,6 +381,17 @@ void drawStatusBar(Emulator& emulator)
     const unsigned int bar_height = 34;
     string speed = (format("%0.1f MHz") % emulator.getSpeed()).str();
     string version = (format("XGS v%0d.%0d") % kVersionMajor % kVersionMinor).str();
+    bool s5d1 = false;
+    bool s5d2 = false;
+    bool s6d1 = false;
+    bool s6d2 = false;
+
+    switch (emulator.getIwm()->getMotorState()) {
+        case 0x50: s5d1 = true; break;
+        case 0x51: s5d2 = true; break;
+        case 0x60: s6d1 = true; break;
+        case 0x61: s6d2 = true; break;
+    }
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
 
@@ -388,6 +401,14 @@ void drawStatusBar(Emulator& emulator)
     ImGui::Text(version.c_str());
     ImGui::SameLine();
     ImGui::Text(speed.c_str());
+    ImGui::SameLine();
+    ImGui::Checkbox("S5D1", &s5d1);
+    ImGui::SameLine();
+    ImGui::Checkbox("S5D2", &s5d2);
+    ImGui::SameLine();
+    ImGui::Checkbox("S6D1", &s6d1);
+    ImGui::SameLine();
+    ImGui::Checkbox("S6D1", &s6d2);
     ImGui::End();
 
     ImGui::PopStyleVar();
