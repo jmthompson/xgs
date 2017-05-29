@@ -73,7 +73,7 @@ class DiskTrack {
 
                 ++nibble_count;
 
-                if (++pos > track_len) pos = 0;
+                if (++pos >= track_len) pos = 0;
             }
 
             return val;

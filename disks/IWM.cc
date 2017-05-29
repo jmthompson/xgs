@@ -20,6 +20,7 @@
 #include "disks/IWM.h"
 
 #include "emulator/System.h"
+#include "M65816/Processor.h"
 
 static const uint8_t iwm_35track_len[80] = {
     12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12,
@@ -102,10 +103,10 @@ uint8_t IWM::read(const unsigned int& offset)
             else {
                 if (iwm_motor_on) {
                     if (iwm_35sel) {
-                        return disks_35[iwm_drive_select].read(system->cycle_count);
+                        return disks_35[iwm_drive_select].read(system->cpu->total_cycles);
                     }
                     else {
-                        return disks_525[iwm_drive_select].read(system->cycle_count);
+                        return disks_525[iwm_drive_select].read(system->cpu->total_cycles);
                     }
                 }
                 else {
@@ -179,10 +180,10 @@ void IWM::write(const unsigned int& offset, const uint8_t& val)
                         //writeEnable2(val);
                     }
                     else if (iwm_35sel) {
-                        disks_35[iwm_drive_select].write(system->cycle_count, val);
+                        disks_35[iwm_drive_select].write(system->cpu->total_cycles, val);
                     }
                     else {
-                        disks_525[iwm_drive_select].write(system->cycle_count, val);
+                        disks_525[iwm_drive_select].write(system->cpu->total_cycles, val);
                     }
                 }
                 else {
@@ -227,10 +228,10 @@ void IWM::tick(const unsigned int frame_number)
 void IWM::loadDrive(const unsigned int slot, const unsigned int drive, VirtualDisk *vdisk)
 {
     if (slot == 5) {
-        disks_35[drive & 1].load(vdisk);
+        disks_35[drive].load(vdisk);
     }
     else if (slot == 6) {
-        disks_525[drive & 1].load(vdisk);
+        disks_525[drive].load(vdisk);
     }
 }
 

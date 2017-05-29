@@ -75,9 +75,9 @@ void Processor::modeSwitch()
 
 unsigned int Processor::runUntil(const unsigned int max_cycles)
 {
-    num_cycles = 0;
+    unsigned int opcode, cycles_done = 0;
 
-    while (num_cycles < max_cycles) {
+    while (cycles_done < max_cycles) {
         if (abort_pending) {
             engine->executeOpcode(0x102);
 
@@ -97,20 +97,18 @@ unsigned int Processor::runUntil(const unsigned int max_cycles)
             return max_cycles;
         }
 
-        unsigned int opcode     = system->cpuRead(PBR, PC, INSTR);
-        unsigned int new_cycles = cycle_counts[opcode];
-
-        // We must never go over our max cycle count
-        //if ((num_cycles + new_cycles) > max_cycles) break;
+        opcode = system->cpuRead(PBR, PC, INSTR);
+        num_cycles = cycle_counts[opcode];
 
         ++PC;
 
-        num_cycles += new_cycles;
-
         engine->executeOpcode(opcode);
+
+        cycles_done += num_cycles;
+        total_cycles += num_cycles;
     }
 
-    return num_cycles;
+    return cycles_done;
 }
 
 void Processor::reset(void)
@@ -130,6 +128,8 @@ void Processor::reset(void)
 
     modeSwitch();
     loadVector(0xFFFC);
+
+    total_cycles = 0;
 }
 
 } // namespace M65816

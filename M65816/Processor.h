@@ -150,8 +150,11 @@ class Processor {
         // Index Registers
         multibyte16_t X, Y;
 
-        // Number of cycles executed
+        // Number of cycles executed on current instruction
         unsigned int num_cycles;
+
+        // Total cycle count
+        cycles_t total_cycles;
 
         Processor();
         ~Processor();
@@ -159,8 +162,9 @@ class Processor {
         // Attach this CPU to a system
         void attach(System *);
 
-        // Run until a certain number of cycles have been executed. Returns the number
-        // of cycles actually executed, which may be slightly higher than requested.
+        // Run until at least the specified number of cycles have been executed.
+        // Returns the actual number of cycles executed, which may be slightly
+        // higher than the number requested.
         unsigned int runUntil(const unsigned int);
 
         // Reset the CPU

@@ -1,4 +1,5 @@
 /**
+ * }
  * XGS: The Linux GS Emulator
  * Written and Copyright (C) 1996 - 2016 by Joshua M. Thompson
  *
@@ -29,11 +30,14 @@
 
 using std::uint32_t;
 
+// Map physical sectors 0..15 to DOS/ProDOS logical sector numbers
 static const uint8_t physical_to_logical[2][16] = {
+    // DOS
     {
         0x00, 0x07, 0x0E, 0x06, 0x0D, 0x05, 0x0C, 0x04,
         0x0B, 0x03, 0x0A, 0x02, 0x09, 0x01, 0x08, 0x0F
     },
+    // ProDOS
     {
         0x00, 0x08, 0x01, 0x09, 0x02, 0x0A, 0x03, 0x0B,
         0x04, 0x0C, 0x05, 0x0D, 0x06, 0x0E, 0x07, 0x0F
@@ -66,59 +70,32 @@ uint8_t Disk525::read(const cycles_t cycle_count)
 
     if (!track.valid) return (cycle_count & 0xFF) | 0x80;
 
-    unsigned int bits_read = (cycle_count - last_access) >> 2;
-
+    uint64_t num_bits = (cycle_count - last_access) >> 2;
     uint8_t size = track.nibble_size[nib_pos];
 
-#if 0
-    // should never need this; we always initialize new buffers
-    // so there's no way to ever get a byte with 0 size.
+    if (num_bits > (size + 2)) {
+        num_bits -= (size + 2);
 
-    while (!size) {
-        if (++nib_pos >= track.track_len) nib_pos = 0;
+        unsigned int skipped = num_bits >> 3;
 
-        size = track.nibble_size[nib_pos];
-    }
-#endif
+        nib_pos = (nib_pos + skipped) % track.track_len;
 
-    if (bits_read > (size + 2)) {
-        bits_read -= (size + 2);
+        num_bits = 8;
 
-        unsigned int skip_nibs = bits_read >> 3;
-
-        nib_pos += skip_nibs;
-
-        if (nib_pos >= track.track_len) nib_pos %= track.track_len;
-
-        last_access += (skip_nibs * 32);
-
-        if ((bits_read >= 10) || (cycle_count - last_access) > 60) {
-            /* We're way off, adjust last_access */
-            last_access = (cycle_count - 32) & ~0x1FL;
-        }
-
-        bits_read = 8;
-
-        size = track.nibble_data[nib_pos];
+        last_access += (skipped * 32);
     }
 
-#if 0
-    while (!size) {
-        ++nib_pos;
-        if (pos >= track_len) pos = 0;
-        size = trk->track_data[pos];
-    }
-#endif
+    size = track.nibble_size[nib_pos];
 
-    if (bits_read < size) {
-        return track.nibble_data[nib_pos] >> (size - bits_read);
+    if (num_bits < size) {
+        return track.nibble_data[nib_pos] >> (size - num_bits);
     }
     else {
         uint8_t val = track.nibble_data[nib_pos];
 
-        if (++nib_pos >= track.track_len) nib_pos = 0;
+        nib_pos = (nib_pos + 1) % track.track_len;
 
-        last_access += size*4;
+        last_access += (size*4);
 
         return val;
     }
@@ -135,11 +112,11 @@ void Disk525::write(const cycles_t cycle_count, const uint8_t val)
 
     track.dirty = true;
 
-    unsigned int bits_read = (cycle_count - last_access) >> 2;
+    unsigned int num_bits = (cycle_count - last_access) >> 2;
 
-    track.write(val? val : cycle_count & 0xFF, bits_read, nib_pos);
+    track.write(val? val : cycle_count & 0xFF, num_bits, nib_pos);
 
-    last_access += (bits_read *4);
+    last_access += (num_bits * 4);
 }
 
 void Disk525::flush()
@@ -150,14 +127,16 @@ void Disk525::flush()
 
         flushTrack(track);
 
-        if (i != current_track) track.invalidate();
+        //if (i != current_track) track.invalidate();
     }
 }
 
 void Disk525::load(VirtualDisk *new_vdisk)
 {
-    if (new_vdisk->num_chunks != (new_vdisk->format == NIBBLE? 280 : 280)) {
-        throw std::runtime_error("5.25\" drives support only 140K images");
+    new_vdisk->open();
+
+    if ((new_vdisk->num_chunks * new_vdisk->chunk_size) != 140*1024) {
+        throw std::runtime_error("5.25\" drives only support 140K images");
     }
 
     vdisk   = new_vdisk;
@@ -167,6 +146,7 @@ void Disk525::load(VirtualDisk *new_vdisk)
         tracks[i].valid = false;
         tracks[i].dirty = false;
     }
+
 }
 
 void Disk525::unload()
@@ -198,17 +178,15 @@ void Disk525::loadTrack(DiskTrack& track)
             }
         }
         else {
-            uint8_t track_buffer[kNibblesPerTrack];
-            uint8_t nib_buff[342];
-
-            vdisk->read(track_buffer, track.track_num * kBlocksPerTrack, kBlocksPerTrack);
+            vdisk->read(track_buffer, track.track_num * kSectorsPerTrack, kSectorsPerTrack);
 
             pos = 0;
 
             for (unsigned int sector = 0; sector < kSectorsPerTrack; ++sector) {
                 unsigned int num_sync = sector? 14 : 70;
+                unsigned int logical_sector = physical_to_logical[vdisk->format][sector];
 
-                for (i = 0; i < num_sync; i++) {
+                for (i = 0; i < num_sync; ++i) {
                     track.write(0xFF, 10, pos);
                 }
 
@@ -243,7 +221,7 @@ void Disk525::loadTrack(DiskTrack& track)
 
                 uint8_t *aux_buf = nib_buff;
                 uint8_t *nib_out = nib_buff + 0x56;
-                uint8_t *in      = track_buffer + (sector * kSectorSize);
+                uint8_t *in      = track_buffer + (logical_sector * kSectorSize);
 
                 for (i = 0 ; i < 0x56 ; ++i) aux_buf[i] = 0;
 
@@ -261,12 +239,12 @@ void Disk525::loadTrack(DiskTrack& track)
                     nib_out[i] = v1;
                     aux_buf[x] = v2;
 
-                    if (x-- < 0) x = 0x55;
+                    if (--x < 0) x = 0x55;
                 }
 
                 uint8_t val, last = 0;
 
-                for (i = 0 ; i < 342 ; ++i) {
+                for (i = 0 ; i < kNibblesPerSector ; ++i) {
                     val = nib_buff[i];
 
                     track.write(nibble_to_disk[last ^ val], 8, pos);
@@ -411,7 +389,8 @@ void Disk525::phaseChange(const unsigned int phase)
 {
     unsigned int phase_up   = (phase - 1) & 3;
     unsigned int phase_down = (phase + 1) & 3;
-    unsigned int delta      = 0;
+
+    int delta = 0;
 
     if (last_phase == phase_up) {
         delta = 2;

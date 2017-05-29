@@ -176,6 +176,8 @@ void Disk35::action(const unsigned int state)
 
 void Disk35::load(VirtualDisk *new_vdisk)
 {
+    new_vdisk->open();
+
     if ((new_vdisk->format != PRODOS) || (new_vdisk->num_chunks != 1600)) {
         throw std::runtime_error("3.5\" drives support only ProODS-order 800k disk imges");
     }

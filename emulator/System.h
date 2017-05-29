@@ -76,8 +76,7 @@ class System {
         void updateIRQ();
 
     public:
-        cycles_t cycle_count = 0;
-        vbls_t   vbl_count   = 0;
+        vbls_t vbl_count = 0;
 
         M65816::Processor *cpu;
 

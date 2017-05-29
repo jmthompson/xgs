@@ -544,14 +544,6 @@ void Mega2::write(const unsigned int& offset, const uint8_t& val)
             sw_slot6_motor = val & 0x04;
             sw_slot5_motor = val & 0x02;
             sw_slot4_motor = val & 0x01;
-#if 0
-            if (sw_fastmode) {
-                schedulerSetTargetSpeed(g_fast_mhz);
-            }
-            else {
-                schedulerSetTargetSpeed(1.0);
-            }
-#endif
             break;
 
         case 0x41:

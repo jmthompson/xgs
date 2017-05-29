@@ -72,6 +72,8 @@ Emulator::~Emulator()
     delete mega2;
     delete vgc;
 
+    delete video;
+
     delete [] rom;
     delete [] fast_ram;
     delete [] slow_ram;
@@ -161,9 +163,21 @@ bool Emulator::setup(const int argc, const char** argv)
 
     for (unsigned int i = 0 ; i < kSmartportUnits ; ++i) {
         if (hd[i].length()) {
-            VirtualDisk *vd = new VirtualDisk(hd[i]);
-            smpt->mountImage(i, vd);
+            smpt->mountImage(i, new VirtualDisk(hd[i]));
         }
+    }
+
+    if (s5d1.length()) {
+        iwm->loadDrive(5, 0, new VirtualDisk(s5d1));
+    }
+    if (s5d2.length()) {
+        iwm->loadDrive(5, 1, new VirtualDisk(s5d2));
+    }
+    if (s6d1.length()) {
+        iwm->loadDrive(6, 0, new VirtualDisk(s6d1));
+    }
+    if (s6d2.length()) {
+        iwm->loadDrive(6, 1, new VirtualDisk(s6d2));
     }
 
     return true;
@@ -210,8 +224,6 @@ void Emulator::tick()
     for (unsigned int line = 0; line < VGC::kLinesPerFrame ; ++line) {
         unsigned int num_cycles = cpu->runUntil(cycles_per);
 
-        sys->cycle_count += num_cycles;
-
         for (unsigned int dt = 0 ; dt < doc_ticks[line % 19] ; ++dt) {
             doc->microtick(0);
         }
@@ -230,9 +242,9 @@ void Emulator::tick()
         current_frame = 0;
     }
 
-    cycles_t diff_cycles = sys->cycle_count - last_cycles;
+    cycles_t diff_cycles = sys->cpu->total_cycles - last_cycles;
 
-    last_cycles = sys->cycle_count;
+    last_cycles = sys->cpu->total_cycles;
 
     video->startFrame();
     video->drawFrame(vgc->frame_buffer, vgc->video_width, vgc->video_height);
@@ -401,6 +413,12 @@ bool Emulator::loadConfig(const int argc, const char **argv)
         ("font80",   po::value<string>(&font80_file)->default_value("xgs80.fnt"),   "Name of 80-column font to load");
 
     po::options_description vdisks("Virtual Disk Options");
+
+    vdisks.add_options()
+        ("s5d1", po::value<string>(&s5d1), "Mount disk image on S5,D1")
+        ("s5d2", po::value<string>(&s5d2), "Mount disk image on S5,D2")
+        ("s6d1", po::value<string>(&s6d1), "Mount disk image on S6,D1")
+        ("s6d2", po::value<string>(&s6d2), "Mount disk image on S6,D2");
 
     for (unsigned int i = 1 ; i <= kSmartportUnits ; ++i) {
         string name = (format("hd%d") % i).str();

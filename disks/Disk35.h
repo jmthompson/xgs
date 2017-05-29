@@ -23,7 +23,8 @@ class Disk35 {
         bool motor_on      = false;
         bool disk_switched = false;
 
-        unsigned int current_track = 0;
+        int current_track = 0;
+
         unsigned int step = 0;
         unsigned int head = 0;
         unsigned int nib_pos = 0;

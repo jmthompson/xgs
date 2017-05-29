@@ -397,7 +397,7 @@ uint8_t ADB::readM2MouseY()
 
 uint8_t ADB::readPaddle0()
 {
-    if (system->cycle_count < paddle0_time) {
+    if (system->cpu->total_cycles < paddle0_time) {
         return 0x80;
     }
     else {
@@ -408,7 +408,7 @@ uint8_t ADB::readPaddle0()
 
 uint8_t ADB::readPaddle1()
 {
-    if (system->cycle_count < paddle1_time) {
+    if (system->cpu->total_cycles < paddle1_time) {
         return 0x80;
     }
     else {
@@ -591,8 +591,8 @@ void ADB::setStatus(uint8_t val)
 
 void ADB::triggerPaddles()
 {
-    paddle0_time = system->cycle_count + (paddle0 * 11);
-    paddle1_time = system->cycle_count + (paddle1 * 11);
+    paddle0_time = system->cpu->total_cycles + (paddle0 * 11);
+    paddle1_time = system->cpu->total_cycles + (paddle1 * 11);
 }
 
 void ADB::handleKeyDown(SDL_KeyboardEvent *event)

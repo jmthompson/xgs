@@ -79,6 +79,10 @@ Video::Video(const unsigned int width, const unsigned int height)
     onResize(width, height);
 }
 
+Video::~Video()
+{
+}
+
 /**
  * Prepare the window for a new video frame
  */

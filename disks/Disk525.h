@@ -12,24 +12,12 @@ class Disk525 {
         static const unsigned int kNumTracks = 35;
         static const unsigned int kLastTrack = (kNumTracks - 1) * 4;
 
-        static const unsigned int kSectorSize      = 256;
-        static const unsigned int kSectorsPerTrack = 16;
-        static const unsigned int kBlocksPerTrack  = kSectorsPerTrack / 2;
-        static const unsigned int kBytesPerTrack   = kSectorsPerTrack * kSectorSize;
-        static const unsigned int kNibblesPerTrack = 6656;
-
-        VirtualDisk *vdisk = nullptr;
-        DiskTrack tracks[kNumTracks * 4];
-
-        // The cpu cycle count at which the disk was read or written.
-        cycles_t last_access = 0;
-
-        // The fractional track # over which the virtual disk head currently rests.
-        unsigned int current_track = 0;
-        unsigned int vol_num       = 254;
-
-        unsigned int last_phase = 0;
-        unsigned int nib_pos    = 0;
+        static const unsigned int kSectorSize       = 256;
+        static const unsigned int kSectorsPerTrack  = 16;
+        static const unsigned int kBlocksPerTrack   = kSectorsPerTrack / 2;
+        static const unsigned int kBytesPerTrack    = kSectorsPerTrack * kSectorSize;
+        static const unsigned int kNibblesPerSector = 342;
+        static const unsigned int kNibblesPerTrack  = 6656;
 
         Disk525();
         ~Disk525();
@@ -47,6 +35,25 @@ class Disk525 {
         void flushTrack(DiskTrack&);
 
         void phaseChange(const unsigned int);
+
+private:
+        VirtualDisk *vdisk = nullptr;
+        DiskTrack tracks[kNumTracks * 4];
+
+        // The cpu cycle count at which the disk was read or written.
+        cycles_t last_access = 0;
+
+        // The fractional track # over which the virtual disk head currently rests.
+        int current_track = 0;
+        unsigned int vol_num = 254;
+
+        unsigned int last_phase = 0;
+        unsigned int nib_pos    = 0;
+
+        uint8_t track_buffer[kSectorsPerTrack * kSectorSize];
+        uint8_t nib_buff[kNibblesPerSector + 1];
+
+        void advance(DiskTrack&);
 };
 
 #endif // DISK525_H_
