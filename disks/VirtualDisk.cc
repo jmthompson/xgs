@@ -78,7 +78,16 @@ void VirtualDisk::open()
             throw std::runtime_error("Unknown image extension");
         }
 
-        chunk_size = (format == NIBBLE? 6656 : 512);
+        if (format == DOS) {
+            chunk_size = 256;
+        }
+        else if (format == PRODOS) {
+            chunk_size = 512;
+        }
+        else if (format == NIBBLE) {
+            chunk_size = 6656;
+        }
+
         num_chunks = data_len / chunk_size;
 
         if (data_len % chunk_size) {
