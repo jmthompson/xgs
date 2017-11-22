@@ -416,6 +416,16 @@ void drawStatusBar(Emulator& emulator)
 
 void drawMenu(Emulator& emulator)
 {
+    Video *video = emulator.getVideo();
+    float max_speed = emulator.getMaxSpeed();
+    
+    ImGui::SetNextWindowPos(ImVec2(video->frame_left + 10, video->frame_top + 10));
+    ImGui::SetNextWindowSize(ImVec2(350, 55));
+    ImGui::Begin("CPU Speed", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+    ImGui::SliderFloat("Max Speed", &max_speed, 2.8, 32.0);
+    ImGui::End();
+
+    emulator.setMaxSpeed(max_speed);
 }
 
 } // namespace GUI

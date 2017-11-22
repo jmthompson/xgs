@@ -49,6 +49,7 @@ class Emulator {
 
         float getSpeed() { return actual_speed; }
         float getMaxSpeed() { return maximum_speed; }
+        float setMaxSpeed(float speed) { maximum_speed = speed; }
 
     private:
         boost::filesystem::path data_dir;
