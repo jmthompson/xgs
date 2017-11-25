@@ -46,7 +46,7 @@ class ADB : public Device {
         uint8_t ski_data_reg     = 0;
         uint8_t ski_status_reg   = 0x10;
         uint8_t ski_mode_byte    = 0x10;
-        bool    ski_status_irq = false;
+        uint8_t ski_status_irq   = 0;
         uint8_t ski_conf[3];
         uint8_t ski_error;
 
