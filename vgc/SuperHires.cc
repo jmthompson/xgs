@@ -79,9 +79,9 @@ void SuperHires::getPalette(const unsigned int palette_number, pixel_t *out)
 
     for (unsigned int i = 0 ; i < 16 ; ++i, color += 2) {
 
-        r = (color[1] & 0x0F) * kColorScale;
+        b = (color[1] & 0x0F) * kColorScale;
         g = ((color[0] >> 4) & 0x0F) * kColorScale;
-        b = (color[0] & 0x0F) * kColorScale;
+        r = (color[0] & 0x0F) * kColorScale;
 
         out[i] = (r << 16) | (g << 8) | b;
     }

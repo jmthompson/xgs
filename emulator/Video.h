@@ -2,12 +2,14 @@
 #define VIDEO_H_
 
 #include <SDL.h>
-#include <GL/glew.h>
+#include "GLES2/gl2.h"
+#include "EGL/egl.h"
+#include "EGL/eglext.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
 struct TriangleVertex {
-    GLuint coord[2];
+    GLfloat coord[2];
     GLfloat tex[2];
 };
 

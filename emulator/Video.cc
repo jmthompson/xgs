@@ -16,6 +16,10 @@
 
 #include <glm/gtc/type_ptr.hpp>
 
+#ifdef RPI
+#include <bcm_host.h>
+#endif
+
 #include "emulator/common.h"
 
 #include "Emulator.h"
@@ -23,7 +27,7 @@
 #include "shader_utils.h"
 
 static const char vertex_shader_source[] = 
-    "#version 120\n"
+    "#version 100\n"
     "attribute vec2 coord;\n"
     "attribute vec2 tex_coord;\n"
     "uniform mat4 transform;\n"
@@ -35,8 +39,8 @@ static const char vertex_shader_source[] =
     "}\n";
 
 static const char fragment_shader_source[] =
-    "#version 120\n"
-    //"precision mediump float;\n"
+    "#version 100\n"
+    "precision mediump float;\n"
     "uniform sampler2D sampler;\n"
     "varying vec2 v_tex_coord;\n"
     "void main()\n"
@@ -50,33 +54,40 @@ Video::Video(const unsigned int width, const unsigned int height)
     video_width  = width;
     video_height = height;
 
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
     SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
     SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
     SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 1);
 
-    window = SDL_CreateWindow("XGS", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, SDL_WINDOW_OPENGL);
-    if (window == nullptr) {
-        //printSDLError("Failed to create window");
+#ifdef RPI
+    uint32_t disp_width, disp_height;
 
-        throw std::runtime_error("SDL_CreateWindow() failed");
+    if (graphics_get_display_size(0 /* LCD */, &disp_width, &disp_height) < 0) {
+        throw std::runtime_error("Unable to get display size");
+    }
+
+    window = SDL_CreateWindow("XGS", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, disp_width, disp_height, SDL_WINDOW_OPENGL|SDL_WINDOW_FULLSCREEN_DESKTOP);
+#else
+    window = SDL_CreateWindow("XGS", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, SDL_WINDOW_OPENGL);
+#endif
+    if (window == nullptr) {
+        throw std::runtime_error(SDL_GetError());
     }
 
     context = SDL_GL_CreateContext(window);
     if (context == nullptr) {
-        throw std::runtime_error("SDL_GL_CreateContext() failed");
-    }
-
-    GLenum glew_status = glewInit();
-    if (glew_status != GLEW_OK) {
-        //cerr << "Error: glewInit: " << glewGetErrorString(glew_status) << endl;
-
-        throw std::runtime_error("glewInit() failed");
+        throw std::runtime_error(SDL_GetError());
     }
 
     initResources();
+#ifdef RPI
+    onResize(disp_width, disp_height);
+#else
     onResize(width, height);
+#endif
 }
 
 Video::~Video()
@@ -103,9 +114,9 @@ void Video::drawFrame(const pixel_t *frame, const unsigned int width, const unsi
 
     TriangleVertex triangles[4] = {
         { { 0, 0}, { 0.0f, 0.0f } },
-        { { 0, height }, { 0.0f, 1.0f } },
-        { { width, 0 },  { 1.0f, 0.0f } },
-        { { width, height }, { 1.0f, 1.0f } }
+        { { 0, (float) height }, { 0.0f, 1.0f } },
+        { { (float) width, 0 },  { 1.0f, 0.0f } },
+        { { (float) width, (float) height }, { 1.0f, 1.0f } }
     };
 
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -115,7 +126,7 @@ void Video::drawFrame(const pixel_t *frame, const unsigned int width, const unsi
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_BGRA, GL_UNSIGNED_BYTE, frame);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, frame);
 
     glUniform1i(uniform_sampler, 0 /* GL_TEXTURE0 */);
     glUniformMatrix4fv(uniform_transform, 1, GL_FALSE, glm::value_ptr(projection));
@@ -124,7 +135,7 @@ void Video::drawFrame(const pixel_t *frame, const unsigned int width, const unsi
     glVertexAttribPointer(
         attribute_coord,
         2,
-        GL_UNSIGNED_INT,
+        GL_FLOAT,
         GL_FALSE,
         sizeof(TriangleVertex),
         0
@@ -155,7 +166,9 @@ void Video::endFrame()
 
 void Video::setFullscreen(bool enabled)
 {
+#ifndef RPI
     SDL_SetWindowFullscreen(window, enabled? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+#endif
 }
 
 void Video::onResize(const unsigned int width, const unsigned int height)
@@ -181,6 +194,7 @@ void Video::onResize(const unsigned int width, const unsigned int height)
     frame_bottom = frame_top + frame_height - 1;
 
     glViewport(frame_left, frame_top, frame_width, frame_height);
+    assert(glGetError() == GL_NO_ERROR);
 }
 
 void Video::initResources()
@@ -188,12 +202,9 @@ void Video::initResources()
     // Set up the VBO for our triangle strip
     glGenBuffers(1, &vbo);
 
-    // Set up our texture. These parameters are set up to allow
-    // non power-of-2 textures on OpenGL ES.
+    // Set up our texture.
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_2D, texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);

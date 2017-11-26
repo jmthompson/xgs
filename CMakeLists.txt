@@ -20,6 +20,23 @@ if(WORDS_BIGENDIAN)
     add_definitions(-DBIGENDIAN)
 endif()
 
+# Check for Raspberry Pi
+if(BCMHOST)
+    add_definitions(-DRPI)
+    include_directories(/opt/vc/include)
+    target_link_libraries(xgs
+        /opt/vc/lib/libbcm_host.so
+        /opt/vc/lib/libbrcmGLESv2.so
+        /opt/vc/lib/libbrcmEGL.so
+    )
+else()
+    find_package(OpenGL REQUIRED)
+    if (OPENGL_FOUND)
+        include_directories($(OPENGL_INCLUDE_DIRS))
+        target_link_libraries(xgs ${OPENGL_LIBRARIES})
+    endif()
+endif()
+    
 find_package(Boost 1.60.0 COMPONENTS filesystem program_options system)
 if(Boost_FOUND)
     include_directories(${Boost_INCLUDE_DIRS})
@@ -36,17 +53,11 @@ if(SDL2_FOUND)
   target_link_libraries(xgs ${SDL2_LIBRARIES})
 endif()
 
-find_package(OpenGL REQUIRED)
-if (OPENGL_FOUND)
-    include_directories($(OPENGL_INCLUDE_DIRS))
-    target_link_libraries(xgs ${OPENGL_LIBRARIES})
-endif()
-
-find_package(GLEW REQUIRED)
-if (GLEW_FOUND)
-    include_directories($(GLEW_INCLUDE_DIRS))
-    target_link_libraries(xgs ${GLEW_LIBRARIES})
-endif()
+#find_package(GLEW REQUIRED)
+#if (GLEW_FOUND)
+#    include_directories($(GLEW_INCLUDE_DIRS))
+#    target_link_libraries(xgs ${GLEW_LIBRARIES})
+#endif()
 
 add_subdirectory(M65816)
 add_subdirectory(emulator)

@@ -108,8 +108,11 @@ bool Emulator::setup(const int argc, const char** argv)
     total_cycles = 0;
     last_cycles  = 0;
 
-    if (SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO|SDL_INIT_EVENTS|SDL_INIT_JOYSTICK) < 0) {
-        throw std::runtime_error("Failed to initialize SDL");
+    int err;
+
+    if ((err = SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO|SDL_INIT_EVENTS|SDL_INIT_JOYSTICK)) < 0) {
+        std::cout << "error = " << err << std::endl;
+        throw std::runtime_error(SDL_GetError());
     }
 
     video = new Video(VGC::kPixelsPerLine, VGC::kLinesPerFrame * 2);

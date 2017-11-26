@@ -1,5 +1,4 @@
-#include <GL/glew.h>
-
+#include "shader_utils.h"
 #include "common.h"
 
 static void print_log(GLuint object) {
