@@ -10,12 +10,10 @@ class VirtualDisk;
 class Disk35 {
     public:
         static const unsigned int kNumTracks  = 80;
-        static const unsigned int kSectorSize = 256;
+        static const unsigned int kMaxSectorsPerTrack = 12;
+        static const unsigned int kSectorSize = 512;
 
-        static const unsigned int kSectorsPerTrack = 16;
-        static const unsigned int kBlocksPerTrack  = kSectorsPerTrack / 2;
-        static const unsigned int kBytesPerTrack   = kSectorsPerTrack * kSectorSize;
-        static const unsigned int kNibblesPerTrack = 6656;
+        static const unsigned int kNibblesPerSector = 800;
 
         VirtualDisk *vdisk = nullptr;
         DiskTrack tracks[2][kNumTracks];
@@ -45,6 +43,9 @@ class Disk35 {
 
         void loadTrack(DiskTrack&);
         void flushTrack(DiskTrack&);
+
+private:
+        uint8_t track_buffer[kMaxSectorsPerTrack * kSectorSize];
 };
 
 #endif // DISK35_H_

@@ -142,6 +142,12 @@ void VirtualDisk::openTwoImgFile()
         locked = true;
     }
 
+    // Some images I have seem to been in mixed big/little endian order.
+    // So, try to accomodate those.
+    if ((header.blocks == 0x4006) && (header.data_len = 0x800c00)) {
+        header.data_len = swap_endian(header.data_len);
+    }
+
     type           = TWOIMG;
     format         = header.format;
     data_offset    = header.data_offset;

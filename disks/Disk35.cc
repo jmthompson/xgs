@@ -24,10 +24,34 @@
 #include "disks/DiskTrack.h"
 #include "disks/Disk35.h"
 #include "disks/VirtualDisk.h"
+#include "disks/nibbles.h"
 
 #include "emulator/System.h"
 
 using std::uint32_t;
+
+const unsigned int kTagByte = 0x22;
+
+static const unsigned int sectors_per_track[80] = {
+    12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12,
+    11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11,
+    10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
+     9,  9,  9,  9,  9,  9,  9,  9,  9,  9,  9,  9,  9,  9,  9,  9,
+     8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8
+};
+
+static const unsigned int track_start[80] = {
+    0,    12,  24,  36,  48,  60 , 72,  84,
+    96,  108, 120, 132, 144, 156, 168, 180,
+    192, 203, 214, 225, 236, 247, 258, 269,
+    280, 291, 302, 313, 324, 335, 346, 357,
+    368, 378, 388, 398, 408, 418, 428, 438,
+    448, 458, 468, 478, 488, 498, 508, 518,
+    528, 537, 546, 555, 564, 573, 582, 591,
+    600, 609, 618, 627, 636, 645, 654, 663,
+    672, 680, 688, 696, 704, 712, 720, 728,
+    736, 744, 752, 760, 768, 776, 784, 792
+};
 
 Disk35::Disk35()
 {
@@ -111,7 +135,19 @@ uint8_t Disk35::status(const unsigned int state)
 
 uint8_t Disk35::read(const cycles_t cycle_count)
 {
-    return (cycle_count & 0xFF) | 0x80;
+    if (vdisk == nullptr) return (cycle_count & 0xFF) | 0x80;
+
+    DiskTrack& track = tracks[head][current_track];
+    loadTrack(track);
+
+    if (!track.valid) return (cycle_count & 0xFF) | 0x80;
+
+    /* Assume everyone is reading 3.5" disks with latch mode enabled */
+
+    uint8_t ret = track.nibble_data[nib_pos++];
+    if (nib_pos >= track.track_len) nib_pos = 0;
+
+    return ret;
 }
 
 void Disk35::write(const cycles_t cycle_count, const uint8_t val)
@@ -140,7 +176,7 @@ void Disk35::action(const unsigned int state)
             step = 0;
 
             break;
-        case 0x01:  // Set step direction outward (towards lower tracks) 
+        case 0x01:  // Set step direction outward (towards lower tracks)
             step = 1;
 
             break;
@@ -203,6 +239,152 @@ void Disk35::unload()
 
 void Disk35::loadTrack(DiskTrack& track)
 {
+    // Do nothing if this track is already loaded
+    if (track.nibble_data != nullptr) return;
+
+    try {
+        unsigned int num_sectors = sectors_per_track[track.track_num];
+        unsigned int nibbles = num_sectors * kNibblesPerSector;
+        unsigned int start = (track_start[track.track_num] * 2) + (head * num_sectors);
+
+        track.allocate(nibbles);
+
+        vdisk->read(track_buffer, start, num_sectors);
+
+        for (unsigned int sec = 0 ; sec < num_sectors ; ++sec) {
+            unsigned int side = head? 0x20 : 0x00;
+
+            if (track.track_num & 0x40) side |= 0x01;
+
+            unsigned int sum = (track.track_num ^ sec ^ side ^ kTagByte) & 0x3F;
+
+            // pad
+            track.write(0xFF, 8, nib_pos);
+
+            // Sync
+            for (unsigned int i = 0 ; i < 35 ; ++i) {
+                track.write(0xFF, 10, nib_pos);
+            }
+
+            // header prolog
+            track.write(0xD5, 8, nib_pos);
+            track.write(0xAA, 8, nib_pos);
+            track.write(0x96, 8, nib_pos);
+
+            // header data
+            track.write(nibble_to_disk[track.track_num & 0x3F], 8, nib_pos);
+            track.write(nibble_to_disk[sec], 8, nib_pos);
+            track.write(nibble_to_disk[side], 8, nib_pos);
+            track.write(nibble_to_disk[kTagByte], 8, nib_pos);
+            track.write(nibble_to_disk[sum], 8, nib_pos);
+
+            // header epilog
+            track.write(0xDE, 8, nib_pos);
+            track.write(0xAA, 8, nib_pos);
+
+            // pad
+            track.write(0xFF, 8, nib_pos);
+
+            // Sync
+            for (unsigned int i = 0 ; i < 5 ; ++i) {
+                track.write(0xFF, 10, nib_pos);
+            }
+
+            // Data prolog
+            track.write(0xD5, 8, nib_pos);
+            track.write(0xAA, 8, nib_pos);
+            track.write(0xAD, 8, nib_pos);
+            track.write(nibble_to_disk[sec], 8, nib_pos);
+
+            // Data
+
+            uint8_t val;
+            uint8_t buffer1[175],buffer2[175],buffer3[175];
+
+            // IIgs doesn't use the tag bytes so set them to zero
+            for (unsigned int i = 171 ; i < 175 ; ++i) {
+                buffer1[i] = buffer2[i] = buffer3[i] = 0;
+            }
+
+            /* Copy from the user's buffer to our buffer, while computing   */
+            /* the three-byte data checksum.                */
+
+            {
+                unsigned int csum1 = 0, csum2 = 0, csum3 = 0, csum4;
+                int i = sec * kSectorSize;
+                int j = 170;
+
+                while (true) {
+                    csum1 = (csum1 & 0xFF) << 1;
+                    if (csum1 & 0x0100) ++csum1;
+
+                    val = track_buffer[i++];
+                    csum3 += val;
+                    if (csum1 & 0x0100) {
+                        csum3++;
+                        csum1 &= 0xFF;
+                    }
+                    buffer1[j] = (val ^ csum1) & 0xFF;
+
+                    val = track_buffer[i++];
+                    csum2 += val;
+                    if (csum3 > 0xFF) {
+                        csum2++;
+                        csum3 &= 0xFF;
+                    }
+                    buffer2[j] = (val ^ csum3) & 0xFF;
+
+                    if (--j < 0) break;
+
+                    val = track_buffer[i++];
+                    csum1 += val;
+                    if (csum2 > 0xFF) {
+                        csum1++;
+                        csum2 &= 0xFF;
+                    }
+                    buffer3[j+1] = (val ^ csum2) & 0xFF;
+                }
+
+                csum4 =  ((csum1 & 0xC0) >> 6);
+                csum4 |= ((csum2 & 0xC0) >> 4);
+                csum4 |= ((csum3 & 0xC0) >> 2);
+
+                i = 175;
+                while(--i >= 0) {
+                    uint8_t nibble1 = buffer1[i] & 0x3F;
+                    uint8_t nibble2 = buffer2[i] & 0x3F;
+                    uint8_t nibble3 = buffer3[i] & 0x3F;
+                    uint8_t nibble4 = ((buffer1[i] & 0xC0) >> 2);
+
+                    nibble4 |= ((buffer2[i] & 0xC0) >> 4);
+                    nibble4 |= ((buffer3[i] & 0xC0) >> 6);
+
+                    track.write(nibble_to_disk[nibble4], 8, nib_pos);
+                    track.write(nibble_to_disk[nibble1], 8, nib_pos);
+                    track.write(nibble_to_disk[nibble2], 8, nib_pos);
+                    if (i) track.write(nibble_to_disk[nibble3], 8, nib_pos);
+                }
+
+                track.write(nibble_to_disk[csum4 & 0x3F], 8, nib_pos);
+                track.write(nibble_to_disk[csum3 & 0x3F], 8, nib_pos);
+                track.write(nibble_to_disk[csum2 & 0x3F], 8, nib_pos);
+                track.write(nibble_to_disk[csum1 & 0x3F], 8, nib_pos);
+            }
+
+            // Data epilog
+            track.write(0xDE, 8, nib_pos);
+            track.write(0xAA, 8, nib_pos);
+            track.write(0xFF, 8, nib_pos);
+        }
+    }
+    catch (std::runtime_error& e) {
+        track.invalidate();
+
+        throw e;
+    }
+
+    track.valid = true;
+    track.dirty = false;
 }
 
 void Disk35::flushTrack(DiskTrack& track)
