@@ -18,8 +18,8 @@
 #include <iostream>
 #include <stdexcept>
 #include <boost/format.hpp>
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
+#include <filesystem>
+#include <fstream>
 #include <boost/program_options.hpp>
 
 #include "emulator/System.h"
@@ -28,7 +28,7 @@
 #include "debugger/Debugger.h"
 #include "M65816/Processor.h"
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 namespace po = boost::program_options;
 
 using std::cerr;
@@ -97,8 +97,8 @@ void TestRunner::run()
  */
 unsigned int TestRunner::loadFile(const string& filename, const unsigned int maximum_size, uint8_t *buffer)
 {
-    boost::uintmax_t bytes = maximum_size;
-    fs::ifstream ifs;
+    std::uintmax_t bytes = maximum_size;
+    std::ifstream ifs;
 
     ifs.open(filename, std::ifstream::binary);
     ifs.read((char *) buffer, bytes);

@@ -1,10 +1,10 @@
 #ifndef IMAGEFILE_H_
 #define IMAGEFILE_H_
 
-#include <boost/filesystem/fstream.hpp>
-#include <boost/filesystem/path.hpp>
+#include <fstream>
+#include <filesystem>
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 using fs::path;
 
 const uint32_t kTwoImgMagic   = 0x474d4932; // "2IMG"
@@ -64,7 +64,7 @@ class VirtualDisk {
     private:
         path image_path;
 
-        fs::fstream file;
+        std::fstream file;
 
         bool writeable; // True if the ifstream is writeable
 

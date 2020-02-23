@@ -6,6 +6,7 @@ option(Boost_USE_STATIC_LIBS "Use boost static libs" OFF)
 option(Boost_USE_STATIC_RUNTIME "Use boost static runtime" OFF)
 
 add_executable(xgs emulator/main.cc)
+target_compile_features(xgs PUBLIC cxx_std_17)
 
 include_directories(${PROJECT_SOURCE_DIR})
 
@@ -42,7 +43,7 @@ else()
 endif()
 
 set(Boost_USE_MULTITHREADED ON)    
-find_package(Boost 1.60.0 COMPONENTS filesystem program_options system)
+find_package(Boost 1.60.0 COMPONENTS program_options)
 
 if(Boost_FOUND)
     include_directories(${Boost_INCLUDE_DIRS})

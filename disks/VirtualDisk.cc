@@ -14,17 +14,17 @@
 
 #include <climits>
 #include <stdexcept>
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/path.hpp>
+#include <filesystem>
+
 
 #include "emulator/common.h"
 
 #include "disks/VirtualDisk.h"
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 
-using fs::path;
-using boost::uintmax_t;
+using std::filesystem::path;
+using std::uintmax_t;
 
 VirtualDisk::~VirtualDisk()
 {

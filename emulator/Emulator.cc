@@ -12,14 +12,14 @@
  * a copy of the emulator.
  */
 
-#include <sys/time.h>
-#include <sys/timerfd.h>
+//#include <sys/time.h>
+//#include <sys/timerfd.h>
 
 #include <iostream>
 #include <stdexcept>
 #include <boost/format.hpp>
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
+#include <filesystem>
+#include <fstream>
 #include <boost/program_options.hpp>
 
 #include <SDL.h>
@@ -42,7 +42,7 @@
 #include "debugger/Debugger.h"
 #include "M65816/Processor.h"
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 namespace po = boost::program_options;
 
 using std::cerr;
@@ -54,9 +54,8 @@ static struct timeval tv;
 
 static long now()
 {
-    gettimeofday(&tv, NULL);
 
-    return (long) (tv.tv_sec * 1000) + (tv.tv_usec / 1000);
+    return SDL_GetTicks();
 }
 
 Emulator::Emulator()
