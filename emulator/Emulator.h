@@ -2,7 +2,7 @@
 #define EMULATOR_H_
 
 #include <stdexcept>
-#include <boost/filesystem/path.hpp>
+#include <filesystem>
 
 #include <SDL.h>
 
@@ -52,8 +52,8 @@ class Emulator {
         float setMaxSpeed(float speed) { maximum_speed = speed; }
 
     private:
-        boost::filesystem::path data_dir;
-        boost::filesystem::path config_file;
+        std::filesystem::path data_dir;
+        std::filesystem::path config_file;
 
         System* sys;
         M65816::Processor* cpu;
