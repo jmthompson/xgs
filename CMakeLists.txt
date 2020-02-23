@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.6)
 
 project(xgs)
+
+option(Boost_USE_STATIC_LIBS "Use boost static libs" OFF) 
+option(Boost_USE_STATIC_RUNTIME "Use boost static runtime" OFF)
+
 add_executable(xgs emulator/main.cc)
 
 include_directories(${PROJECT_SOURCE_DIR})
@@ -36,16 +40,16 @@ else()
         target_link_libraries(xgs ${OPENGL_LIBRARIES})
     endif()
 endif()
-    
+
+set(Boost_USE_MULTITHREADED ON)    
 find_package(Boost 1.60.0 COMPONENTS filesystem program_options system)
+
 if(Boost_FOUND)
     include_directories(${Boost_INCLUDE_DIRS})
     target_link_libraries(xgs ${Boost_LIBRARIES})
 endif()
 
-set(Boost_USE_STATIC_LIBS OFF) 
-set(Boost_USE_MULTITHREADED ON)  
-set(Boost_USE_STATIC_RUNTIME OFF) 
+ 
 
 find_package(SDL2 REQUIRED)
 if(SDL2_FOUND)
