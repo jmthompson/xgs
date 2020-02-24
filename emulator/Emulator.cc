@@ -12,8 +12,15 @@
  * a copy of the emulator.
  */
 
-//#include <sys/time.h>
-//#include <sys/timerfd.h>
+#ifndef _WIN32
+    //windows doesn't have these
+    #include <sys/time.h>
+    #include <sys/timerfd.h>
+#else
+    //use chrono instead
+    #include <chrono>
+    #include <thread>
+#endif
 
 #include <iostream>
 #include <stdexcept>
@@ -49,8 +56,10 @@ using std::cerr;
 using std::endl;
 using std::string;
 
+#ifndef _WIN32
 // avoid having to constantly reallocate this
 static struct timeval tv;
+#endif
 
 static long now()
 {
@@ -64,8 +73,9 @@ Emulator::Emulator()
 
 Emulator::~Emulator()
 {
+#ifndef _WIN32
     close(timer_fd);
-
+#endif
     delete cpu;
     delete sys;
     delete mega2;
@@ -84,6 +94,7 @@ bool Emulator::setup(const int argc, const char** argv)
         return false;
     }
 
+#ifndef _WIN32
     struct timespec ts;
 
     clock_getres(CLOCK_MONOTONIC, &ts);
@@ -92,6 +103,8 @@ bool Emulator::setup(const int argc, const char** argv)
     if ((timer_fd = timerfd_create(CLOCK_MONOTONIC, 0)) < 0) {
         throw std::runtime_error("Failed to create timer");
     }
+
+#endif
 
     last_time = now();
 
@@ -187,13 +200,15 @@ bool Emulator::setup(const int argc, const char** argv)
 
 void Emulator::run()
 {
-    uint64_t exp;
+    
 
     current_frame = 0;
 
     timer_interval = 1000000000 / framerate;
     cerr << boost::format("Timer period is %d Hz (%d ns)\n") % framerate % timer_interval;
 
+#ifndef _WIN32
+    uint64_t exp;
     timer.it_interval.tv_sec  = 0;
     timer.it_interval.tv_nsec = timer_interval;
     timer.it_value.tv_sec     = 0;
@@ -202,18 +217,29 @@ void Emulator::run()
     if (timerfd_settime(timer_fd, 0, &timer, NULL) < 0) {
         throw std::runtime_error("Failed to set timer");
     }
+#else
+    using clk = std::chrono::steady_clock; 
+    auto next_tick = clk::now() + std::chrono::nanoseconds(timer_interval);
+#endif
 
     running = true;
 
     while (running) {
+
+#ifndef _WIN32
         ssize_t len = read(timer_fd, &exp, sizeof(exp));
 
         if (len != sizeof(exp)) {
             cerr << boost::format("Failed to read timer: %s") % strerror(errno) << endl;
-        }
+#else
+        next_tick = clk::now() + std::chrono::nanoseconds(timer_interval);
+#endif
 
         tick();
         pollForEvents();
+#ifdef _WIN32
+    std::this_thread::sleep_until(next_tick);
+#endif
     }
 }
 
@@ -359,8 +385,8 @@ unsigned int Emulator::loadFile(const std::string& filename, const unsigned int 
         p = filename;
     }
 
-    boost::uintmax_t bytes = fs::file_size(p);
-    fs::ifstream ifs;
+    std::uintmax_t bytes = fs::file_size(p);
+    std::ifstream ifs;
 
     //*buffer = new uint8_t[bytes];
 
@@ -442,7 +468,7 @@ bool Emulator::loadConfig(const int argc, const char **argv)
     po::variables_map vm; 
         
     try { 
-        fs::ifstream cfs{config_file};
+        std::ifstream cfs{config_file};
 
         if (cfs.is_open()) {
         	po::store(po::parse_config_file(cfs, config_file_options), vm);
