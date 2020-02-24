@@ -240,6 +240,7 @@ void Emulator::run()
 
         if (len != sizeof(exp)) {
             cerr << boost::format("Failed to read timer: %s") % strerror(errno) << endl;
+        }
 #else
         next_tick = clk::now() + std::chrono::nanoseconds(timer_interval);
 #endif
