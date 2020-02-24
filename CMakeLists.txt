@@ -58,12 +58,8 @@ if(SDL2_FOUND)
   target_link_libraries(xgs ${SDL2_LIBRARIES})
 endif()
 
-#find_package(GLEW REQUIRED)
-#if (GLEW_FOUND)
-#    include_directories($(GLEW_INCLUDE_DIRS))
-#    target_link_libraries(xgs ${GLEW_LIBRARIES})
-#endif()
 
+add_subdirectory(third_party/galogen)
 add_subdirectory(M65816)
 add_subdirectory(emulator)
 add_subdirectory(debugger)
@@ -75,4 +71,4 @@ add_subdirectory(vgc)
 
 add_subdirectory(imgui)
 
-target_link_libraries(xgs emulator M65816 debugger disks adb doc mega2 vgc imgui)
+target_link_libraries(xgs emulator M65816 debugger disks adb doc mega2 vgc imgui gl_extension_loader)
