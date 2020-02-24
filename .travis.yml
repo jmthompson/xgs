@@ -3,7 +3,7 @@ dist: bionic
 os: linux
 before_install:
 - sudo apt-get -y install libsdl2-dev
-- sudo apt-get -y install libboost-dev
+- sudo apt-get -y install libboost-program-options-dev
 script:
 - mkdir -p build
 - cd build
