@@ -37,39 +37,42 @@ if(BCMHOST)
 else()
     set(OpenGL_GL_PREFERENCE LEGACY) #needed for some linux systems
     find_package(OpenGL REQUIRED)
-    if (OPENGL_FOUND)
-        include_directories(${OPENGL_INCLUDE_DIRS})
-        target_link_libraries(xgs ${OPENGL_LIBRARIES})
-    endif()
+    include_directories(${OPENGL_INCLUDE_DIRS})
+    target_link_libraries(xgs ${OPENGL_LIBRARIES})
 endif()
 
-set(Boost_USE_MULTITHREADED ON)    
-find_package(Boost 1.60.0 COMPONENTS program_options)
+set(Boost_USE_MULTITHREADED ON)
 
-if(Boost_FOUND)
-    include_directories(${Boost_INCLUDE_DIRS})
-    target_link_libraries(xgs ${Boost_LIBRARIES})
-endif()
-
- 
-
+find_package(Boost 1.60.0 REQUIRED COMPONENTS program_options)
 find_package(SDL2 REQUIRED)
-if(SDL2_FOUND)
-  include_directories(${SDL2_INCLUDE_DIRS})
-  target_link_libraries(xgs ${SDL2_LIBRARIES})
-endif()
 
+include_directories(${SDL2_INCLUDE_DIRS} ${Boost_INCLUDE_DIR})
 
-add_subdirectory(third_party/galogen)
-add_subdirectory(M65816)
-add_subdirectory(emulator)
-add_subdirectory(debugger)
 add_subdirectory(adb)
+add_subdirectory(debugger)
 add_subdirectory(disks)
 add_subdirectory(doc)
+add_subdirectory(emulator)
+add_subdirectory(M65816)
 add_subdirectory(mega2)
 add_subdirectory(vgc)
 
+add_subdirectory(third_party/galogen)
 add_subdirectory(imgui)
 
-target_link_libraries(xgs emulator M65816 debugger disks adb doc mega2 vgc imgui gl_extension_loader)
+target_link_libraries(xgs   ${Boost_LIBRARIES} 
+                            ${SDL2_LIBRARIES}
+                            adb
+                            debugger 
+                            doc 
+                            disks 
+                            emulator 
+                            M65816 
+                            mega2 
+                            vgc 
+                            imgui 
+                            gl_extension_loader )
+
+if(CMAKE_CXX_COMPILER_ID STREQUAL GNU)
+    target_link_libraries(xgs stdc++fs) #<filesystem>
+endif()
