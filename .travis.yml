@@ -1,0 +1,11 @@
+language: cpp
+dist: bionic
+os: linux
+before_install:
+- sudo apt-get -y install libsdl2-dev
+script:
+- mkdir -p build
+- cd build
+- cmake ..
+
+
