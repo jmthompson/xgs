@@ -12,6 +12,7 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <random>
 #include <string>
 #include <boost/format.hpp>
 
