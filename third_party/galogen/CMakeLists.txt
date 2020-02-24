@@ -11,4 +11,6 @@ else()
     add_library(gl_extension_loader generated_files/gl_33.c)
 endif()
 
+target_link_libraries(gl_extension_loader ${OPENGL_LIBRARIES})
+
 
