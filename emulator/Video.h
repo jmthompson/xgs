@@ -1,10 +1,15 @@
 #ifndef VIDEO_H_
 #define VIDEO_H_
 
+#ifdef RPI
+    #include "GLES2/gl2.h"
+    #include "EGL/egl.h"
+    #include "EGL/eglext.h"
+#else
+    #include "gl_33.h"
+#endif
+
 #include <SDL.h>
-#include "GLES2/gl2.h"
-#include "EGL/egl.h"
-#include "EGL/eglext.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
