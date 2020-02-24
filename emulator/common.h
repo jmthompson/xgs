@@ -49,7 +49,7 @@ T random(T a , T b)
 {
     static std::random_device rd;
     static std::mt19937 mt(rd());
-    typedef std::conditional<std::is_integral<T>::value,
+    typedef typename std::conditional<std::is_integral<T>::value,
 							std::uniform_int_distribution<T>,
 							std::uniform_real_distribution<T>>::type Dist;
     Dist dist(a,b);
