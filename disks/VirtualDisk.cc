@@ -26,7 +26,7 @@
 #else
     #include <experimental/filesystem>
     namespace fs = std::experimental::filesystem;
-    using std::filesystem::experimental::path;
+    using std::experimental::filesystem::path;
 #endif
 
 
