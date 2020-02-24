@@ -35,6 +35,7 @@ if(BCMHOST)
         /opt/vc/lib/libbrcmEGL.so
     )
 else()
+    set(OpenGL_GL_PREFERENCE LEGACY) #needed for some linux systems
     find_package(OpenGL REQUIRED)
     if (OPENGL_FOUND)
         include_directories(${OPENGL_INCLUDE_DIRS})
