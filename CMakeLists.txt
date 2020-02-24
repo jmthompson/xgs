@@ -60,18 +60,18 @@ add_subdirectory(vgc)
 add_subdirectory(third_party/galogen)
 add_subdirectory(imgui)
 
-target_link_libraries(xgs   ${Boost_LIBRARIES} 
-                            ${SDL2_LIBRARIES}
+target_link_libraries(xgs   emulator #gcc needs this to be first
                             adb
                             debugger 
                             doc 
-                            disks 
-                            emulator 
+                            disks  
                             M65816 
                             mega2 
                             vgc 
                             imgui 
-                            gl_extension_loader )
+                            gl_extension_loader 
+                            ${Boost_LIBRARIES} 
+                            ${SDL2_LIBRARIES})
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL GNU)
     target_link_libraries(xgs stdc++fs) #<filesystem>
