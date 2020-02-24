@@ -12,18 +12,25 @@
  * variety of formats.
  */
 
+#include "disks/VirtualDisk.h"
+
 #include <climits>
 #include <stdexcept>
-#include <filesystem>
-
 
 #include "emulator/common.h"
 
-#include "disks/VirtualDisk.h"
+#if __has_include(<filesystem>)
+    #include <filesystem>
+    namespace fs = std::filesystem;
+    using std::filesystem::path;
+#else
+    #include <experimental/filesystem>
+    namespace fs = std::experimental::filesystem;
+    using std::filesystem::experimental::path;
+#endif
 
-namespace fs = std::filesystem;
 
-using std::filesystem::path;
+
 using std::uintmax_t;
 
 VirtualDisk::~VirtualDisk()

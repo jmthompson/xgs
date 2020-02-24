@@ -11,6 +11,7 @@
  * The TestRunner class is a stripped down emulator designed to run
  * binary test suites.
  */
+#include "TestRunner.h"
 
 #include <sys/time.h>
 #include <sys/timerfd.h>
@@ -18,17 +19,26 @@
 #include <iostream>
 #include <stdexcept>
 #include <boost/format.hpp>
-#include <filesystem>
+
 #include <fstream>
 #include <boost/program_options.hpp>
 
 #include "emulator/System.h"
-#include "TestRunner.h"
+
 
 #include "debugger/Debugger.h"
 #include "M65816/Processor.h"
 
-namespace fs = std::filesystem;
+#if __has_include(<filesystem>)
+    #include <filesystem>
+    namespace fs = std::filesystem;
+    using std::filesystem::path;
+#else
+    #include <experimental/filesystem>
+    namespace fs = std::experimental::filesystem;
+    using std::filesystem::experimental::path;
+#endif
+
 namespace po = boost::program_options;
 
 using std::cerr;

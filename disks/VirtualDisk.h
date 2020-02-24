@@ -2,10 +2,11 @@
 #define IMAGEFILE_H_
 
 #include <fstream>
-#include <filesystem>
-
-namespace fs = std::filesystem;
-using fs::path;
+#if __has_include(<filesystem>)
+    #include <filesystem>
+#else
+    #include <experimental/filesystem>
+#endif
 
 const uint32_t kTwoImgMagic   = 0x474d4932; // "2IMG"
 const uint32_t kTwoImgCreator = 0x21534758; // "XGS!"
@@ -62,7 +63,12 @@ enum ImageType {
 
 class VirtualDisk {
     private:
-        path image_path;
+#if __has_include(<filesystem>)
+        std::filesystem::path image_path;
+#else
+        std::experimental::filesystem::path image_path;
+#endif
+        
 
         std::fstream file;
 
@@ -89,8 +95,12 @@ class VirtualDisk {
 
         unsigned int num_chunks;
         unsigned int chunk_size;
-
-        VirtualDisk(path filename) : image_path(filename) {}
+#if __has_include(<filesystem>)
+        VirtualDisk(std::filesystem::path filename) : image_path(filename) {}
+#else
+        VirtualDisk(std::experimental::filesystem::path filename) : image_path(filename) {}
+#endif
+        
         ~VirtualDisk();
 
         void open();
