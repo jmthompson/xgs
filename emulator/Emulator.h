@@ -1,12 +1,18 @@
 #ifndef EMULATOR_H_
 #define EMULATOR_H_
 
+#include "emulator/common.h"
+
 #include <stdexcept>
-#include <boost/filesystem/path.hpp>
+#if __has_include(<filesystem>)
+    #include <filesystem>
+#else
+    #include <experimental/filesystem>
+#endif
 
 #include <SDL.h>
 
-#include "emulator/common.h"
+
 
 class Config;
 class Video;
@@ -49,11 +55,17 @@ class Emulator {
 
         float getSpeed() { return actual_speed; }
         float getMaxSpeed() { return maximum_speed; }
-        float setMaxSpeed(float speed) { maximum_speed = speed; }
+        void setMaxSpeed(float speed) { maximum_speed = speed; }
 
     private:
-        boost::filesystem::path data_dir;
-        boost::filesystem::path config_file;
+#if __has_include(<filesystem>)
+        std::filesystem::path data_dir;
+        std::filesystem::path config_file;
+#else
+        std::experimental::filesystem::path data_dir;
+        std::experimental::filesystem::path config_file;
+#endif
+        
 
         System* sys;
         M65816::Processor* cpu;
@@ -103,7 +115,9 @@ class Emulator {
         float target_speed;
 
         // The timer we use for scheduling
+#ifndef _WIN32
         struct itimerspec timer;
+#endif
         unsigned int timer_interval;
         int timer_fd;
 

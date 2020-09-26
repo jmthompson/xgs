@@ -75,6 +75,7 @@ class StatusRegister {
                 if (!(v & 0x20)) M = false;
                 if (!(v & 0x10)) X = false;
             }
+            return *this;
         }
 
         StatusRegister& operator|= (uint8_t v)
@@ -90,6 +91,7 @@ class StatusRegister {
                 if (v & 0x20) M = true;
                 if (v & 0x10) X = true;
             }
+            return *this;
         }
 
         operator uint8_t() const {

@@ -139,7 +139,7 @@ uint8_t VGC::read(const unsigned int& offset)
             val = sw_vert_cnt >> 1;
             break;
         case 0x2F:
-            sw_horiz_cnt = random() & 0x7F;
+            sw_horiz_cnt = random<int>(0,255) & 0x7F;
 
             val = ((sw_vert_cnt & 0x01) << 7) | sw_horiz_cnt;
 

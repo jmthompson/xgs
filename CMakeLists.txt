@@ -1,7 +1,12 @@
 cmake_minimum_required(VERSION 3.6)
 
 project(xgs)
+
+option(Boost_USE_STATIC_LIBS "Use boost static libs" OFF) 
+option(Boost_USE_STATIC_RUNTIME "Use boost static runtime" OFF)
+
 add_executable(xgs emulator/main.cc)
+target_compile_features(xgs PUBLIC cxx_std_17)
 
 include_directories(${PROJECT_SOURCE_DIR})
 
@@ -30,44 +35,44 @@ if(BCMHOST)
         /opt/vc/lib/libbrcmEGL.so
     )
 else()
+    set(OpenGL_GL_PREFERENCE GLVND) #needed for some linux systems
     find_package(OpenGL REQUIRED)
-    if (OPENGL_FOUND)
-        include_directories($(OPENGL_INCLUDE_DIRS))
-        target_link_libraries(xgs ${OPENGL_LIBRARIES})
-    endif()
-endif()
-    
-find_package(Boost 1.60.0 COMPONENTS filesystem program_options system)
-if(Boost_FOUND)
-    include_directories(${Boost_INCLUDE_DIRS})
-    target_link_libraries(xgs ${Boost_LIBRARIES})
+    include_directories(${OPENGL_INCLUDE_DIRS})
+    target_link_libraries(xgs ${OPENGL_LIBRARIES})
 endif()
 
-set(Boost_USE_STATIC_LIBS OFF) 
-set(Boost_USE_MULTITHREADED ON)  
-set(Boost_USE_STATIC_RUNTIME OFF) 
+set(Boost_USE_MULTITHREADED ON)
 
+find_package(Boost 1.60.0 REQUIRED COMPONENTS program_options)
 find_package(SDL2 REQUIRED)
-if(SDL2_FOUND)
-  include_directories(${SDL2_INCLUDE_DIRS})
-  target_link_libraries(xgs ${SDL2_LIBRARIES})
-endif()
 
-#find_package(GLEW REQUIRED)
-#if (GLEW_FOUND)
-#    include_directories($(GLEW_INCLUDE_DIRS))
-#    target_link_libraries(xgs ${GLEW_LIBRARIES})
-#endif()
+include_directories(${SDL2_INCLUDE_DIRS} ${Boost_INCLUDE_DIR})
 
-add_subdirectory(M65816)
-add_subdirectory(emulator)
-add_subdirectory(debugger)
 add_subdirectory(adb)
+add_subdirectory(debugger)
 add_subdirectory(disks)
 add_subdirectory(doc)
+add_subdirectory(emulator)
+add_subdirectory(M65816)
 add_subdirectory(mega2)
 add_subdirectory(vgc)
 
+add_subdirectory(third_party/galogen)
 add_subdirectory(imgui)
 
-target_link_libraries(xgs emulator M65816 debugger disks adb doc mega2 vgc imgui)
+target_link_libraries(xgs   emulator #gcc needs this to be first
+                            adb
+                            debugger 
+                            doc 
+                            disks  
+                            M65816 
+                            mega2 
+                            vgc 
+                            imgui 
+                            gl_extension_loader 
+                            ${Boost_LIBRARIES} 
+                            ${SDL2_LIBRARIES})
+
+if(CMAKE_CXX_COMPILER_ID STREQUAL GNU)
+    target_link_libraries(xgs stdc++fs) #<filesystem>
+endif()

@@ -14,11 +14,13 @@
 
 #include "emulator/Emulator.h"
 
-int main (const int argc, const char **argv)
+int main (int argc, char **argv)
 {
     Emulator *e = new Emulator();
 
-    if (e->setup(argc, argv)) {
+    if ( e->setup(argc, const_cast<const char**>(argv) ) ) {
         e->run();
     }
+    delete e; //call delete to make destructors run
+    return 0;
 }

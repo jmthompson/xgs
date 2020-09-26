@@ -12,19 +12,26 @@
  * variety of formats.
  */
 
+#include "disks/VirtualDisk.h"
+
 #include <climits>
 #include <stdexcept>
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/path.hpp>
 
 #include "emulator/common.h"
 
-#include "disks/VirtualDisk.h"
+#if __has_include(<filesystem>)
+    #include <filesystem>
+    namespace fs = std::filesystem;
+    using std::filesystem::path;
+#else
+    #include <experimental/filesystem>
+    namespace fs = std::experimental::filesystem;
+    using std::experimental::filesystem::path;
+#endif
 
-namespace fs = boost::filesystem;
 
-using fs::path;
-using boost::uintmax_t;
+
+using std::uintmax_t;
 
 VirtualDisk::~VirtualDisk()
 {
