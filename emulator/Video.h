@@ -30,7 +30,7 @@ class Video {
         ~Video();
 
         void setFullscreen(bool);
-        void onResize(const unsigned int, const unsigned int);
+        void onResize(void);
 
         void startFrame();
         void drawFrame(const pixel_t *, const unsigned int, const unsigned int);
@@ -38,7 +38,6 @@ class Video {
 
     private:
         unsigned int video_width, video_height;
-        unsigned int win_width, win_height;
 
         GLuint vertex_shader;
         GLuint fragment_shader;
@@ -54,6 +53,7 @@ class Video {
         glm::mat4 projection;
 
         void initResources();
+        void initContext();
 };
 
 #endif // VIDEO_H_

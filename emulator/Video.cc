@@ -15,16 +15,15 @@
 #include <SDL.h>
 
 #include <glm/gtc/type_ptr.hpp>
-
-#ifdef RPI
-#include <bcm_host.h>
-#endif
+#include <boost/format.hpp>
 
 #include "emulator/common.h"
 
 #include "Emulator.h"
 #include "Video.h"
 #include "shader_utils.h"
+
+using std::cerr;
 
 static const char vertex_shader_source[] = 
     "#version 100\n"
@@ -51,47 +50,34 @@ static const char fragment_shader_source[] =
 
 Video::Video(const unsigned int width, const unsigned int height)
 {
+
     video_width  = width;
     video_height = height;
 
-    
     SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
     SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
     SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 1);
 
-#ifdef RPI
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
-    uint32_t disp_width, disp_height;
+    int flags = SDL_WINDOW_OPENGL;
 
-    if (graphics_get_display_size(0 /* LCD */, &disp_width, &disp_height) < 0) {
-        throw std::runtime_error("Unable to get display size");
+    if (!strcmp(SDL_GetCurrentVideoDriver(), "KMSDRM")) {
+        cerr << "Running in standalone mode\n";
+
+        flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
+    }
+    else {
+        cerr << "Running in desktop mode\n";
     }
 
-    window = SDL_CreateWindow("XGS", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, disp_width, disp_height, SDL_WINDOW_OPENGL|SDL_WINDOW_FULLSCREEN_DESKTOP);
-#else
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-    window = SDL_CreateWindow("XGS", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, SDL_WINDOW_OPENGL);
-#endif
+    window = SDL_CreateWindow("XGS", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, flags);
     if (window == nullptr) {
         throw std::runtime_error(SDL_GetError());
     }
 
-    context = SDL_GL_CreateContext(window);
-    if (context == nullptr) {
-        throw std::runtime_error(SDL_GetError());
-    }
-
+    initContext();
     initResources();
-#ifdef RPI
-    onResize(disp_width, disp_height);
-#else
-    onResize(width, height);
-#endif
+    onResize();
 }
 
 Video::~Video()
@@ -170,18 +156,17 @@ void Video::endFrame()
 
 void Video::setFullscreen(bool enabled)
 {
-#ifndef RPI
     SDL_SetWindowFullscreen(window, enabled? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
-#endif
 }
 
-void Video::onResize(const unsigned int width, const unsigned int height)
+void Video::onResize(void)
 {
-    win_width  = width;
-    win_height = height;
+    int width, height;
 
-    float hscale = win_width / video_width;
-    float vscale = win_height / video_height;
+    SDL_GetWindowSize(window, &width, &height);
+
+    float hscale = width / video_width;
+    float vscale = height / video_height;
 
     if (hscale < vscale) {
         frame_height = video_height * hscale;
@@ -192,9 +177,9 @@ void Video::onResize(const unsigned int width, const unsigned int height)
         frame_width  = video_width * vscale;
     }
 
-    frame_left   = (win_width - frame_width) / 2;
+    frame_left   = (width - frame_width) / 2;
     frame_right  = frame_left + frame_width - 1;
-    frame_top    = (win_height - frame_height) / 2;
+    frame_top    = (height - frame_height) / 2;
     frame_bottom = frame_top + frame_height - 1;
 
     glViewport(frame_left, frame_top, frame_width, frame_height);
@@ -224,4 +209,31 @@ void Video::initResources()
     attribute_tex_coord = glGetAttribLocation(program, "tex_coord");
     uniform_transform   = glGetUniformLocation(program, "transform");
     uniform_sampler     = glGetUniformLocation(program, "sampler");
+}
+
+void Video::initContext()
+{
+
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+
+    context = SDL_GL_CreateContext(window);
+
+    if (context == nullptr) {
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+
+        context = SDL_GL_CreateContext(window);
+    }
+
+    if (context == nullptr) {
+        throw std::runtime_error(SDL_GetError());
+    }
+
+    cerr << boost::format("OpenGL Information\n  Vendor   : %s\n  Renderer : %s\n  Version  : %s\n")
+           % glGetString(GL_VENDOR)
+           % glGetString(GL_RENDERER)
+           % glGetString(GL_VERSION);
 }

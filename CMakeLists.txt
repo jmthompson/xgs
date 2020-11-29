@@ -25,21 +25,10 @@ if(WORDS_BIGENDIAN)
     add_definitions(-DBIGENDIAN)
 endif()
 
-# Check for Raspberry Pi
-if(BCMHOST)
-    add_definitions(-DRPI)
-    include_directories(/opt/vc/include)
-    target_link_libraries(xgs
-        /opt/vc/lib/libbcm_host.so
-        /opt/vc/lib/libbrcmGLESv2.so
-        /opt/vc/lib/libbrcmEGL.so
-    )
-else()
-    set(OpenGL_GL_PREFERENCE GLVND) #needed for some linux systems
-    find_package(OpenGL REQUIRED)
-    include_directories(${OPENGL_INCLUDE_DIRS})
-    target_link_libraries(xgs ${OPENGL_LIBRARIES})
-endif()
+set(OpenGL_GL_PREFERENCE GLVND) #needed for some linux systems
+find_package(OpenGL REQUIRED)
+include_directories(${OPENGL_INCLUDE_DIRS})
+target_link_libraries(xgs ${OPENGL_LIBRARIES})
 
 set(Boost_USE_MULTITHREADED ON)
 
