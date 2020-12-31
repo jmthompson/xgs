@@ -113,10 +113,8 @@ void System::sysWrite(const uint8_t bank, const uint16_t address, uint8_t val)
     if (page.write) {
         page.write[offset] = val;
 
-        if (page.shadowed) {
-            MemoryPage& spage = memory[(page_no & 0x01FF) | 0xE000];
-
-            spage.write[offset] = val;
+        if (page.swrite) {
+            page.swrite[offset] = val;
         }
     }
 }
@@ -173,10 +171,8 @@ void System::cpuWrite(const uint8_t bank, const uint16_t address, uint8_t val, c
     else if (page.write) {
         page.write[offset] = val;
 
-        if (page.shadowed) {
-            MemoryPage& spage = memory[(page_no & 0x01FF) | 0xE000];
-
-            spage.write[offset] = val;
+        if (page.swrite) {
+            page.swrite[offset] = val;
         }
     }
 }

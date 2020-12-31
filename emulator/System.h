@@ -33,7 +33,7 @@ enum irq_source_t {
 struct MemoryPage {
     uint8_t *read    = nullptr;
     uint8_t *write   = nullptr;
-    bool    shadowed = false;
+    uint8_t *swrite  = nullptr;
 
     mem_page_t type = UNMAPPED;
 };
@@ -135,7 +135,7 @@ class System {
 
         inline void setShadowed(const unsigned int page, const bool isShadowed)
         {
-            memory[page].shadowed = isShadowed;
+            memory[page].swrite = isShadowed? memory[(page & 0x01FF) | 0xE000].write : nullptr;
         }
 
         inline void setIoRead(const unsigned int& offset, Device *device)
