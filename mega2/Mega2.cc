@@ -267,7 +267,7 @@ uint8_t Mega2::read(const unsigned int& offset)
             break;
 
         case 0x13:
-            val = sw_auxwr? 0x80 : 0x00;
+            val = sw_auxrd? 0x80 : 0x00;
             break;
 
         case 0x14:
