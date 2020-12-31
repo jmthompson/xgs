@@ -72,7 +72,6 @@ static struct timeval tv;
 
 static long now()
 {
-
     return SDL_GetTicks();
 }
 
@@ -168,7 +167,7 @@ bool Emulator::setup(const int argc, const char** argv)
     sys->installDevice("adb", adb);
     sys->installDevice("doc", doc);
     sys->installDevice("iwm", iwm);
-    sys->installDevice("smpt",smpt);
+    sys->installDevice("smpt", smpt);
 
     sys->setWdmHandler(0xC7, smpt);
     sys->setWdmHandler(0xC8, smpt);
@@ -209,8 +208,6 @@ bool Emulator::setup(const int argc, const char** argv)
 
 void Emulator::run()
 {
-    
-
     current_frame = 0;
 
     timer_interval = 1000000000 / framerate;
@@ -255,12 +252,12 @@ void Emulator::run()
 
 void Emulator::tick()
 {
-    target_speed = mega2->sw_fastmode? maximum_speed : 1.0;
+    target_speed = mega2->sw_fastmode? maximum_speed : 1.0f;
 
     unsigned int cycles_per = (1000000/(VGC::kLinesPerFrame * framerate)) * target_speed;
 
     for (unsigned int line = 0; line < VGC::kLinesPerFrame ; ++line) {
-        unsigned int num_cycles = cpu->runUntil(cycles_per);
+        cpu->runUntil(cycles_per);
 
         for (unsigned int dt = 0 ; dt < doc_ticks[line % 19] ; ++dt) {
             doc->microtick(0);
@@ -314,7 +311,7 @@ void Emulator::tick()
     cycles[current_frame] = diff_cycles;
     total_cycles += diff_cycles;
 
-    actual_speed = ((float) total_cycles / (float) total_time) / 1000.0;
+    actual_speed = ((float) total_cycles / (float) total_time) / 1000.0f;
 }
 
 void Emulator::pollForEvents()
@@ -398,8 +395,6 @@ unsigned int Emulator::loadFile(const std::string& filename, const unsigned int 
     std::uintmax_t bytes = fs::file_size(p);
     std::ifstream ifs;
 
-    //*buffer = new uint8_t[bytes];
-
     ifs.open(p, std::ifstream::binary);
     ifs.read((char *) buffer, bytes);
     ifs.close();
@@ -421,10 +416,10 @@ bool Emulator::loadConfig(const int argc, const char **argv)
     string font40_file;
     string font80_file;
 
-    if (p = std::getenv("XGS_DATA_DIR")) {
+    if ((p = std::getenv("XGS_DATA_DIR"))) {
         data_dir = path(p);
     }
-    else if (p = std::getenv("HOME")) {
+    else if ((p = std::getenv("HOME"))) {
         data_dir = path(p) / ".xgs";
     }
     else {

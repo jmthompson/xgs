@@ -12,11 +12,7 @@
 
 #include <SDL.h>
 
-
-
-class Config;
 class Video;
-
 class System;
 class ADB;
 class DOC;
@@ -65,7 +61,6 @@ class Emulator {
         std::experimental::filesystem::path data_dir;
         std::experimental::filesystem::path config_file;
 #endif
-        
 
         System* sys;
         M65816::Processor* cpu;
