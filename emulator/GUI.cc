@@ -257,6 +257,7 @@ void newFrame(SDL_Window *window)
 
 void initialize()
 {
+    ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
 
     io.KeyMap[ImGuiKey_Tab] = SDLK_TAB;
@@ -309,7 +310,8 @@ void shutdown()
         g_FontTexture = 0;
     }
 
-    ImGui::Shutdown();
+    ImGuiContext* context = ImGui::GetCurrentContext();
+    ImGui::Shutdown(context);
 }
 
 bool processEvent(SDL_Event& event)
