@@ -44,6 +44,7 @@ add_subdirectory(doc)
 add_subdirectory(emulator)
 add_subdirectory(M65816)
 add_subdirectory(mega2)
+add_subdirectory(scc)
 add_subdirectory(vgc)
 
 add_subdirectory(third_party/galogen)
@@ -56,6 +57,7 @@ target_link_libraries(xgs   emulator #gcc needs this to be first
                             disks  
                             M65816 
                             mega2 
+                            scc
                             vgc 
                             imgui 
                             gl_extension_loader 

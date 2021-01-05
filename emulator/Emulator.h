@@ -20,6 +20,7 @@ class IWM;
 class Mega2;
 class Smartport;
 class VGC;
+class Zilog8530;
 
 namespace M65816 {
     class Processor;
@@ -47,6 +48,7 @@ class Emulator {
         ADB* getAdb() { return adb; }
         DOC* getDoc() { return doc; }
         IWM* getIwm() { return iwm; }
+        Zilog8530* getScc() { return scc; }
         Smartport* getSmartport() { return smpt; }
 
         float getSpeed() { return actual_speed; }
@@ -71,6 +73,7 @@ class Emulator {
         DOC*   doc;
         IWM*   iwm;
         Mega2* mega2;
+        Zilog8530* scc;
         Smartport* smpt;
         VGC*   vgc;
 

@@ -40,6 +40,7 @@
 #include "adb/ADB.h"
 #include "doc/DOC.h"
 #include "mega2/Mega2.h"
+#include "scc/Zilog8530.h"
 #include "vgc/VGC.h"
 
 #include "disks/IWM.h"
@@ -87,6 +88,7 @@ Emulator::~Emulator()
     delete cpu;
     delete sys;
     delete mega2;
+    delete scc;
     delete vgc;
 
     delete video;
@@ -141,8 +143,8 @@ bool Emulator::setup(const int argc, const char** argv)
 
     cpu = new M65816::Processor();
     sys = new System(rom03);
-
     mega2 = new Mega2();
+    scc = new Zilog8530();
 
     vgc = new VGC();
     vgc->setMemory(slow_ram);
@@ -152,6 +154,7 @@ bool Emulator::setup(const int argc, const char** argv)
     adb  = new ADB();
     iwm  = new IWM();
     smpt = new Smartport();
+    scc  = new Zilog8530();
 
     doc  = new DOC();
     doc->setOutputDevice(nullptr);
@@ -163,6 +166,7 @@ bool Emulator::setup(const int argc, const char** argv)
     sys->installMemory(slow_ram, 0xE000, 512, SLOW);
 
     sys->installDevice("mega2", mega2);
+    sys->installDevice("scc", scc);
     sys->installDevice("vgc", vgc);
     sys->installDevice("adb", adb);
     sys->installDevice("doc", doc);
