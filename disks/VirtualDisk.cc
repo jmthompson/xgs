@@ -142,7 +142,7 @@ void VirtualDisk::openTwoImgFile()
     }
 
     if (header.version > kTwoImgVersion) {
-        throw std::runtime_error("Unsupport 2IMG version");
+        throw std::runtime_error("Unsupported 2IMG version");
     }
 
     if (header.flags & kTwoImgLocked) {
@@ -150,7 +150,7 @@ void VirtualDisk::openTwoImgFile()
     }
 
     // Some images I have seem to been in mixed big/little endian order.
-    // So, try to accomodate those.
+    // So, try to accommodate those.
     if ((header.blocks == 0x4006) && (header.data_len = 0x800c00)) {
         header.data_len = swap_endian(header.data_len);
     }
@@ -158,7 +158,7 @@ void VirtualDisk::openTwoImgFile()
     type           = TWOIMG;
     format         = header.format;
     data_offset    = header.data_offset;
-    data_len       = header.data_len;
+    data_len       = header.blocks * 512;
     comment_offset = header.comment_offset;
     comment_len    = header.comment_len;
     creator_offset = header.creator_offset;
