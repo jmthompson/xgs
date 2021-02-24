@@ -7,10 +7,11 @@ class Emulator;
 
 namespace GUI {
 
-void initialize();
+void initialize(SDL_Window *, SDL_GLContext);
 void shutdown(void);
 void newFrame(SDL_Window *);
-bool processEvent(SDL_Event&);
+void render();
+void processEvent(SDL_Event&);
 
 void drawStatusBar(Emulator&);
 void drawMenu(Emulator&);

@@ -30,7 +30,6 @@
 #include <boost/program_options.hpp>
 
 #include <SDL.h>
-#include "imgui/imgui.h"
 
 #include "Emulator.h"
 #include "GUI.h"
@@ -139,7 +138,7 @@ bool Emulator::setup(const int argc, const char** argv)
 
     video = new Video(VGC::kPixelsPerLine, VGC::kLinesPerFrame * 2);
 
-    GUI::initialize();
+    GUI::initialize(video->window, video->context);
 
     cpu = new M65816::Processor();
     sys = new System(rom03);
@@ -298,7 +297,7 @@ void Emulator::tick()
         GUI::drawMenu(*this);
     }
 
-    ImGui::Render();
+    GUI::render();
     video->endFrame();
 
     this_time = now();
@@ -324,6 +323,8 @@ void Emulator::pollForEvents()
     static bool mouse_grabbed =false;
 
     while (SDL_PollEvent(&event)) {
+
+        GUI::processEvent(event);
 
         if (event.type == SDL_KEYDOWN) {
             switch (event.key.keysym.sym) {

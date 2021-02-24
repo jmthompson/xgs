@@ -36,18 +36,20 @@ find_package(Boost 1.60.0 REQUIRED COMPONENTS program_options)
 find_package(SDL2 REQUIRED)
 
 include_directories(${SDL2_INCLUDE_DIRS} ${Boost_INCLUDE_DIR})
+include_directories(imgui)
 
 add_subdirectory(adb)
 add_subdirectory(debugger)
 add_subdirectory(disks)
 add_subdirectory(doc)
 add_subdirectory(emulator)
+add_subdirectory(gl)
 add_subdirectory(M65816)
 add_subdirectory(mega2)
 add_subdirectory(scc)
 add_subdirectory(vgc)
 
-add_subdirectory(third_party/galogen)
+#add_subdirectory(third_party/galogen)
 add_subdirectory(imgui)
 
 target_link_libraries(xgs   emulator #gcc needs this to be first
@@ -60,7 +62,7 @@ target_link_libraries(xgs   emulator #gcc needs this to be first
                             scc
                             vgc 
                             imgui 
-                            gl_extension_loader 
+                            gl
                             ${Boost_LIBRARIES} 
                             ${SDL2_LIBRARIES})
 

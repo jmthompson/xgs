@@ -19,7 +19,6 @@
 
 #include "emulator/common.h"
 
-#include "Emulator.h"
 #include "Video.h"
 #include "shader_utils.h"
 
@@ -50,7 +49,6 @@ static const char fragment_shader_source[] =
 
 Video::Video(const unsigned int width, const unsigned int height)
 {
-
     video_width  = width;
     video_height = height;
 
@@ -213,21 +211,11 @@ void Video::initResources()
 
 void Video::initContext()
 {
-
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
 
     context = SDL_GL_CreateContext(window);
-
-    if (context == nullptr) {
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-
-        context = SDL_GL_CreateContext(window);
-    }
-
     if (context == nullptr) {
         throw std::runtime_error(SDL_GetError());
     }

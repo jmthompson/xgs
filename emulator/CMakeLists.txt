@@ -7,3 +7,4 @@ target_include_directories(emulator PRIVATE ../third_party/glm
 
 target_link_libraries(emulator Boost::program_options)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+add_compile_definitions(IMGUI_IMPL_OPENGL_LOADER_CUSTOM="gl/gl.h")

@@ -356,8 +356,6 @@ void VGC::write(const unsigned int& offset, const uint8_t& val)
  */
 void VGC::modeChanged()
 {
-    VideoMode *new_mode;
-
     if (sw_super) {
         mode_super_hires.setDisplayBuffer(display_buffers.super_hires);
 
