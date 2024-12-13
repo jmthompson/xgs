@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.6)
+
 set(CMAKE_C_COMPILER clang)
 set(CMAKE_CXX_COMPILER clang++)
 set(CMAKE_CXX_STANDARD 20)
@@ -15,7 +16,7 @@ target_compile_features(xgs PUBLIC cxx_std_17)
 include_directories(${PROJECT_SOURCE_DIR})
 
 set(xgs_VERSION_MAJOR 0)
-set(xgs_VERSION_MINOR 60)
+set(xgs_VERSION_MINOR 70)
 add_definitions(-DVERSION_MAJOR=${xgs_VERSION_MAJOR} -DVERSION_MINOR=${xgs_VERSION_MINOR})
 
 # enable the debugger
@@ -36,11 +37,20 @@ target_link_libraries(xgs ${OPENGL_LIBRARIES})
 
 set(Boost_USE_MULTITHREADED ON)
 
-find_package(Boost 1.60.0 REQUIRED COMPONENTS program_options)
+if(POLICY CMP0167)
+  cmake_policy(SET CMP0167 NEW)
+endif()
+
+find_package(Boost REQUIRED COMPONENTS program_options)
 find_package(SDL2 REQUIRED)
 
 include_directories(${SDL2_INCLUDE_DIRS} ${Boost_INCLUDE_DIR})
+include_directories(third_party/glm)
 include_directories(imgui)
+
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -pg")
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -pg")
+set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -pg")
 
 add_subdirectory(adb)
 add_subdirectory(debugger)
