@@ -1,5 +1,5 @@
 /**
- * XGS: The Linux GS Emulator
+ * M65816: Portable 65816 Emulator
  * Written and Copyright (C) 1996 - 2016 by Joshua M. Thompson
  *
  * You are free to distribute this code for non-commercial purposes
@@ -8,18 +8,11 @@
  */
 
 /*
- * This file contains the startup code that loads the configuration
- * and instantiates an Emulator instance.
+ * This file defines macros used by the rest of
+ * the code for interfacing to the host platform.
  */
-
 #include "emulator/xgs.h"
 
-int main (int argc, char **argv)
-{
-    if ( xgs::setup(argc, const_cast<const char**>(argv) ) ) {
-        xgs::reset();
-        xgs::run();
-    }
-
-    return 0;
-}
+#define MREAD(b,a,t) xgs::cpuRead(b, a, t)
+#define MWRITE(b,a, v, t) xgs::cpuWrite(b, a, v, t)
+#define WDM(v) xgs::handleWdm(v)

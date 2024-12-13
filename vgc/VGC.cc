@@ -18,10 +18,8 @@
 #include "emulator/common.h"
 
 #include "VGC.h"
-#include "emulator/System.h"
+#include "emulator/xgs.h"
 #include "mega2/Mega2.h"
-#include "M65816/Processor.h"
-
 #include "standard_colors.h"
 
 using std::cerr;
@@ -30,7 +28,7 @@ void VGC::reset()
 {
     uint8_t *buffer;
 
-    mega2 = (Mega2 *) system->getDevice("mega2");
+    mega2 = (Mega2 *) xgs::getMega2();
 
     sw_vgcint           = false;
     sw_onesecirq_enable = false;
@@ -55,15 +53,15 @@ void VGC::reset()
     sw_vert_cnt  = 0;
     sw_horiz_cnt = 0;
 
-    display_buffers.text1_main = system->getPage(0xE004).read;
-    display_buffers.text1_aux  = system->getPage(0xE104).read;
-    display_buffers.text2_main = system->getPage(0xE008).read;
-    display_buffers.text2_aux  = system->getPage(0xE108).read;
-    display_buffers.hires1_main = system->getPage(0xE020).read;
-    display_buffers.hires1_aux  = system->getPage(0xE120).read;
-    display_buffers.hires2_main = system->getPage(0xE040).read;
-    display_buffers.hires2_aux  = system->getPage(0xE140).read;
-    display_buffers.super_hires = system->getPage(0xE120).read;
+    display_buffers.text1_main = xgs::getPage(0xE004).read;
+    display_buffers.text1_aux  = xgs::getPage(0xE104).read;
+    display_buffers.text2_main = xgs::getPage(0xE008).read;
+    display_buffers.text2_aux  = xgs::getPage(0xE108).read;
+    display_buffers.hires1_main = xgs::getPage(0xE020).read;
+    display_buffers.hires1_aux  = xgs::getPage(0xE120).read;
+    display_buffers.hires2_main = xgs::getPage(0xE040).read;
+    display_buffers.hires2_aux  = xgs::getPage(0xE140).read;
+    display_buffers.super_hires = xgs::getPage(0xE120).read;
 
     updateBorderColor();
     updateTextColors();
@@ -139,7 +137,7 @@ uint8_t VGC::read(const unsigned int& offset)
             val = sw_vert_cnt >> 1;
             break;
         case 0x2F:
-            sw_horiz_cnt = random<int>(0,255) & 0x7F;
+            sw_horiz_cnt = xgs::random<int>(0,255) & 0x7F;
 
             val = ((sw_vert_cnt & 0x01) << 7) | sw_horiz_cnt;
 
@@ -270,7 +268,7 @@ void VGC::write(const unsigned int& offset, const uint8_t& val)
             if (!(val & 0x20)) sw_vgcint &= ~0x20;
 
             if (!(sw_vgcint & 0x60) && (sw_vgcint & 0x80)) {
-                system->lowerInterrupt(VGC_IRQ);
+                xgs::lowerInterrupt(xgs::VGC_IRQ);
 
                 sw_vgcint &= ~0x80;
             }
@@ -462,7 +460,7 @@ void VGC::tick(const unsigned int frame_number)
         if (!(sw_vgcint & 0x40)) {
             sw_vgcint |= 0xC0;
 
-            system->raiseInterrupt(VGC_IRQ);
+            xgs::raiseInterrupt(xgs::VGC_IRQ);
         }
     }
 } 
@@ -490,7 +488,7 @@ void VGC::microtick(const unsigned int line_number)
     if (sw_scanirq_enable && (line_number < 200) && (ram[0x019D00 + line_number] & 0x40)) {
         if (!(sw_vgcint & 0x20)) {
             sw_vgcint |= 0xA0;
-            system->raiseInterrupt(VGC_IRQ);
+            xgs::raiseInterrupt(xgs::VGC_IRQ);
         }
     }
 }

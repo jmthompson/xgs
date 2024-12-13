@@ -1,9 +1,6 @@
-#ifndef GUI_H_
-#define GUI_H_
+#pragma once
 
 #include <SDL.h>
-
-class Emulator;
 
 namespace GUI {
 
@@ -13,9 +10,7 @@ void newFrame(SDL_Window *);
 void render();
 void processEvent(SDL_Event&);
 
-void drawStatusBar(Emulator&);
-void drawMenu(Emulator&);
+void drawStatusBar(void);
+void drawMenu(void);
 
-} // namespace GUI
-
-#endif // GUI_H_
+}; // namespace GUI

@@ -17,8 +17,8 @@
 #include <SDL.h>
 
 #include "emulator/common.h"
-#include "emulator/System.h"
-#include "M65816/Processor.h"
+#include "emulator/xgs.h"
+#include "M65816/m65816.h"
 #include "adb/ADB.h"
 #include "vgc/VGC.h"
 
@@ -296,7 +296,7 @@ uint8_t ADB::readMouse()
 
         ski_status_reg &= ~0x82;
 
-        if (ski_status_reg & 0x40) system->lowerInterrupt(ADB_IRQ);
+        if (ski_status_reg & 0x40) xgs::lowerInterrupt(xgs::ADB_IRQ);
     }
     else {
         delta  = ski_xdelta;
@@ -340,7 +340,7 @@ uint8_t ADB::readCommand()
 
         ski_status_irq = false;
 
-        system->lowerInterrupt(ADB_IRQ);
+        xgs::lowerInterrupt(xgs::ADB_IRQ);
 
         return val;
     }
@@ -397,7 +397,7 @@ uint8_t ADB::readM2MouseY()
 
 uint8_t ADB::readPaddle0()
 {
-    if (system->cpu->total_cycles < paddle0_time) {
+    if (m65816::total_cycles < paddle0_time) {
         return 0x80;
     }
     else {
@@ -408,7 +408,7 @@ uint8_t ADB::readPaddle0()
 
 uint8_t ADB::readPaddle1()
 {
-    if (system->cpu->total_cycles < paddle1_time) {
+    if (m65816::total_cycles < paddle1_time) {
         return 0x80;
     }
     else {
@@ -591,8 +591,8 @@ void ADB::setStatus(uint8_t val)
 
 void ADB::triggerPaddles()
 {
-    paddle0_time = system->cpu->total_cycles + (paddle0 * 11);
-    paddle1_time = system->cpu->total_cycles + (paddle1 * 11);
+    paddle0_time = m65816::total_cycles + (paddle0 * 11);
+    paddle1_time = m65816::total_cycles + (paddle1 * 11);
 }
 
 void ADB::handleKeyDown(SDL_KeyboardEvent *event)
@@ -687,7 +687,7 @@ void ADB::handleKeyDown(SDL_KeyboardEvent *event)
                 if (!ski_status_irq) {
                     ski_status_irq = 0x20;
 
-                    system->raiseInterrupt(ADB_IRQ);
+                    xgs::raiseInterrupt(xgs::ADB_IRQ);
                 }
             }
 
@@ -792,7 +792,7 @@ void ADB::handleMouseBtnDown(SDL_MouseButtonEvent *event)
     ski_ydelta = 0;
 
     if (ski_status_reg & 0x40) {
-        system->raiseInterrupt(ADB_IRQ);
+        xgs::raiseInterrupt(xgs::ADB_IRQ);
     }
 
     ski_status_reg |= 0x80;
@@ -820,7 +820,7 @@ void ADB::handleMouseBtnUp(SDL_MouseButtonEvent *event)
     ski_ydelta = 0;
 
     if (ski_status_reg & 0x40) {
-        system->raiseInterrupt(ADB_IRQ);
+        xgs::raiseInterrupt(xgs::ADB_IRQ);
     }
 
     ski_status_reg |= 0x80;
@@ -840,7 +840,7 @@ void ADB::handleMouseMotion(SDL_MouseMotionEvent *event)
     ski_button1 = (event->state & SDL_BUTTON_RMASK)? 1 : 0;
 
     if (ski_status_reg & 0x40) {
-        system->raiseInterrupt(ADB_IRQ);
+        xgs::raiseInterrupt(xgs::ADB_IRQ);
     }
 
     ski_status_reg |= 0x80;

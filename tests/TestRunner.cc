@@ -23,11 +23,11 @@
 #include <fstream>
 #include <boost/program_options.hpp>
 
-#include "emulator/System.h"
+#include "emulator/platform.h"
 
 
 #include "debugger/Debugger.h"
-#include "M65816/Processor.h"
+#include "M65816/m65816.h"
 
 #if __has_include(<filesystem>)
     #include <filesystem>
@@ -67,7 +67,7 @@ bool TestRunner::setup(const int argc, const char** argv)
     sys = new System(false);
     dbg = new Debugger();
 
-    sys->installProcessor(cpu);
+    m65816::reset();
     sys->installMemory(ram, 0, ram_pages, FAST);
     sys->installMemory(ram + 0xFF00, 0xFFFF, 1, FAST); // hack until we fix the forcing of vector reads to page FFFF
     sys->installDebugger(dbg);

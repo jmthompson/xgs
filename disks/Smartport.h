@@ -1,4 +1,4 @@
-#ifndef SMARTPORT_H_
+#pragma once
 
 #include <cstdlib>
 #include <iostream>
@@ -7,6 +7,7 @@
 #include "emulator/Device.h"
 
 using std::uint8_t;
+using xgs::kSmartportUnits;
 
 struct SmartportCommand {
     int command     = -1;
@@ -61,14 +62,14 @@ class Smartport : public Device {
     public:
         Smartport();
         ~Smartport();
-
+        void init();
         void reset();
+        void start();
+        void stop();
         uint8_t read(const unsigned int& offset) { return 0; }
         void write(const unsigned int& offset, const uint8_t& value) {}
 
         void wdm(const uint8_t);
-
-        void attach(System *theSystem);
 
         void tick(const unsigned int) {}
         void microtick(const unsigned int) {}
@@ -76,5 +77,3 @@ class Smartport : public Device {
         void mountImage(const unsigned int, VirtualDisk *image);
         void unmountImage(const unsigned int);
 };
-
-#endif // SMARTPORT_H_

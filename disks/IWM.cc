@@ -19,8 +19,8 @@
 
 #include "disks/IWM.h"
 
-#include "emulator/System.h"
-#include "M65816/Processor.h"
+#include "emulator/xgs.h"
+#include "M65816/m65816.h"
 
 IWM::IWM()
 {
@@ -78,10 +78,10 @@ uint8_t IWM::read(const unsigned int& offset)
             else {
                 if (iwm_motor_on) {
                     if (iwm_35sel) {
-                        return disks_35[iwm_drive_select].read(system->cpu->total_cycles);
+                        return disks_35[iwm_drive_select].read(m65816::total_cycles);
                     }
                     else {
-                        return disks_525[iwm_drive_select].read(system->cpu->total_cycles);
+                        return disks_525[iwm_drive_select].read(m65816::total_cycles);
                     }
                 }
                 else {
@@ -155,10 +155,10 @@ void IWM::write(const unsigned int& offset, const uint8_t& val)
                         //writeEnable2(val);
                     }
                     else if (iwm_35sel) {
-                        disks_35[iwm_drive_select].write(system->cpu->total_cycles, val);
+                        disks_35[iwm_drive_select].write(m65816::total_cycles, val);
                     }
                     else {
-                        disks_525[iwm_drive_select].write(system->cpu->total_cycles, val);
+                        disks_525[iwm_drive_select].write(m65816::total_cycles, val);
                     }
                 }
                 else {
@@ -186,7 +186,7 @@ void IWM::write(const unsigned int& offset, const uint8_t& val)
 void IWM::tick(const unsigned int frame_number)
 {
     if (iwm_motor_on && iwm_motor_spindown) {
-        if (motor_off_frame <= system->vbl_count) {
+        if (motor_off_frame <= xgs::vbl_count) {
             iwm_motor_on = iwm_motor_spindown = false;
         }
     }
@@ -275,7 +275,7 @@ void IWM::touchSwitches(const unsigned int loc)
                         iwm_motor_spindown = true;
 
                         /* 1 second delay */
-                        motor_off_frame = system->vbl_count + 60;
+                        motor_off_frame = xgs::vbl_count + 60;
                     }
                 }
 

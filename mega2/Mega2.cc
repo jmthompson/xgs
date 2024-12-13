@@ -17,10 +17,7 @@
 #include <cstdlib>
 
 #include "Mega2.h"
-
-#include "emulator/System.h"
-#include "M65816/Processor.h"
-
+#include "emulator/xgs.h"
 #include "adb/ADB.h"
 #include "vgc/VGC.h"
 
@@ -31,8 +28,8 @@ using std::uint8_t;
  */
 void Mega2::reset()
 {
-    vgc = (VGC *) system->getDevice("vgc");
-    adb = (ADB *) system->getDevice("adb");
+    vgc = xgs::getVgc();
+    adb = xgs::getAdb();
 
     sw_80store = false;
     sw_auxrd   = false;
@@ -80,40 +77,40 @@ void Mega2::updateMemoryMaps()
      */
 
     for (page = 0x0000 ; page < 0x0002 ; page++) {
-        system->mapRead(page, sw_altzp? page + 0x0100 : page);
-        system->mapWrite(page, sw_altzp? page + 0x0100 : page);
+        xgs::mapRead(page, sw_altzp? page + 0x0100 : page);
+        xgs::mapWrite(page, sw_altzp? page + 0x0100 : page);
     }
     for (page = 0x0002 ; page < 0x0004 ; page++) {
-        system->mapRead(page,  sw_auxrd? page + 0x0100 : page);
-        system->mapWrite(page, sw_auxwr? page + 0x0100 : page);
+        xgs::mapRead(page,  sw_auxrd? page + 0x0100 : page);
+        xgs::mapWrite(page, sw_auxwr? page + 0x0100 : page);
     }
     for (page = 0x0004 ; page < 0x0008 ; page++) {
         if (sw_80store) {
-            system->mapRead(page,  vgc->sw_page2? page + 0x0100 : page);
-            system->mapWrite(page, vgc->sw_page2? page + 0x0100 : page);
+            xgs::mapRead(page,  vgc->sw_page2? page + 0x0100 : page);
+            xgs::mapWrite(page, vgc->sw_page2? page + 0x0100 : page);
         }
         else {
-            system->mapRead(page,  sw_auxrd? page + 0x0100 : page);
-            system->mapWrite(page, sw_auxwr? page + 0x0100 : page);
+            xgs::mapRead(page,  sw_auxrd? page + 0x0100 : page);
+            xgs::mapWrite(page, sw_auxwr? page + 0x0100 : page);
         }
     }
     for (page = 0x0008 ; page < 0x0020 ; page++) {
-        system->mapRead(page,  sw_auxrd? page + 0x0100 : page);
-        system->mapWrite(page, sw_auxwr? page + 0x0100 : page);
+        xgs::mapRead(page,  sw_auxrd? page + 0x0100 : page);
+        xgs::mapWrite(page, sw_auxwr? page + 0x0100 : page);
     }
     for (page = 0x0020 ; page < 0x0040 ; page++) {
         if (sw_80store && vgc->sw_hires) {
-            system->mapRead(page,  vgc->sw_page2? page + 0x0100 : page);
-            system->mapWrite(page, vgc->sw_page2? page + 0x0100 : page);
+            xgs::mapRead(page,  vgc->sw_page2? page + 0x0100 : page);
+            xgs::mapWrite(page, vgc->sw_page2? page + 0x0100 : page);
         }
         else {
-            system->mapRead(page,  sw_auxrd? page + 0x0100 : page);
-            system->mapWrite(page, sw_auxwr? page + 0x0100 : page);
+            xgs::mapRead(page,  sw_auxrd? page + 0x0100 : page);
+            xgs::mapWrite(page, sw_auxwr? page + 0x0100 : page);
         }
     }
     for (page = 0x0040 ; page < 0x00C0 ; page++) {
-        system->mapRead(page,  sw_auxrd? page + 0x0100 : page);
-        system->mapWrite(page, sw_auxwr? page + 0x0100 : page);
+        xgs::mapRead(page,  sw_auxrd? page + 0x0100 : page);
+        xgs::mapWrite(page, sw_auxwr? page + 0x0100 : page);
     }
 
     // Language cards
@@ -127,12 +124,12 @@ void Mega2::updateMemoryMaps()
     }
     else {
         for (page = 0x00C0 ; page <= 0x00FF ; page++) {
-            system->mapRead(page,  sw_auxrd? page + 0x0100 : page);
-            system->mapWrite(page, sw_auxwr? page + 0x0100 : page);
+            xgs::mapRead(page,  sw_auxrd? page + 0x0100 : page);
+            xgs::mapWrite(page, sw_auxwr? page + 0x0100 : page);
         }
         for (page = 0x01C0 ; page <= 0x01FF ; page++) {
-            system->mapRead(page, page);
-            system->mapWrite(page, page);
+            xgs::mapRead(page, page);
+            xgs::mapWrite(page, page);
         }
     }
 
@@ -142,31 +139,31 @@ void Mega2::updateMemoryMaps()
      */
 
     for (page = 0x0004 ; page < 0x0008 ; page++) {
-        system->setShadowed(page, sw_shadow_text);
+        xgs::setShadowed(page, sw_shadow_text);
     }
     for (page = 0x0008 ; page < 0x000C ; page++) {
-        system->setShadowed(page, sw_shadow_text2);
+        xgs::setShadowed(page, sw_shadow_text2);
     }
     for (page = 0x0020 ; page < 0x0040 ; page++) {
-        system->setShadowed(page, sw_shadow_hires1);
+        xgs::setShadowed(page, sw_shadow_hires1);
     }
     for (page = 0x0060 ; page < 0x0080 ; page++) {
-        system->setShadowed(page, sw_shadow_hires2);
+        xgs::setShadowed(page, sw_shadow_hires2);
     }
     for (page = 0x0104 ; page < 0x0108 ; page++) {
-        system->setShadowed(page, sw_shadow_text);
+        xgs::setShadowed(page, sw_shadow_text);
     }
     for (page = 0x0108 ; page < 0x010C ; page++) {
-        system->setShadowed(page, sw_shadow_text2);
+        xgs::setShadowed(page, sw_shadow_text2);
     }
     for (page = 0x0120 ; page < 0x0140 ; page++) {
-        system->setShadowed(page, (sw_shadow_hires1 && sw_shadow_aux) || sw_shadow_super);
+        xgs::setShadowed(page, (sw_shadow_hires1 && sw_shadow_aux) || sw_shadow_super);
     }
     for (page = 0x0140 ; page < 0x0160 ; page++) {
-        system->setShadowed(page, (sw_shadow_hires2 && sw_shadow_aux) || sw_shadow_super);
+        xgs::setShadowed(page, (sw_shadow_hires2 && sw_shadow_aux) || sw_shadow_super);
     }
     for (page = 0x0160 ; page < 0x01A0 ; page++) {
-        system->setShadowed(page, sw_shadow_aux || sw_shadow_super);
+        xgs::setShadowed(page, sw_shadow_aux || sw_shadow_super);
     }
 }
 
@@ -182,23 +179,23 @@ void Mega2::buildLanguageCard(unsigned int dst_bank, unsigned int src_bank)
     dst_bank <<= 8;
     src_bank <<= 8;
 
-    system->mapIO(dst_bank|0xC0);
+    xgs::mapIO(dst_bank|0xC0);
 
     for (page = 0xC1 ; page <= 0xCF ; page++) {
-        system->mapRead(dst_bank|page,  0xFF00|page);
-        system->mapWrite(dst_bank|page, 0xFF00|page);
+        xgs::mapRead(dst_bank|page,  0xFF00|page);
+        xgs::mapWrite(dst_bank|page, 0xFF00|page);
     }
 
     unsigned int offset = sw_lcbank2? 0 : 0x10;
 
     for (page = 0xD0 ; page <= 0xDF ; page++) {
-        system->mapRead(dst_bank|page,  sw_lcread?  src_bank|(page - offset): 0xFF00|page);
-        system->mapWrite(dst_bank|page, sw_lcwrite? src_bank|(page - offset): 0xFF00|page);
+        xgs::mapRead(dst_bank|page,  sw_lcread?  src_bank|(page - offset): 0xFF00|page);
+        xgs::mapWrite(dst_bank|page, sw_lcwrite? src_bank|(page - offset): 0xFF00|page);
     }
 
     for (page = 0xE0 ; page <= 0xFF ; page++) {
-        system->mapRead(dst_bank|page,  sw_lcread?  src_bank|page : 0xFF00|page);
-        system->mapWrite(dst_bank|page, sw_lcwrite? src_bank|page : 0xFF00|page);
+        xgs::mapRead(dst_bank|page,  sw_lcread?  src_bank|page : 0xFF00|page);
+        xgs::mapWrite(dst_bank|page, sw_lcwrite? src_bank|page : 0xFF00|page);
     }
 }
 
@@ -371,7 +368,7 @@ uint8_t Mega2::read(const unsigned int& offset)
         case 0x7D:
         case 0x7E:
         case 0x7F:
-            val = system->getPage(0xFFC0).read[offset];
+            val = xgs::getPage(0xFFC0).read[offset];
             break;
         case 0x81:
             sw_lcbank2 = true;
@@ -510,7 +507,7 @@ void Mega2::write(const unsigned int& offset, const uint8_t& val)
                 sw_diagtype &= ~0x08;
             
                 if (!(sw_diagtype & 0x18)) {
-                    system->lowerInterrupt(MEGA2_IRQ);
+                    xgs::lowerInterrupt(xgs::MEGA2_IRQ);
                 }
             }
 
@@ -556,8 +553,8 @@ void Mega2::write(const unsigned int& offset, const uint8_t& val)
             break;
 
         case 0x47:
-            if (sw_diagtype & 0x10) system->lowerInterrupt(MEGA2_IRQ);
-            if (sw_diagtype & 0x08) system->lowerInterrupt(MEGA2_IRQ);
+            if (sw_diagtype & 0x10) xgs::lowerInterrupt(xgs::MEGA2_IRQ);
+            if (sw_diagtype & 0x08) xgs::lowerInterrupt(xgs::MEGA2_IRQ);
 
             sw_diagtype &= ~0x18;
 
@@ -659,7 +656,7 @@ void Mega2::tick(const unsigned int frame_number)
     if (sw_qtrsecirq_enable && !(frame_number % 15) && !(sw_diagtype & 0x10)) {
         sw_diagtype |= 0x10;
 
-        system->raiseInterrupt(MEGA2_IRQ);
+        xgs::raiseInterrupt(xgs::MEGA2_IRQ);
     }
 }
 
@@ -671,7 +668,7 @@ void Mega2::microtick(const unsigned int line_number)
         if (sw_vblirq_enable && !(sw_diagtype & 0x08)) {
             sw_diagtype |= 0x08;
 
-            system->raiseInterrupt(MEGA2_IRQ);
+            xgs::raiseInterrupt(xgs::MEGA2_IRQ);
         }
     }
     else {

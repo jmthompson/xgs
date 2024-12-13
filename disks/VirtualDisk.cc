@@ -29,9 +29,8 @@
     using std::experimental::filesystem::path;
 #endif
 
-
-
 using std::uintmax_t;
+using xgs::swap_endian;
 
 VirtualDisk::~VirtualDisk()
 {
@@ -211,7 +210,7 @@ void VirtualDisk::openDiskCopyFile()
 
 void VirtualDisk::close()
 {
-    file.close();
+    //if (file.is_open()) file.close();
 }
 
 #if 0

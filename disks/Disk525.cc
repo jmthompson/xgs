@@ -26,7 +26,7 @@
 #include "disks/VirtualDisk.h"
 #include "disks/nibbles.h"
 
-#include "emulator/System.h"
+#include "emulator/xgs.h"
 
 using std::uint32_t;
 

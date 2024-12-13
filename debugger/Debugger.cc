@@ -16,7 +16,8 @@
 #include <vector>
 #include <boost/format.hpp>
 
-#include "M65816/Processor.h"
+#include "M65816/m65816.h"
+#include "M65816/registers.h"
 #include "Debugger.h"
 
 #include "opcodes.h"
@@ -28,110 +29,34 @@ using std::int16_t;
 using std::string;
 using boost::format;
 
-using M65816::mem_access_t;
+using m65816::mem_access_t;
 
-uint8_t Debugger::memoryRead(const uint8_t bank, const uint16_t address, const uint8_t val, const mem_access_t type)
-{
-    switch (type) {
-        case M65816::INSTR:
-            if (trace) handleInstructionRead(bank, address, val);
-            break;
-        case M65816::VECTOR:
-            handleVectorRead(bank, address, val);
-            break;
-        default:
-             break;
-    }
+namespace xgs::Debugger {
 
-    return val;
-}
+static bool trace = false;
 
-uint8_t Debugger::memoryWrite(const uint8_t bank, const uint16_t address, const uint8_t val, const mem_access_t type)
-{
-    switch (type) {
-        case M65816::STACK:
-            //std::cerr << format("stack write: %02X (%04X)\n") % (unsigned int) val % address;
-            break;
-        default:
-            break;
-    }
+/**
+ * True when the CPU is fetching an instruction
+ */
+bool ins_fetch = false;
 
-    return val;
-}
+bool vector_fetch = false;
+uint16_t vector_addr;
+uint16_t vector_data;
 
-void Debugger::handleInstructionRead(const uint8_t bank, const uint16_t address, const uint8_t val)
-{
-    if (ins_fetch) {
-        cpu_instr.bytes.push_back(val);
-    }
-    else {
-        if (cpu_instr.bytes.size()) {
-            cout << format("%02X/%04X:%-12s  %3s  %-18s |%c%c%c%c%c%c%c%c| E=%1d DBR=%02X A=%04X X=%04X Y=%04X S=%04X D=%04X\n")
-                            % (int) cpu_instr.pbr
-                            % cpu_instr.pc
-                            % renderBytes()
-                            % opcodes[cpu_instr.bytes[0]].mnemonic
-                            % renderArgument()
-                            % (system->cpu->SR.N? 'n' : '-')
-                            % (system->cpu->SR.V? 'v' : '-')
-                            % (system->cpu->SR.M? 'm' : '-')
-                            % (system->cpu->SR.X? 'x' : '-')
-                            % (system->cpu->SR.D? 'd' : '-')
-                            % (system->cpu->SR.I? 'i' : '-')
-                            % (system->cpu->SR.Z? 'z' : '-')
-                            % (system->cpu->SR.C? 'c' : '-')
-                            % (int) system->cpu->SR.E
-                            % (int) system->cpu->DBR
-                            % system->cpu->A.W
-                            % system->cpu->X.W
-                            % system->cpu->Y.W
-                            % system->cpu->S.W
-                            % system->cpu->D;
-        }
+/**
+ * The instruction being fetched
+ */
+struct {
+    std::uint8_t pbr;
+    std::uint16_t pc;
 
-        cpu_instr.bytes.clear();
+    unsigned int len;
 
-        cpu_instr.pbr = bank;
-        cpu_instr.pc  = address;
+    std::vector<unsigned int> bytes;
+} cpu_instr;
 
-        cpu_instr.bytes.push_back(val);
-
-        int len = opcodes[val].len;
-
-        if (len == kLenIsMemorySize) {
-            cpu_instr.len = 2 + !system->cpu->SR.M;
-        }
-        else if (len == kLenIsIndexSize) {
-            cpu_instr.len = 2 + !system->cpu->SR.X;
-        }
-        else {
-            cpu_instr.len = len;
-        }
-
-        ins_fetch = true;
-    }
-
-    if (cpu_instr.bytes.size() == cpu_instr.len) {
-        ins_fetch = false;
-    }
-}
-
-void Debugger::handleVectorRead(const uint8_t bank, const uint16_t address, const uint8_t val)
-{
-    if (vector_fetch) {
-        vector_fetch = false;
-        vector_data |= (val << 8);
-
-        //std::cerr << format("Fetch new PC %04X from vector %04X\n") % vector_data % vector_addr;
-    }
-    else {
-        vector_fetch = true;
-        vector_addr  = address;
-        vector_data  = val;
-    }
-}
-
-std::string Debugger::renderArgument()
+static std::string renderArgument()
 {
     std::stringstream buffer;
     int i;
@@ -247,7 +172,7 @@ std::string Debugger::renderArgument()
     return buffer.str();
 }
 
-std::string Debugger::renderBytes()
+static std::string renderBytes()
 {
     std::stringstream buffer;
 
@@ -257,3 +182,110 @@ std::string Debugger::renderBytes()
 
     return buffer.str();
 }
+
+static void handleInstructionRead(const uint8_t bank, const uint16_t address, const uint8_t val)
+{
+    if (ins_fetch) {
+        cpu_instr.bytes.push_back(val);
+    }
+    else {
+        if (cpu_instr.bytes.size()) {
+            cout << format("%02X/%04X:%-12s  %3s  %-18s |%c%c%c%c%c%c%c%c| E=%1d DBR=%02X A=%04X X=%04X Y=%04X S=%04X D=%04X\n")
+                            % (int) cpu_instr.pbr
+                            % cpu_instr.pc
+                            % renderBytes()
+                            % opcodes[cpu_instr.bytes[0]].mnemonic
+                            % renderArgument()
+                            % (m65816::registers::SR.N? 'n' : '-')
+                            % (m65816::registers::SR.V? 'v' : '-')
+                            % (m65816::registers::SR.M? 'm' : '-')
+                            % (m65816::registers::SR.X? 'x' : '-')
+                            % (m65816::registers::SR.D? 'd' : '-')
+                            % (m65816::registers::SR.I? 'i' : '-')
+                            % (m65816::registers::SR.Z? 'z' : '-')
+                            % (m65816::registers::SR.C? 'c' : '-')
+                            % (int) m65816::registers::SR.E
+                            % (int) m65816::registers::DBR
+                            % m65816::registers::A.W
+                            % m65816::registers::X.W
+                            % m65816::registers::Y.W
+                            % m65816::registers::S.W
+                            % m65816::registers::D;
+        }
+
+        cpu_instr.bytes.clear();
+
+        cpu_instr.pbr = bank;
+        cpu_instr.pc  = address;
+
+        cpu_instr.bytes.push_back(val);
+
+        int len = opcodes[val].len;
+
+        if (len == kLenIsMemorySize) {
+            cpu_instr.len = 2 + !m65816::registers::SR.M;
+        }
+        else if (len == kLenIsIndexSize) {
+            cpu_instr.len = 2 + !m65816::registers::SR.X;
+        }
+        else {
+            cpu_instr.len = len;
+        }
+
+        ins_fetch = true;
+    }
+
+    if (cpu_instr.bytes.size() == cpu_instr.len) {
+        ins_fetch = false;
+    }
+}
+
+void handleVectorRead(const uint8_t bank, const uint16_t address, const uint8_t val)
+{
+    if (vector_fetch) {
+        vector_fetch = false;
+        vector_data |= (val << 8);
+
+        //std::cerr << format("Fetch new PC %04X from vector %04X\n") % vector_data % vector_addr;
+    }
+    else {
+        vector_fetch = true;
+        vector_addr  = address;
+        vector_data  = val;
+    }
+}
+
+void enableTrace() { trace = true; }
+void disableTrace() { trace = false; }
+void toggleTrace() { trace = !trace; }
+
+uint8_t memoryRead(const uint8_t bank, const uint16_t address, const uint8_t val, const mem_access_t type)
+{
+    switch (type) {
+        case m65816::INSTR:
+            if (trace) handleInstructionRead(bank, address, val);
+            break;
+        case m65816::VECTOR:
+            handleVectorRead(bank, address, val);
+            break;
+        default:
+             break;
+    }
+
+    return val;
+}
+
+uint8_t memoryWrite(const uint8_t bank, const uint16_t address, const uint8_t val, const mem_access_t type)
+{
+    switch (type) {
+        case m65816::STACK:
+            //std::cerr << format("stack write: %02X (%04X)\n") % (unsigned int) val % address;
+            break;
+        default:
+            break;
+    }
+
+    return val;
+}
+
+}; // namespace xgs::Debugger

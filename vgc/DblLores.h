@@ -2,6 +2,7 @@
 #define DBLLORES_H_
 
 #include "emulator/common.h"
+#include "emulator/Video.h"
 #include "VideoMode.h"
 
 class DblLores : public VideoMode {

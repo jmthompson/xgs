@@ -2,6 +2,7 @@
 #define DBLHIRES_H_
 
 #include "emulator/common.h"
+#include "emulator/Video.h"
 #include "VideoMode.h"
 
 class DblHires : public VideoMode {

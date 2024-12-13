@@ -1,4 +1,4 @@
-#ifndef ADB_H_
+#pragma once
 
 #include <cstdlib>
 #include <iostream>
@@ -6,7 +6,9 @@
 
 #include <SDL.h>
 
+#include "emulator/common.h"
 #include "emulator/Device.h"
+#include "M65816/m65816.h"
 
 using std::uint8_t;
 
@@ -39,7 +41,7 @@ class ADB : public Device {
         bool sw_m2mouseswirq;
 
         unsigned int paddle0, paddle1;
-        cycles_t paddle0_time, paddle1_time;
+        m65816::cycles_t paddle0_time, paddle1_time;
 
         uint8_t ski_kbd_reg;
         uint8_t ski_modifier_reg = 0;
@@ -128,5 +130,3 @@ class ADB : public Device {
 
         bool processEvent(SDL_Event&);
 };
-
-#endif // ADB_H_

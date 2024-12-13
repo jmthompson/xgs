@@ -11,6 +11,8 @@
  * This file defines a table of the standard 16 colors
  */
 
+#include "emulator/Video.h"
+
 static const pixel_t standard_colors[16] = {
     0x000000,
     0x3300DD,

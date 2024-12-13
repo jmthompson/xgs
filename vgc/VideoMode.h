@@ -4,6 +4,7 @@
 #include <cstdlib>
 
 #include "emulator/common.h"
+#include "emulator/Video.h"
 
 class VideoMode {
     public:

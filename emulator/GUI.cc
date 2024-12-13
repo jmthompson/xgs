@@ -10,11 +10,10 @@
 #include "backends/imgui_impl_sdl.h"
 #include "backends/imgui_impl_opengl3.h"
 
-#include "Emulator.h"
 #include "GUI.h"
 #include "Video.h"
-
 #include "disks/IWM.h"
+#include "xgs.h"
 
 namespace GUI {
 
@@ -124,20 +123,20 @@ void processEvent(SDL_Event& event)
     ImGui_ImplSDL2_ProcessEvent(&event);
 }
 
-void drawStatusBar(Emulator& emulator)
+void drawStatusBar(void)
 {
-    Video *video = emulator.getVideo();
+    Video *video = xgs::getVideo();
 
     const unsigned int bar_height = 34;
-    string speed = (format("%0.1f MHz") % emulator.getSpeed()).str();
+    string speed = (format("%0.1f MHz") % xgs::getSpeed()).str();
 
-    string version = (format("XGS v%0d.%0d") % kVersionMajor % kVersionMinor).str();
+    string version = (format("XGS v%0d.%0d") % xgs::kVersionMajor % xgs::kVersionMinor).str();
     bool s5d1 = false;
     bool s5d2 = false;
     bool s6d1 = false;
     bool s6d2 = false;
 
-    switch (emulator.getIwm()->getMotorState()) {
+    switch (xgs::getIwm()->getMotorState()) {
         case 0x50: s5d1 = true; break;
         case 0x51: s5d2 = true; break;
         case 0x60: s6d1 = true; break;
@@ -172,18 +171,18 @@ void drawStatusBar(Emulator& emulator)
     ImGui::PopStyleVar();
 }
 
-void drawMenu(Emulator& emulator)
+void drawMenu(void)
 {
-    Video *video = emulator.getVideo();
-    float max_speed = emulator.getMaxSpeed();
+    Video *video = xgs::getVideo();
+    float max_speed = xgs::getMaxSpeed();
     
     ImGui::SetNextWindowPos(ImVec2(video->frame_left + 10, video->frame_top + 10));
     ImGui::SetNextWindowSize(ImVec2(350, 55));
     ImGui::Begin("CPU Speed", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
-    ImGui::SliderFloat("Max Speed", &max_speed, 2.8, 32.0);
+    ImGui::SliderFloat("Max Speed", &max_speed, 2.8, 256.0);
     ImGui::End();
 
-    emulator.setMaxSpeed(max_speed);
+    xgs::setMaxSpeed(max_speed);
 }
 
 } // namespace GUI

@@ -7,82 +7,94 @@
  * Commercial use is prohibited without my written permission
  */
 
-class LogicEngineBase {
-    public:
-        LogicEngineBase()  = default;
-        ~LogicEngineBase() = default;
+#pragma once
 
-        virtual void executeOpcode(const unsigned int) = 0;
-};
+#include "platform.h"
+#include "registers.h"
 
-template <typename MemSizeType, typename IndexSizeType, typename StackSizeType, const uint16_t StackOffset>
-class LogicEngine : public LogicEngineBase {
-private:
-    Processor *cpu;
-    System *system;
+namespace m65816 {
 
-    const MemSizeType n_bit = 1 << ((sizeof(MemSizeType) * 8) - 1);
-    const MemSizeType v_bit = 1 << ((sizeof(MemSizeType) * 8) - 2);
+extern unsigned int num_cycles;
+extern bool stopped;
+extern bool waiting;
+extern bool nmi_pending;
+extern bool abort_pending;
+extern bool irq_pending;
+
+/**
+ * The address and bank of the operand address. These are common to all cores.
+ */
+static uint16_t operand_addr;
+static uint8_t  operand_bank;
+
+extern void modeSwitch();
+extern void loadVector(const uint16_t);
+
+using registers::D;
+using registers::DBR;
+using registers::PBR;
+using registers::PC;
+using registers::SR;
+
+/**
+ * The core class encapsulates the code and registers for a specific processor mode (M/X/e).
+ * This is never instantiated; all members and methods are static.
+ */
+template <typename MemType, typename IndexType, typename StackType, const uint16_t StackOffset>
+class core {
+    using mem_type = MemType;
+    using index_type = IndexType;
+    using stack_type = StackType;
+
+    static constexpr uint16_t stack_offset = StackOffset;
 
     /**
-     * Maximum value that can be stored in MemSizeType
+     * Value of the N and V bits in the current accmulator size
      */
-    const unsigned int m_max = sizeof(MemSizeType) == 2? 0xFFFF : 0xFF;
+    static constexpr mem_type n_bit = 1 << ((sizeof(mem_type) * 8) - 1);
+    static constexpr mem_type v_bit = 1 << ((sizeof(mem_type) * 8) - 2);
 
     /**
-     * Number of nibbles in MemSizeType. Used by the BCD routines
+     * Maximum value that can be stored in mem_type
      */
-    const unsigned int m_nibbles = sizeof(MemSizeType) * 2;
+    static constexpr unsigned int m_max = sizeof(mem_type) == 2? 0xFFFF : 0xFF;
 
     /**
-    * Should be 0 for native mode or 0x0100 for emulation mode.
-    * This provides the upper 8 bits of the (bank 0) stack pointer
-    * when in emulation mode with an 8-bit SP.
-    */
-    const uint16_t stack_offset = StackOffset;
-
-    /**
-     * References to the CPU registers in the parent object, for faster
-     * access. In addition the A, X, Y, and S registers are adjusted for
-     * the specific CPU mode we are trying to emulate.
+     * Number of nibbles in mem_type. Used by the BCD routines
      */
+    static constexpr unsigned int m_nibbles = sizeof(mem_type) * 2;
 
-    StatusRegister& SR;
-    uint16_t&       D;
-    StackSizeType&  S;
-    uint16_t&       PC;
-    uint8_t&        PBR;
-    uint8_t&        DBR;
-
-    MemSizeType&   A;
-    IndexSizeType& X;
-    IndexSizeType& Y;
+public:
+    /**
+     *
+     * Type-casted references to the processor registers. These are initialized
+     * at startup in m65816.cc.
+     */
+    static mem_type& A;
+    static index_type& X;
+    static index_type& Y;
+    static stack_type& S;
 
     /**
-     * The address and bank of the operand address
+     * The operand union allows working with an operand that is the size of the memory width,
+     * the index width, or a specific with (byte or word).
      */
-    uint16_t operand_addr;
-    uint8_t  operand_bank;
-
-    /**
-     * The operand union allows working with an operand
-     * that is the size of the memory width, the index
-     * width, or a specific with (byte or word).
-     */
-    union {
-        MemSizeType m;
-        IndexSizeType x;
+    typedef union {
+        mem_type m;
+        index_type x;
         uint8_t b;
         uint16_t w;
-    } operand;
+    } operand_type;
+
+    static operand_type operand;
 
     /**
      * If the CPU is in emulation mode, and the low byte of D is 0x00,
      * then wrap the address at the DP boundary.
      */
-    uint16_t wrapDirectPage(uint16_t address)
+    static uint16_t wrapDirectPage(uint16_t address)
     {
-        if (!(D & 0xFF) && StackOffset) {
+        if (!(D & 0xFF) && stack_offset) {
             return (D & 0xFF00) | (address & 0xFF);
         }
         else {
@@ -90,33 +102,37 @@ private:
         }
     }
 
-    void getAddress_a()
+    /**** The getAddress methods retrieve the operand address for a given addressing mode. ****/
+
+    static void getAddress_a()
     {
-        operand_addr = system->cpuRead(PBR, PC++, INSTR) | (system->cpuRead(PBR, PC++, INSTR) << 8);
+        operand_addr = MREAD(PBR, PC, INSTR) | (MREAD(PBR, PC + 1, INSTR) << 8);
         operand_bank = DBR;
+        PC += 2;
     }
 
-    void getAddress_al()
+    static void getAddress_al()
     {
-        operand_addr = system->cpuRead(PBR, PC++, INSTR) | (system->cpuRead(PBR, PC++, INSTR) << 8);
-        operand_bank = system->cpuRead(PBR, PC++, INSTR);
+        operand_addr = MREAD(PBR, PC, INSTR) | (MREAD(PBR, PC + 1, INSTR) << 8);
+        operand_bank = MREAD(PBR, PC + 2, INSTR);
+        PC += 3;
     }
 
-    void getAddress_d()
+    static void getAddress_d()
     {
         checkDirectPageAlignment();
 
-        operand_addr = wrapDirectPage(D + system->cpuRead(PBR, PC++, INSTR));
+        operand_addr = wrapDirectPage(D + MREAD(PBR, PC++, INSTR));
         operand_bank = 0;
     }
 
-    void getAddress_dix()
+    static void getAddress_dix()
     {
         checkDirectPageAlignment();
 
-        uint16_t tmp = D + system->cpuRead(PBR, PC++, INSTR);
-        uint8_t lo = system->cpuRead(0, wrapDirectPage(tmp), OPADDR);
-        uint8_t hi = system->cpuRead(0, wrapDirectPage(tmp + 1), OPADDR);
+        uint16_t tmp = D + MREAD(PBR, PC++, INSTR);
+        uint8_t lo = MREAD(0, wrapDirectPage(tmp), OPADDR);
+        uint8_t hi = MREAD(0, wrapDirectPage(tmp + 1), OPADDR);
 
         operand_addr = lo | (hi << 8);
         operand_bank = DBR;
@@ -129,14 +145,14 @@ private:
         checkDataPageCross(tmp);
     }
 
-    void getAddress_dixl()
+    static void getAddress_dixl()
     {
-        uint16_t tmp = D + system->cpuRead(PBR, PC++, INSTR);
+        uint16_t tmp = D + MREAD(PBR, PC++, INSTR);
 
         checkDirectPageAlignment();
 
-        operand_addr = system->cpuRead(0, tmp, OPADDR) | (system->cpuRead(0, tmp + 1, OPADDR) << 8);
-        operand_bank = system->cpuRead(0, tmp + 2, OPADDR);
+        operand_addr = MREAD(0, tmp, OPADDR) | (MREAD(0, tmp + 1, OPADDR) << 8);
+        operand_bank = MREAD(0, tmp + 2, OPADDR);
 
         tmp = operand_addr;
         operand_addr += Y;
@@ -145,44 +161,44 @@ private:
     }
 
     // (DIRECT,X)
-    void getAddress_dxi()
+    static void getAddress_dxi()
     {
-        uint16_t tmp = D + X + system->cpuRead(PBR, PC++, INSTR);
+        uint16_t tmp = D + X + MREAD(PBR, PC++, INSTR);
 
         checkDirectPageAlignment();
 
-        uint8_t lo = system->cpuRead(0, wrapDirectPage(tmp) , OPADDR);
-        uint8_t hi = system->cpuRead(0, wrapDirectPage(tmp + 1), OPADDR);
+        uint8_t lo = MREAD(0, wrapDirectPage(tmp), OPADDR);
+        uint8_t hi = MREAD(0, wrapDirectPage(tmp + 1), OPADDR);
 
         operand_addr = lo | (hi << 8);
         operand_bank = DBR;
     }
 
     // DIRECT,X
-    void getAddress_dxx()
+    static void getAddress_dxx()
     {
         checkDirectPageAlignment();
 
-        uint8_t loc = system->cpuRead(PBR, PC++, INSTR);
+        uint8_t loc = MREAD(PBR, PC++, INSTR);
 
         operand_addr = wrapDirectPage(D + loc + X);
         operand_bank = 0;
     }
 
     // DIRECT,Y
-    void getAddress_dxy()
+    static void getAddress_dxy()
     {
         checkDirectPageAlignment();
 
-        uint8_t loc = system->cpuRead(PBR, PC++, INSTR);
+        uint8_t loc = MREAD(PBR, PC++, INSTR);
 
         operand_addr = wrapDirectPage(D + loc + Y);
         operand_bank = 0;
     }
 
-    void getAddress_axx()
+    static void getAddress_axx()
     {
-        operand_addr = system->cpuRead(PBR, PC, INSTR) | (system->cpuRead(PBR, PC + 1, INSTR) << 8);
+        operand_addr = MREAD(PBR, PC, INSTR) | (MREAD(PBR, PC + 1, INSTR) << 8);
         operand_bank = DBR;
 
         uint16_t tmp = operand_addr;
@@ -195,9 +211,9 @@ private:
         PC += 2;
     }
 
-    void getAddress_axy()
+    static void getAddress_axy()
     {
-        operand_addr = system->cpuRead(PBR, PC, INSTR) | (system->cpuRead(PBR, PC + 1, INSTR) << 8);
+        operand_addr = MREAD(PBR, PC, INSTR) | (MREAD(PBR, PC + 1, INSTR) << 8);
         operand_bank = DBR;
 
         uint16_t tmp = operand_addr;
@@ -211,11 +227,11 @@ private:
         PC += 2;
     }
 
-    void getAddress_alxx()
+    static void getAddress_alxx()
     {
-        uint32_t address = system->cpuRead(PBR, PC, INSTR)
-                            | (system->cpuRead(PBR, PC + 1, INSTR) << 8)
-                            | (system->cpuRead(PBR, PC + 2, INSTR) << 16);
+        uint32_t address = MREAD(PBR, PC, INSTR)
+                            | (MREAD(PBR, PC + 1, INSTR) << 8)
+                            | (MREAD(PBR, PC + 2, INSTR) << 16);
 
         address += X;
 
@@ -225,87 +241,89 @@ private:
         PC += 3;
     }
 
-    void getAddress_pcr()
+    static void getAddress_pcr()
     {
-        int8_t offset = system->cpuRead(PBR, PC++, INSTR);
+        int8_t offset = MREAD(PBR, PC++, INSTR);
 
         operand_addr = PC + offset;
         operand_bank = PBR;
     }
 
-    void getAddress_pcrl()
+    static void getAddress_pcrl()
     {
-        int16_t offset = system->cpuRead(PBR, PC++, INSTR) | (system->cpuRead(PBR, PC++, INSTR) << 8);
-
-        operand_addr = PC + offset;
-        operand_bank = PBR;
-    }
-
-    void getAddress_ai()
-    {
-        uint16_t tmp = system->cpuRead(PBR, PC, INSTR) | (system->cpuRead(PBR, PC + 1, INSTR) << 8);
+        int16_t offset = MREAD(PBR, PC, INSTR) | (MREAD(PBR, PC + 1, INSTR) << 8);
 
         PC += 2;
 
-        operand_addr = system->cpuRead(0, tmp, OPADDR) | (system->cpuRead(0, tmp + 1, OPADDR) << 8);
+        operand_addr = PC + offset;
+        operand_bank = PBR;
+    }
+
+    static void getAddress_ai()
+    {
+        uint16_t tmp = MREAD(PBR, PC, INSTR) | (MREAD(PBR, PC + 1, INSTR) << 8);
+
+        PC += 2;
+
+        operand_addr = MREAD(0, tmp, OPADDR) | (MREAD(0, tmp + 1, OPADDR) << 8);
         operand_bank = 0;
     }
 
-    void getAddress_ail()
+    static void getAddress_ail()
     {
-        uint16_t tmp = system->cpuRead(PBR, PC, INSTR) | (system->cpuRead(PBR, PC + 1, INSTR) << 8);
+        uint16_t tmp = MREAD(PBR, PC, INSTR) | (MREAD(PBR, PC + 1, INSTR) << 8);
 
         PC += 2;
 
-        operand_addr = system->cpuRead(0, tmp, OPADDR) | (system->cpuRead(0, tmp + 1, OPADDR) << 8);
-        operand_bank = system->cpuRead(0, tmp + 2, OPADDR);
+        operand_addr = MREAD(0, tmp, OPADDR) | (MREAD(0, tmp + 1, OPADDR) << 8);
+        operand_bank = MREAD(0, tmp + 2, OPADDR);
     }
 
     // (DIRECT)
-    void getAddress_di()
+    static void getAddress_di()
     {
-        uint16_t tmp = D + system->cpuRead(PBR, PC++, INSTR);
+        uint16_t tmp = D + MREAD(PBR, PC++, INSTR);
 
         checkDirectPageAlignment();
 
-        uint8_t lo = system->cpuRead(0, tmp, OPADDR);
-        uint8_t hi = system->cpuRead(0, wrapDirectPage(tmp + 1), OPADDR);
+        uint8_t lo = MREAD(0, tmp, OPADDR);
+        uint8_t hi = MREAD(0, wrapDirectPage(tmp + 1), OPADDR);
 
         operand_addr = lo | (hi << 8);
         operand_bank = DBR;
     }
 
-    void getAddress_dil()
+    static void getAddress_dil()
     {
-        uint16_t tmp = D + system->cpuRead(PBR, PC++, INSTR);
+        uint16_t tmp = D + MREAD(PBR, PC++, INSTR);
 
         checkDirectPageAlignment();
 
-        operand_addr = system->cpuRead(0, tmp, OPADDR) | (system->cpuRead(0, tmp + 1, OPADDR) << 8);
-        operand_bank = system->cpuRead(0, tmp + 2, OPADDR);
+        operand_addr = MREAD(0, tmp, OPADDR) | (MREAD(0, tmp + 1, OPADDR) << 8);
+        operand_bank = MREAD(0, tmp + 2, OPADDR);
     }
 
-    void getAddress_axi()
+    static void getAddress_axi()
     {
-        uint16_t tmp = (system->cpuRead(PBR, PC, INSTR) | (system->cpuRead(PBR, PC + 1, INSTR) << 8)) + X;
+        uint16_t tmp = (MREAD(PBR, PC, INSTR) | (MREAD(PBR, PC + 1, INSTR) << 8)) + X;
 
         PC += 2;
 
-        operand_addr = system->cpuRead(PBR, tmp, OPADDR) | (system->cpuRead(PBR, tmp + 1, OPADDR) << 8);
+        operand_addr = MREAD(PBR, tmp, OPADDR) | (MREAD(PBR, tmp + 1, OPADDR) << 8);
         operand_bank = PBR;
     }
 
-    void getAddress_sr()
+    static void getAddress_sr()
     {
-        operand_addr = S + system->cpuRead(PBR, PC++, INSTR) + StackOffset;
+        operand_addr = S + MREAD(PBR, PC++, INSTR) + stack_offset;
         operand_bank = 0;
     }
 
-    void getAddress_srix()
+    static void getAddress_srix()
     {
-        uint16_t tmp = S + system->cpuRead(PBR, PC++, INSTR) + StackOffset;
+        uint16_t tmp = S + MREAD(PBR, PC++, INSTR) + stack_offset;
 
-        operand_addr = system->cpuRead(0, tmp, OPADDR) | (system->cpuRead(0, tmp + 1, OPADDR) << 8);
+        operand_addr = MREAD(0, tmp, OPADDR) | (MREAD(0, tmp + 1, OPADDR) << 8);
         operand_bank = DBR;
 
         tmp = operand_addr;
@@ -314,98 +332,96 @@ private:
         if (operand_addr < tmp) operand_bank++;
     }
 
-    inline void stackPush(const uint8_t& v)
+    inline static void stackPush(const uint8_t& v)
     {
-        system->cpuWrite(0, S-- + StackOffset, v, STACK);
+        MWRITE(0, S-- + stack_offset, v, STACK);
     }
 
-    inline void stackPush(const uint16_t& v)
+    inline static void stackPush(const uint16_t& v)
     {
-        system->cpuWrite(0, S-- + StackOffset, v >> 8, STACK);
-        system->cpuWrite(0, S-- + StackOffset, v, STACK);
+        MWRITE(0, S-- + stack_offset, v >> 8, STACK);
+        MWRITE(0, S-- + stack_offset, v, STACK);
     }
 
-    inline void stackPull(uint8_t& v)
+    inline static void stackPull(uint8_t& v)
     {
-        v = system->cpuRead(0, ++S + StackOffset, STACK);
+        v = MREAD(0, ++S + stack_offset, STACK);
     }
 
-    inline void stackPull(uint16_t& v)
+    inline static void stackPull(uint16_t& v)
     {
-        v = system->cpuRead(0, ++S + StackOffset, STACK) | (system->cpuRead(0, ++S + StackOffset, STACK) << 8);
+        v = MREAD(0, S + 1 + stack_offset, STACK) | (MREAD(0, S + 2 + stack_offset, STACK) << 8);
+        S += 2;
     }
 
-    inline void jumpTo(const uint16_t& addr)
+    inline static void jumpTo(const uint16_t& addr)
     {
         PC = addr;
     }
 
-    inline void jumpTo(const uint8_t& bank, const uint16_t& addr)
+    inline static void jumpTo(const uint8_t& bank, const uint16_t& addr)
     {
         PBR = bank;
         PC  = addr;
     }
 
-    inline void checkDataPageCross(const uint16_t& check)
+    inline static void checkDataPageCross(const uint16_t& check)
     {
-        if ((StackOffset > 0) && ((check & 0xFF00) != (operand_addr & 0xFF00))) {
-            cpu->num_cycles++;
-        }
+        if (stack_offset && ((check & 0xFF00) != (operand_addr & 0xFF00)))
+            num_cycles++;
     }
 
-    inline void checkProgramPageCross()
+    inline static void checkProgramPageCross()
     {
-        if ((StackOffset > 0) && ((PC & 0xFF00) != (operand_addr & 0xFF00))) {
-            cpu->num_cycles++;
-        }
+        if (stack_offset && ((PC & 0xFF00) != (operand_addr & 0xFF00))) 
+            num_cycles++;
     }
 
-    inline void checkDirectPageAlignment()
+    inline static void checkDirectPageAlignment()
     {
-        if (D & 0xFF) {
-            cpu->num_cycles++;
-        }
+        if (D & 0xFF) num_cycles++;
     }
 
-    inline void fetchImmediateOperand(uint8_t &op)
+    inline static void fetchImmediateOperand(uint8_t &op)
     {
-        op = system->cpuRead(PBR, PC++, INSTR);
+        op = MREAD(PBR, PC++, INSTR);
     }
 
-    inline void fetchImmediateOperand(uint16_t &op)
+    inline static void fetchImmediateOperand(uint16_t &op)
     {
-        op = system->cpuRead(PBR, PC++, INSTR) | (system->cpuRead(PBR, PC++, INSTR) << 8);
+        op = MREAD(PBR, PC, INSTR) | (MREAD(PBR, PC + 1, INSTR) << 8);
+        PC += 2;
     }
 
-    inline void fetchOperand(uint8_t &op)
+    inline static void fetchOperand(uint8_t &op)
     {
-        op = system->cpuRead(operand_bank, operand_addr, OPERAND);
+        op = MREAD(operand_bank, operand_addr, OPERAND);
     }
 
-    inline void fetchOperand(uint16_t &op)
+    inline static void fetchOperand(uint16_t &op)
     {
-        op = system->cpuRead(operand_bank, operand_addr, OPERAND)
-             | (system->cpuRead(operand_bank, operand_addr + 1, OPERAND) << 8);
+        op = MREAD(operand_bank, operand_addr, OPERAND)
+             | (MREAD(operand_bank, operand_addr + 1, OPERAND) << 8);
     }
 
-    inline void storeOperand(uint8_t &op)
+    inline static void storeOperand(uint8_t &op)
     {
-        system->cpuWrite(operand_bank, operand_addr, op, OPERAND);
+        MWRITE(operand_bank, operand_addr, op, OPERAND);
     }
 
-    inline void storeOperand(uint16_t &op)
+    inline static void storeOperand(uint16_t &op)
     {
-        system->cpuWrite(operand_bank, operand_addr, op, OPERAND);
-        system->cpuWrite(operand_bank, operand_addr + 1, op >> 8, OPERAND);
+        MWRITE(operand_bank, operand_addr, op, OPERAND);
+        MWRITE(operand_bank, operand_addr + 1, op >> 8, OPERAND);
     }
 
-    inline void checkIfNegative(const uint8_t &v) { SR.N = v & 0x80; }
-    inline void checkIfNegative(const uint16_t &v) { SR.N = v & 0x8000; }
+    inline static void checkIfNegative(const uint8_t &v) { SR.N = v & 0x80; }
+    inline static void checkIfNegative(const uint16_t &v) { SR.N = v & 0x8000; }
 
-    inline void checkIfZero(const uint8_t &v) { SR.Z = (v == 0); }
-    inline void checkIfZero(const uint16_t &v) { SR.Z = (v == 0); }
+    inline static void checkIfZero(const uint8_t &v) { SR.Z = (v == 0); }
+    inline static void checkIfZero(const uint16_t &v) { SR.Z = (v == 0); }
 
-    inline void op_AND()
+    inline static void op_AND()
     {
         A &= operand.m;
 
@@ -413,14 +429,14 @@ private:
         checkIfZero(A);
     }
 
-    inline void op_BIT()
+    inline static void op_BIT()
     {
         SR.Z = !(operand.m & A);
         SR.N = operand.m & n_bit;
         SR.V = operand.m & v_bit;
     }
 
-    inline void op_EOR()
+    inline static void op_EOR()
     {
         A ^= operand.m;
 
@@ -428,7 +444,7 @@ private:
         checkIfZero(A);
     }
 
-    inline void op_ORA()
+    inline static void op_ORA()
     {
         A |= operand.m;
 
@@ -436,14 +452,14 @@ private:
         checkIfZero(A);
     }
 
-    inline void op_TRB()
+    inline static void op_TRB()
     {
         SR.Z = !(operand.m & A);
 
         operand.m &= ~A;
     }
 
-    inline void op_TSB()
+    inline static void op_TSB()
     {
         SR.Z = !(operand.m & A);
 
@@ -452,7 +468,7 @@ private:
 
     // Increment/decrement
 
-    inline void op_DEC()
+    inline static void op_DEC()
     {
         --operand.m;
 
@@ -460,7 +476,7 @@ private:
         checkIfZero(operand.m);
     }
 
-    inline void op_INC()
+    inline static void op_INC()
     {
         ++operand.m;
 
@@ -470,7 +486,7 @@ private:
 
     // Bit shifts/rotates
 
-    inline void op_ASL()
+    inline static void op_ASL()
     {
         SR.C = operand.m & n_bit;
 
@@ -480,7 +496,7 @@ private:
         checkIfZero(operand.m);
     }
 
-    inline void op_LSR()
+    inline static void op_LSR()
     {
         SR.C = operand.m & 1;
 
@@ -490,7 +506,7 @@ private:
         checkIfZero(operand.m);
     }
 
-    inline void op_ROL()
+    inline static void op_ROL()
     {
         bool c = SR.C;
 
@@ -502,7 +518,7 @@ private:
         checkIfZero(operand.m);
     }
 
-    inline void op_ROR()
+    inline static void op_ROR()
     {
         bool c = SR.C;
 
@@ -516,9 +532,9 @@ private:
 
     // Compares
 
-    inline void op_CMP()
+    inline static void op_CMP()
     {
-        MemSizeType tmp = A - operand.m;
+        mem_type tmp = A - operand.m;
 
         checkIfNegative(tmp);
         checkIfZero(tmp);
@@ -526,9 +542,9 @@ private:
         SR.C = (A >= operand.m);
     }
 
-    inline void op_CPX()
+    inline static void op_CPX()
     {
-        IndexSizeType tmp = X - operand.x;
+        index_type tmp = X - operand.x;
 
         checkIfNegative(tmp);
         checkIfZero(tmp);
@@ -536,9 +552,9 @@ private:
         SR.C = (X >= operand.x);
     }
 
-    inline void op_CPY()
+    inline static void op_CPY()
     {
-        IndexSizeType tmp = Y - operand.x;
+        index_type tmp = Y - operand.x;
 
         checkIfNegative(tmp);
         checkIfZero(tmp);
@@ -548,18 +564,18 @@ private:
 
     // Block moves
 
-    void op_MVP()
+    static void op_MVP()
     {
-        uint8_t src_bank = system->cpuRead(PBR, PC + 1, INSTR);
+        uint8_t src_bank = MREAD(PBR, PC + 1, INSTR);
 
-        DBR = system->cpuRead(PBR, PC, INSTR);
+        DBR = MREAD(PBR, PC, INSTR);
 
-        if (cpu->A.W != 0xFFFF) {
-            system->cpuWrite(DBR, cpu->Y.W, system->cpuRead(src_bank, cpu->X.W, DATA), DATA);
+        if (registers::A.W != 0xFFFF) {
+            MWRITE(DBR, registers::Y.W, MREAD(src_bank, registers::X.W, DATA), DATA);
 
-            --cpu->A.W;
-            --cpu->X.W;
-            --cpu->Y.W;
+            --registers::A.W;
+            --registers::X.W;
+            --registers::Y.W;
 
             --PC;
         }
@@ -568,18 +584,18 @@ private:
         }
     }
 
-    void op_MVN()
+    static void op_MVN()
     {
-        uint8_t src_bank = system->cpuRead(PBR, PC + 1, INSTR);
+        uint8_t src_bank = MREAD(PBR, PC + 1, INSTR);
 
-        DBR = system->cpuRead(PBR, PC, INSTR);
+        DBR = MREAD(PBR, PC, INSTR);
 
-        if (cpu->A.W != 0xFFFF) {
-            system->cpuWrite(DBR, cpu->Y.W, system->cpuRead(src_bank, cpu->X.W, DATA), DATA);
+        if (registers::A.W != 0xFFFF) {
+            MWRITE(DBR, registers::Y.W, MREAD(src_bank, registers::X.W, DATA), DATA);
 
-            --cpu->A.W;
-            ++cpu->X.W;
-            ++cpu->Y.W;
+            --registers::A.W;
+            ++registers::X.W;
+            ++registers::Y.W;
 
             --PC;
         }
@@ -590,7 +606,7 @@ private:
 
     // Loads and stores
 
-    inline void op_LDA()
+    inline static void op_LDA()
     {
         A = operand.m;
 
@@ -598,7 +614,7 @@ private:
         checkIfZero(A);
     }
 
-    inline void op_LDX()
+    inline static void op_LDX()
     {
         X = operand.x;
 
@@ -606,7 +622,7 @@ private:
         checkIfZero(X);
     }
 
-    inline void op_LDY()
+    inline static void op_LDY()
     {
         Y = operand.x;
 
@@ -614,63 +630,63 @@ private:
         checkIfZero(Y);
     }
 
-    inline void op_STA()
+    inline static void op_STA()
     {
-        system->cpuWrite(operand_bank, operand_addr, A, DATA);
+        MWRITE(operand_bank, operand_addr, A, DATA);
 
-        if (sizeof(MemSizeType) == 2) {
-            system->cpuWrite(operand_bank, operand_addr + 1, A >> 8, DATA);
+        if (sizeof(mem_type) == 2) {
+            MWRITE(operand_bank, operand_addr + 1, A >> 8, DATA);
         }
     }
 
-    inline void op_STX()
+    inline static void op_STX()
     {
-        system->cpuWrite(operand_bank, operand_addr, X, DATA);
+        MWRITE(operand_bank, operand_addr, X, DATA);
 
-        if (sizeof(IndexSizeType) == 2) {
-            system->cpuWrite(operand_bank, operand_addr + 1, X >> 8, DATA);
+        if (sizeof(index_type) == 2) {
+            MWRITE(operand_bank, operand_addr + 1, X >> 8, DATA);
         }
     }
 
-    inline void op_STY()
+    inline static void op_STY()
     {
-        system->cpuWrite(operand_bank, operand_addr, Y, DATA);
+        MWRITE(operand_bank, operand_addr, Y, DATA);
 
-        if (sizeof(IndexSizeType) == 2) {
-            system->cpuWrite(operand_bank, operand_addr + 1, Y >> 8, DATA);
+        if (sizeof(index_type) == 2) {
+            MWRITE(operand_bank, operand_addr + 1, Y >> 8, DATA);
         }
     }
 
-    inline void op_STZ()
+    inline static void op_STZ()
     {
-        system->cpuWrite(operand_bank, operand_addr, 0, DATA);
+        MWRITE(operand_bank, operand_addr, 0, DATA);
 
-        if (sizeof(MemSizeType) == 2) {
-            system->cpuWrite(operand_bank, operand_addr + 1, 0, DATA);
+        if (sizeof(mem_type) == 2) {
+            MWRITE(operand_bank, operand_addr + 1, 0, DATA);
         }
     }
 
     // Register transfers
 
-    inline void op_TCD()
+    inline static void op_TCD()
     {
-        D = cpu->A.W;
+        D = registers::A.W;
 
         checkIfNegative(D);
         checkIfZero(D);
     }
 
-    inline void op_TDC()
+    inline static void op_TDC()
     {
-        cpu->A.W = D;
+        registers::A.W = D;
 
-        checkIfNegative(cpu->A.W);
-        checkIfZero(cpu->A.W);
+        checkIfNegative(registers::A.W);
+        checkIfZero(registers::A.W);
     }
 
     // Addition and subtraction
 
-    inline void op_ADC()
+    inline static void op_ADC()
     {
         unsigned int sum = 0;
 
@@ -713,7 +729,7 @@ private:
         checkIfZero(A);
     }
 
-    inline void op_SBC()
+    inline static void op_SBC()
     {
         int diff = 0;
         bool borrow = !SR.C;
@@ -755,19 +771,13 @@ private:
         checkIfZero(A);
     }
 
-
-
-public:
-    LogicEngine(Processor *parent) : cpu(parent), system(parent->system), SR(parent->SR), D(parent->D), S(parent->S), PC(parent->PC), PBR(parent->PBR), DBR(parent->DBR), A(parent->A), X(parent->X), Y(parent->Y) { }
-    ~LogicEngine() = default;
-
-    void executeOpcode(unsigned int opcode)
+    static void executeOpcode(unsigned int opcode)
     {
         switch (opcode) {
             case 0x00:  /* BRK s */
                 ++PC;
 
-                if (StackOffset) {
+                if (stack_offset) {
                     stackPush(PC);
                     stackPush(uint8_t(SR | 0x10));  // set B bit on stack
                 }
@@ -780,7 +790,7 @@ public:
                 SR.D = false;
                 SR.I = true;
 
-                cpu->loadVector(StackOffset? 0xFFFE : 0xFFE6);
+                loadVector(stack_offset? 0xFFFE : 0xFFE6);
 
                 break;
 
@@ -795,7 +805,7 @@ public:
             case 0x02:  /* COP s */
                 ++PC;
 
-                if (!StackOffset) {
+                if (!stack_offset) {
                     stackPush(PBR);
                 }
 
@@ -805,7 +815,7 @@ public:
                 SR.D = false;
                 SR.I = true;
 
-                cpu->loadVector(StackOffset? 0xFFF4 : 0xFFE4);
+                loadVector(stack_offset? 0xFFF4 : 0xFFE4);
 
                 break;
 
@@ -916,7 +926,7 @@ public:
 
                     jumpTo(operand_addr);
 
-                    ++cpu->num_cycles;
+                    ++num_cycles;
                 }
 
                 break;
@@ -1000,12 +1010,12 @@ public:
                 break;
 
             case 0x1B:  /* TCS i */
-                if (StackOffset) {
+                if (stack_offset) {
                     S = A;
                 }
                 else {
                     // native mode ignores M bit
-                    cpu->S.W = cpu->A.W;
+                    registers::S.W = registers::A.W;
                 }
 
                 break;
@@ -1123,7 +1133,7 @@ public:
 
                     SR = v;
 
-                    cpu->modeSwitch();
+                    modeSwitch();
                 }
 
                 break;
@@ -1191,7 +1201,7 @@ public:
 
                     jumpTo(operand_addr);
 
-                    ++cpu->num_cycles;
+                    ++num_cycles;
                 }
 
                 break;
@@ -1275,15 +1285,15 @@ public:
 
             case 0x3B:  /* TSC i */
                 // ignore M bit
-                cpu->A.W = cpu->S.W;
+                registers::A.W = registers::S.W;
 
-                if (StackOffset) {
+                if (stack_offset) {
                     checkIfNegative(A);
                     checkIfZero(A);
                 }
                 else {
-                    checkIfNegative(cpu->A.W);
-                    checkIfZero(cpu->A.W);
+                    checkIfNegative(registers::A.W);
+                    checkIfZero(registers::A.W);
                 }
 
                 break;
@@ -1329,11 +1339,11 @@ public:
 
                     SR = v;
 
-                    cpu->modeSwitch();
+                    modeSwitch();
 
                     stackPull(PC);
 
-                    // cannot use StackOffset check here because we may have changed
+                    // cannot use stack_offset check here because we may have changed
                     // out of the mode this version of the template is compiled for.
                     if (!SR.E) {
                         stackPull(PBR);
@@ -1353,7 +1363,7 @@ public:
             case 0x42:  /* WDM */
                 fetchImmediateOperand(operand.b);
 
-                system->handleWdm(operand.b);
+                WDM(operand.b);
 
                 break;
 
@@ -1459,7 +1469,7 @@ public:
 
                     jumpTo(operand_addr);
 
-                    ++cpu->num_cycles;
+                    ++num_cycles;
                 }
 
                 break;
@@ -1704,7 +1714,7 @@ public:
 
                     jumpTo(operand_addr);
 
-                    ++cpu->num_cycles;
+                    ++num_cycles;
                 }
 
                 break;
@@ -1895,7 +1905,7 @@ public:
                 break;
 
             case 0x8A:  /* TXA i */
-                A = static_cast<MemSizeType> (cpu->X);
+                A = static_cast<mem_type> (X);
 
                 checkIfNegative(A);
                 checkIfZero(A);
@@ -1943,7 +1953,7 @@ public:
 
                     jumpTo(operand_addr);
 
-                    ++cpu->num_cycles;
+                    ++num_cycles;
                 }
 
                 break;
@@ -1998,7 +2008,7 @@ public:
                 break;
 
             case 0x98:  /* TYA i */
-                A = static_cast<MemSizeType> (cpu->Y);
+                A = static_cast<mem_type> (Y);
 
                 checkIfNegative(A);
                 checkIfZero(A);
@@ -2117,7 +2127,7 @@ public:
 
             case 0xA8:  /* TAY i */
                 // transfer all bits when x=0, even if m=1
-                Y = static_cast<IndexSizeType> (cpu->A);
+                Y = static_cast<index_type> (A);
 
                 checkIfNegative(Y);
                 checkIfZero(Y);
@@ -2133,7 +2143,7 @@ public:
 
             case 0xAA:  /* TAX i */
                 // transfer all bits when x=0, even if m=1
-                X = static_cast<IndexSizeType> (cpu->A);
+                X = static_cast<index_type> (A);
 
                 checkIfNegative(X);
                 checkIfZero(X);
@@ -2188,7 +2198,7 @@ public:
 
                     jumpTo(operand_addr);
 
-                    ++cpu->num_cycles;
+                    ++num_cycles;
                 }
 
                 break;
@@ -2328,7 +2338,7 @@ public:
                 fetchImmediateOperand(operand.b);
                 SR &= ~operand.b;
 
-                cpu->modeSwitch();
+                modeSwitch();
 
                 break;
 
@@ -2396,7 +2406,7 @@ public:
                 break;
 
             case 0xCB:  /* WAI */
-                cpu->waiting = true;
+                waiting = true;
 
                 break;
 
@@ -2441,7 +2451,7 @@ public:
 
                     jumpTo(operand_addr);
 
-                    ++cpu->num_cycles;
+                    ++num_cycles;
                 }
 
                 break;
@@ -2522,7 +2532,7 @@ public:
                 break;
 
             case 0xDB:  /* STP */
-                cpu->stopped = true;
+                stopped = true;
 
                 break;
 
@@ -2576,7 +2586,7 @@ public:
                 fetchImmediateOperand(operand.b);
                 SR |= operand.b;
 
-                cpu->modeSwitch();
+                modeSwitch();
 
                 break;
 
@@ -2640,12 +2650,12 @@ public:
                 break;
 
             case 0xEB:  /* XBA i */
-                operand.b = cpu->A.B.H;
-                cpu->A.B.H = cpu->A.B.L;
-                cpu->A.B.L = operand.b;
+                operand.b = registers::A.B.H;
+                registers::A.B.H = registers::A.B.L;
+                registers::A.B.L = operand.b;
 
-                checkIfNegative(cpu->A.B.L);
-                checkIfZero(cpu->A.B.L);
+                checkIfNegative(registers::A.B.L);
+                checkIfZero(registers::A.B.L);
 
                 break;
 
@@ -2690,7 +2700,7 @@ public:
 
                     jumpTo(operand_addr);
 
-                    ++cpu->num_cycles;
+                    ++num_cycles;
                 }
 
                 break;
@@ -2775,7 +2785,7 @@ public:
                 SR.E = SR.C;
                 SR.C = operand.b;
 
-                cpu->modeSwitch();
+                modeSwitch();
 
                 break;
 
@@ -2816,9 +2826,9 @@ public:
                 break;
 
             case 0x100: /* irq */
-                cpu->waiting = false;
+                waiting = false;
 
-                if (StackOffset) {
+                if (stack_offset) {
                     stackPush(PC);
                     stackPush((uint8_t) (SR & ~0x10));
                 }
@@ -2831,14 +2841,14 @@ public:
                 SR.D = false;
                 SR.I = true;
 
-                cpu->loadVector(StackOffset? 0xFFFE : 0xFFEE);
+                loadVector(stack_offset ? 0xFFFE : 0xFFEE);
 
                 break;
 
             case 0x101: /* nmi */
-                cpu->nmi_pending = cpu->waiting = false;
+                nmi_pending = waiting = false;
 
-                if (!StackOffset) {
+                if (!stack_offset) {
                     stackPush(PBR);
                 }
 
@@ -2848,14 +2858,14 @@ public:
                 SR.D = false;
                 SR.I = true;
 
-                cpu->loadVector(StackOffset? 0xFFFA : 0xFFEA);
+                loadVector(stack_offset? 0xFFFA : 0xFFEA);
 
                 break;
 
             case 0x102: /* abort */
-                cpu->abort_pending = cpu->waiting = false;
+                abort_pending = waiting = false;
 
-                if (!StackOffset) {
+                if (!stack_offset) {
                     stackPush(PBR);
                 }
 
@@ -2865,7 +2875,7 @@ public:
                 SR.D = false;
                 SR.I = true;
 
-                cpu->loadVector(StackOffset? 0xFFF8 : 0xFFE8);
+                loadVector(stack_offset? 0xFFF8 : 0xFFE8);
 
                 break;
 
@@ -2874,3 +2884,5 @@ public:
         }
     }
 };
+
+} // namespace m65816

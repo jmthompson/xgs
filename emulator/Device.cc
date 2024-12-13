@@ -16,18 +16,20 @@
 
 #include "emulator/common.h"
 
-#include "System.h"
+#include "xgs.h"
 #include "Device.h"
 
-void Device::attach(System *parent)
+void Device::start()
 {
-    system = parent;
-
     for (auto loc : ioReadList()) {
-        system->setIoRead(loc, this);
+        xgs::setIoRead(loc, this);
     }
 
     for (auto loc : ioWriteList()) {
-        system->setIoWrite(loc, this);
+        xgs::setIoWrite(loc, this);
     }
 }
+
+void Device::stop() {}
+
+void Device::reset() {}

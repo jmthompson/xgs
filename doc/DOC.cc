@@ -20,9 +20,7 @@
 #include <SDL.h>
 
 #include "emulator/common.h"
-
-#include "emulator/System.h"
-#include "M65816/Processor.h"
+#include "emulator/xgs.h"
 
 #include "doc/DOC.h"
 #include "mega2/Mega2.h"
@@ -442,7 +440,7 @@ void DOC::pushIRQ(const unsigned int osc_num)
 {
     if (irq_index == kInterruptStackSize) return;
 
-    if (!irq_index) system->raiseInterrupt(DOC_IRQ);
+    if (!irq_index) xgs::raiseInterrupt(xgs::DOC_IRQ);
 
     irq_stack[irq_index++] = osc_num;
 }
@@ -452,7 +450,7 @@ const int DOC::pullIRQ()
     if (!irq_index) return -1;
 
     int osc_num = irq_stack[--irq_index];
-    if (!irq_index) system->lowerInterrupt(DOC_IRQ);
+    if (!irq_index) xgs::lowerInterrupt(xgs::DOC_IRQ);
 
     return osc_num;
 }

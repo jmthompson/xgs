@@ -12,6 +12,9 @@ struct TriangleVertex {
     GLfloat tex[2];
 };
 
+// Typedef representing pixel data in the video driver (32-bit color)
+typedef std::uint32_t pixel_t;
+
 class Video {
     public:
         SDL_Window    *window;

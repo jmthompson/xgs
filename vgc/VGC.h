@@ -5,6 +5,7 @@
 
 #include "emulator/common.h"
 #include "emulator/Device.h"
+#include "emulator/Video.h"
 #include "Text40Col.h"
 #include "Text80Col.h"
 #include "Lores.h"
@@ -128,8 +129,8 @@ class VGC : public Device {
 
         unsigned int sw_vgcint;
 
-        bool sw_vert_cnt;
-        bool sw_horiz_cnt;
+        uint16_t sw_vert_cnt;
+        uint16_t sw_horiz_cnt;
 
         bool sw_onesecirq_enable;
         bool sw_scanirq_enable;
