@@ -5,6 +5,9 @@ cmake_install.cmake
 install_manifest.txt
 CTestTestfile.cmake
 *build*
+.cache
 .idea
 .vs
 .vscode
+notes/
+compile_commands.json
