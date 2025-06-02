@@ -106,9 +106,9 @@ static void updateTextColors()
 void updateTextFont()
 {
   if (sw_80col)
-    Video::text_font = &font_80col[sw_altcharset];
+    Video::text_font = sw_altcharset? font_80col + kFont40Bytes : font_80col;
   else
-    Video::text_font = &font_40col[sw_altcharset];
+    Video::text_font = sw_altcharset? font_40col + kFont40Bytes : font_40col;
 }
 
 static void drawBorder(pixel_t *line, const unsigned int len)
@@ -226,7 +226,7 @@ static void modeChanged()
 }
 
 DEFINE_TOGGLE(80col, modeChanged();)
-DEFINE_TOGGLE(altcharset, modeChanged();)
+DEFINE_TOGGLE(altcharset, updateTextFont();)
 DEFINE_TOGGLE(text, modeChanged();)
 DEFINE_TOGGLE(mixed, modeChanged();)
 DEFINE_TOGGLE(

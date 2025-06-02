@@ -26,7 +26,14 @@ using std::uint8_t;
 static uint8_t last_offset;
 static bool in_vbl;
 
-#define DEFINE_SS(name)                                                            \
+#define DEFINE_TOGGLE(name)                                                            \
+  static uint8_t clear_##name(const uint8_t offset, const uint8_t val)             \
+  {                                                                                \
+    sw_##name = false;                                                             \
+    updateMemoryMaps();                                                            \
+    last_offset = offset;                                                          \
+    return 0;                                                                      \
+  }                                                                                \
   static uint8_t get_##name(const uint8_t offset, const uint8_t _v)                \
   {                                                                                \
     last_offset = offset;                                                          \
@@ -34,7 +41,7 @@ static bool in_vbl;
   }                                                                                \
   static uint8_t set_##name(const uint8_t offset, const uint8_t val)               \
   {                                                                                \
-    sw_##name = val & 0x01;                                                        \
+    sw_##name = true;                                                              \
     updateMemoryMaps();                                                            \
     last_offset = offset;                                                          \
     return 0;                                                                      \
@@ -43,14 +50,14 @@ static bool in_vbl;
 namespace Mega2
 {
 
-DEFINE_SS(80store)
-DEFINE_SS(auxrd)
-DEFINE_SS(auxwr)
-DEFINE_SS(intcxrom)
-DEFINE_SS(slotc3rom)
-DEFINE_SS(altzp)
-DEFINE_SS(lcbank2)
-DEFINE_SS(lcread)
+DEFINE_TOGGLE(80store)
+DEFINE_TOGGLE(auxrd)
+DEFINE_TOGGLE(auxwr)
+DEFINE_TOGGLE(intcxrom)
+DEFINE_TOGGLE(slotc3rom)
+DEFINE_TOGGLE(altzp)
+DEFINE_TOGGLE(lcbank2)
+DEFINE_TOGGLE(lcread)
 
 static uint8_t get_in_vbl(const uint8_t offset, const uint8_t _v)
 {
@@ -248,7 +255,7 @@ void start()
   setIoReadHandler(0x12, get_lcread);
   setIoReadHandler(0x13, get_auxrd);
   setIoReadHandler(0x14, get_auxwr);
-  setIoReadHandler(0x16, get_intcxrom);
+  setIoReadHandler(0x15, get_intcxrom);
   setIoReadHandler(0x16, get_altzp);
   setIoReadHandler(0x17, get_slotc3rom);
   setIoReadHandler(0x18, get_80store);
@@ -291,17 +298,17 @@ void start()
   setIoReadHandler(0x8E, set_c08x);
   setIoReadHandler(0x8F, set_c08x);
 
-  setIoWriteHandler(0x00, set_80store);
+  setIoWriteHandler(0x00, clear_80store);
   setIoWriteHandler(0x01, set_80store);
-  setIoWriteHandler(0x02, set_auxrd);
+  setIoWriteHandler(0x02, clear_auxrd);
   setIoWriteHandler(0x03, set_auxrd);
-  setIoWriteHandler(0x04, set_auxwr);
+  setIoWriteHandler(0x04, clear_auxwr);
   setIoWriteHandler(0x05, set_auxwr);
-  setIoWriteHandler(0x06, set_intcxrom);
+  setIoWriteHandler(0x06, clear_intcxrom);
   setIoWriteHandler(0x07, set_intcxrom);
-  setIoWriteHandler(0x08, set_altzp);
+  setIoWriteHandler(0x08, clear_altzp);
   setIoWriteHandler(0x09, set_altzp);
-  setIoWriteHandler(0x0A, set_slotc3rom);
+  setIoWriteHandler(0x0A, clear_slotc3rom);
   setIoWriteHandler(0x0B, set_slotc3rom);
   setIoWriteHandler(0x2D, set_slot_reg);
   setIoWriteHandler(0x35, set_shadow_reg);
