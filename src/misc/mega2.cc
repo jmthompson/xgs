@@ -31,19 +31,16 @@ static bool in_vbl;
   {                                                                                \
     sw_##name = false;                                                             \
     updateMemoryMaps();                                                            \
-    last_offset = offset;                                                          \
     return 0;                                                                      \
   }                                                                                \
   static uint8_t get_##name(const uint8_t offset, const uint8_t _v)                \
   {                                                                                \
-    last_offset = offset;                                                          \
     return sw_##name ? 0x80 : 0x00;                                                \
   }                                                                                \
   static uint8_t set_##name(const uint8_t offset, const uint8_t val)               \
   {                                                                                \
     sw_##name = true;                                                              \
     updateMemoryMaps();                                                            \
-    last_offset = offset;                                                          \
     return 0;                                                                      \
   }
 
@@ -61,7 +58,6 @@ DEFINE_TOGGLE(lcread)
 
 static uint8_t get_in_vbl(const uint8_t offset, const uint8_t _v)
 {
-  last_offset = offset;
   return in_vbl ? 0x80 : 0x00;
 }
 
@@ -74,7 +70,6 @@ static uint8_t get_slot_reg(const uint8_t offset, const uint8_t _v)
     val |= sw_slot_reg[i];
   }
 
-  last_offset = offset;
   return val;
 }
 
@@ -85,7 +80,6 @@ static uint8_t set_slot_reg(const uint8_t offset, const uint8_t val)
   }
 
   updateMemoryMaps();
-  last_offset = offset;
   return val;
 }
 
@@ -101,7 +95,6 @@ static uint8_t get_shadow_reg(const uint8_t offset, const uint8_t _v)
   // if (!sw_shadow_text2)  val |= 0x20;
   if (!sw_shadow_lc) val |= 0x40;
 
-  last_offset = offset;
   return val;
 }
 
@@ -116,7 +109,6 @@ static uint8_t set_shadow_reg(const uint8_t offset, const uint8_t val)
   sw_shadow_lc = !(val & 0x40);
 
   updateMemoryMaps();
-  last_offset = offset;
   return 0;
 }
 
@@ -130,7 +122,6 @@ static uint8_t get_speed_reg(const uint8_t offset, const uint8_t _v)
   if (sw_slot5_motor) val |= 0x02;
   if (sw_slot4_motor) val |= 0x01;
 
-  last_offset = offset;
   return val;
 }
 
@@ -142,7 +133,6 @@ static uint8_t set_speed_reg(const uint8_t offset, const uint8_t val)
   sw_slot5_motor = val & 0x02;
   sw_slot4_motor = val & 0x01;
 
-  last_offset = offset;
   return 0;
 }
 
@@ -156,7 +146,6 @@ static uint8_t get_vbl_mask(const uint8_t offset, const uint8_t _v)
   if (sw_m2mousemvirq) val |= 0x02;
   if (sw_m2mouseenable) val |= 0x01;
 
-  last_offset = offset;
   return val;
 }
 
@@ -173,7 +162,6 @@ static uint8_t set_vbl_mask(const uint8_t offset, const uint8_t val)
 
 static uint8_t get_diagtype(const uint8_t offset, const uint8_t _v)
 {
-  last_offset = offset;
   return sw_diagtype;
 }
 
@@ -186,7 +174,6 @@ static uint8_t set_diagtype(const uint8_t offset, const uint8_t val)
       lowerInterrupt(MEGA2_IRQ);
     }
   }
-  last_offset = offset;
   return sw_diagtype;
 }
 
@@ -203,7 +190,6 @@ static uint8_t get_state_reg(const uint8_t offset, const uint8_t _v)
   if (sw_page2) val |= 0x40;
   if (sw_altzp) val |= 0x80;
 
-  last_offset = offset;
   return val;
 }
 
@@ -224,7 +210,6 @@ static uint8_t set_state_reg(const uint8_t offset, const uint8_t val)
 
 static uint8_t get_rom(const uint8_t offset, const uint8_t _v)
 {
-  last_offset = offset;
   return getPageReadPointer(0xFFC0)[offset];
 }
 
@@ -233,13 +218,14 @@ static uint8_t set_c08x(const uint8_t offset, const uint8_t _v)
   uint8_t lowbits = offset & 0x03;
 
   sw_lcbank2 = !(offset & 0x08);
-  sw_lcread = ((lowbits == 0x01) || (lowbits == 0x02));
+  sw_lcread = !((lowbits == 0x01) || (lowbits == 0x02));
   if (offset & 0x01) {
     if (offset == last_offset) {
       sw_lcwrite = true;
       last_offset = 0xFF;
     } else {
       sw_lcwrite = false;
+      last_offset = offset;
     }
   }
   updateMemoryMaps();
