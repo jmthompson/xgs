@@ -230,10 +230,18 @@ static uint8_t get_rom(const uint8_t offset, const uint8_t _v)
 
 static uint8_t set_c08x(const uint8_t offset, const uint8_t _v)
 {
+  uint8_t lowbits = offset & 0x03;
+
   sw_lcbank2 = !(offset & 0x08);
-  sw_lcread = ((offset & 0x03) == 0x01) || ((offset & 0x03) == 0x03);
-  sw_lcwrite = !(offset & 0x01) && (offset == last_offset);
-  last_offset = offset;
+  sw_lcread = ((lowbits == 0x01) || (lowbits == 0x02));
+  if (offset & 0x01) {
+    if (offset == last_offset) {
+      sw_lcwrite = true;
+      last_offset = 0xFF;
+    } else {
+      sw_lcwrite = false;
+    }
+  }
   updateMemoryMaps();
   return 0;
 }
@@ -250,7 +258,17 @@ static uint8_t clear_vbl_int(const uint8_t offset, const uint8_t _v)
 
 void start()
 {
-  setIoReadHandler(0x02, set_auxrd);
+  setIoReadHandler(0x01, set_80store);
+  setIoReadHandler(0x02, clear_auxrd);
+  setIoReadHandler(0x03, set_auxrd);
+  setIoReadHandler(0x04, clear_auxwr);
+  setIoReadHandler(0x05, set_auxwr);
+  setIoReadHandler(0x06, clear_intcxrom);
+  setIoReadHandler(0x07, set_intcxrom);
+  setIoReadHandler(0x08, clear_altzp);
+  setIoReadHandler(0x09, set_altzp);
+  setIoReadHandler(0x0A, clear_slotc3rom);
+  setIoReadHandler(0x0B, set_slotc3rom);
   setIoReadHandler(0x11, get_lcbank2);
   setIoReadHandler(0x12, get_lcread);
   setIoReadHandler(0x13, get_auxrd);
