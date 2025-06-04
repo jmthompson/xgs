@@ -14,6 +14,7 @@
 #include <boost/format.hpp>
 #include <cstdlib>
 #include <iostream>
+#include <memory.h>
 #include <stdexcept>
 
 #include <SDL.h>
@@ -43,9 +44,16 @@ static unsigned int kSampleRates[kNumOscillators] = {
 
 static SDL_AudioDeviceID sound_device_id;
 
-static unsigned int glu_ctrl_reg;
-static unsigned int glu_next_val;
-static uint16_t glu_addr_reg;
+static uint8_t glu_ctrl_reg;
+static uint8_t glu_next_val;
+static union {
+#ifdef BIGENDIAN
+    struct { std::uint8_t H,L; } B;
+#else
+    struct { std::uint8_t L,H; } B;
+#endif
+    uint16_t W;
+} glu_addr_reg;
 
 static unsigned int num_osc;
 
@@ -265,6 +273,101 @@ static void scanOscillators(AudioSample *samples_out)
   }
 }
 
+static uint8_t click_speaker(const uint8_t _o, const uint8_t _v)
+{
+  click_sample = click_sample ? 0 : 1.0;
+  return 0;
+}
+
+static uint8_t get_glu_ctrl_reg(const uint8_t _o, const uint8_t _v)
+{
+  return glu_ctrl_reg;
+}
+
+static uint8_t set_glu_ctrl_reg(const uint8_t _o, const uint8_t val)
+{
+  glu_ctrl_reg = val;
+  system_volume = ((float)(val & 0x07)) / 7.0;
+  return 0;
+}
+
+static uint8_t get_glu_data_reg(const uint8_t _o, const uint8_t _v)
+{
+  uint8_t ret = glu_next_val;
+
+  if (glu_ctrl_reg & 0x40) {
+    glu_next_val = doc_ram[glu_addr_reg.W];
+  } else {
+    uint8_t reg = glu_addr_reg.B.L;
+
+    if (reg == 0xE0) {
+      int osc_num = pullInterrupt();
+
+      if (osc_num == -1) {
+        doc_registers[0xE0] |= 0x80;
+      } else {
+        doc_registers[0xE0] = (osc_num << 1) | 0x01;
+      }
+    }
+
+    glu_next_val = doc_registers[reg];
+  }
+
+  if (glu_ctrl_reg & 0x20) glu_addr_reg.W++;
+
+  return ret;
+}
+
+static uint8_t set_glu_data_reg(const uint8_t _o, const uint8_t val)
+{
+  if (glu_ctrl_reg & 0x40) {
+    doc_ram[glu_addr_reg.W] = val;
+  } else {
+    uint8_t reg = glu_addr_reg.B.L;
+
+    if ((reg == 0xE0) || ((reg & 0xE0) == 0x60)) {
+      /* read-only registers $E0 and $60 - $7F */
+    } else {
+      doc_registers[reg] = val;
+    }
+
+    if (reg == 0xE1) enableOscillators();
+
+    if ((reg & 0xE0) == 0xA0) {
+      osc_acc[reg & 0x1F] = 0;
+      last_addr[reg & 0x1F] = 0;
+    }
+
+    if (reg < 0xE0) updateOscillator(reg & 0x1F);
+  }
+
+  if (glu_ctrl_reg & 0x20) glu_addr_reg.W++;
+
+  return 0;
+}
+
+static uint8_t get_glu_addrl_reg(const uint8_t _o, const uint8_t _v)
+{
+  return glu_addr_reg.B.L;
+}
+
+static uint8_t get_glu_addrh_reg(const uint8_t _o, const uint8_t _v)
+{
+  return glu_addr_reg.B.H;
+}
+
+static uint8_t set_glu_addrl_reg(const uint8_t _o, const uint8_t val)
+{
+  glu_addr_reg.B.L = val;
+  return 0;
+}
+
+static uint8_t set_glu_addrh_reg(const uint8_t _o, const uint8_t val)
+{
+  glu_addr_reg.B.H = val;
+  return 0;
+}
+
 void start(void)
 {
   SDL_AudioSpec wanted, actual;
@@ -303,6 +406,18 @@ void start(void)
               buffer_len % buffer_max;
 
   SDL_PauseAudioDevice(sound_device_id, 0);
+
+  setIoReadHandler(0x30, click_speaker);
+  setIoReadHandler(0x3C, get_glu_ctrl_reg);
+  setIoReadHandler(0x3D, get_glu_data_reg);
+  setIoReadHandler(0x3E, get_glu_addrl_reg);
+  setIoReadHandler(0x3F, get_glu_addrh_reg);
+
+  setIoWriteHandler(0x30, click_speaker);
+  setIoWriteHandler(0x3C, set_glu_ctrl_reg);
+  setIoWriteHandler(0x3D, set_glu_data_reg);
+  setIoWriteHandler(0x3E, set_glu_addrl_reg);
+  setIoWriteHandler(0x3F, set_glu_addrh_reg);
 }
 
 void stop(void)
@@ -335,109 +450,6 @@ void reset(void)
   buffer_index = 0;
 
   enableOscillators();
-}
-
-uint8_t read(const unsigned int &offset)
-{
-  uint8_t val = 0;
-
-  switch (offset) {
-  case 0x30:
-    click_sample = click_sample ? 0 : 1.0;
-
-    break;
-  case 0x3C:
-    val = glu_ctrl_reg;
-
-    break;
-  case 0x3D: {
-    val = glu_next_val;
-
-    if (glu_ctrl_reg & 0x40) {
-      glu_next_val = doc_ram[glu_addr_reg & 0xFFFF];
-    } else {
-      unsigned int reg = glu_addr_reg & 0xFF;
-
-      if (reg == 0xE0) {
-        int osc_num = pullInterrupt();
-
-        if (osc_num == -1) {
-          doc_registers[0xE0] |= 0x80;
-        } else {
-          doc_registers[0xE0] = (osc_num << 1) | 0x01;
-        }
-      }
-
-      glu_next_val = doc_registers[reg];
-    }
-
-    if (glu_ctrl_reg & 0x20) glu_addr_reg++;
-  }
-
-  break;
-  case 0x3E:
-    val = glu_addr_reg & 0xFF;
-
-    break;
-  case 0x3F:
-    val = glu_addr_reg >> 8;
-
-    break;
-  default:
-    break;
-  }
-
-  return val;
-}
-
-void write(const unsigned int &offset, const uint8_t &val)
-{
-  switch (offset) {
-  case 0x30:
-    click_sample = click_sample ? 0 : 1.0;
-
-    break;
-  case 0x3C:
-    glu_ctrl_reg = val;
-
-    system_volume = ((float)(val & 0x07)) / 7.0;
-
-    break;
-  case 0x3D: {
-    if (glu_ctrl_reg & 0x40) {
-      doc_ram[glu_addr_reg & 0xFFFF] = val;
-    } else {
-      unsigned int reg = glu_addr_reg & 0xFF;
-
-      if ((reg == 0xE0) || ((reg & 0xE0) == 0x60)) {
-        /* read-only registers $E0 and $60 - $7F */
-      } else {
-        doc_registers[reg] = val;
-      }
-
-      if (reg == 0xE1) enableOscillators();
-
-      if ((reg & 0xE0) == 0xA0) {
-        osc_acc[reg & 0x1F] = 0;
-        last_addr[reg & 0x1F] = 0;
-      }
-
-      if (reg < 0xE0) updateOscillator(reg & 0x1F);
-    }
-
-    if (glu_ctrl_reg & 0x20) glu_addr_reg++;
-  } break;
-  case 0x3E:
-    glu_addr_reg = (glu_addr_reg & 0xFF00) | val;
-
-    break;
-  case 0x3F:
-    glu_addr_reg = (glu_addr_reg & 0x00FF) | (val << 8);
-
-    break;
-  default:
-    break;
-  }
 }
 
 void microtick(unsigned int mt)
