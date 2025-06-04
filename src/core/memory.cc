@@ -213,7 +213,7 @@ void buildLanguageCard(unsigned int dst_bank, unsigned int src_bank)
 
   for (page = 0xC1; page <= 0xCF; page++) {
     mapRead(dst_bank | page, 0xFF00 | page);
-    mapWrite(dst_bank | page, 0xFF00 | page);
+    write_map[dst_bank | page] = unwriteable;
   }
 
   unsigned int offset = sw_lcbank2 ? 0 : 0x10;
