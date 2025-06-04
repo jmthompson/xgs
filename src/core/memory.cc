@@ -10,7 +10,6 @@
 #include <boost/format.hpp>
 #include <cstdint>
 #include <cstdlib>
-#include <iostream>
 
 #include "config.h"
 #include "debugger.h"
@@ -41,13 +40,24 @@ static uint8_t unwriteable[kPageSize];
 
 static void mapRead(const uint32_t src_page, const uint32_t dst_page)
 {
-//  std::cout << (boost::format("mapping %04X to %04X\n") % src_page % dst_page).str();
   read_map[src_page] = memory + (dst_page << 8);
 }
 
 static void mapWrite(const uint32_t src_page, const uint32_t dst_page)
 {
   write_map[src_page] = memory + (dst_page << 8);
+}
+
+static void mapLanguageCardRom(const uint32_t src_page)
+{
+  const uint32_t dst_page = src_page | 0xFF00;
+
+  read_map[src_page] = memory + (dst_page << 8);
+}
+
+static void mapUnwriteable(const uint32_t src_page)
+{
+  write_map[src_page] = unwriteable;
 }
 
 static void mapIO(const uint32_t src_page)
@@ -79,13 +89,13 @@ void setupMemory(void)
   loadFile(rom_file, rom_size, memory + rom_start);
 
   uint8_t *page = memory;
-  
+
   // Map RAM as r/w
-  for (uint32_t page_no = 0; page_no < 0xFC00 ; page_no++) {
+  for (uint32_t page_no = 0; page_no < 0xFC00; page_no++) {
     read_map[page_no] = write_map[page_no] = shadow_map[page_no] = page;
     page += kPageSize;
   }
-  
+
   // Map ROM as ro
   for (uint32_t page_no = 0xFC00; page_no < kNumPages; page_no++) {
     read_map[page_no] = page;
@@ -100,10 +110,7 @@ void setupMemory(void)
   }
 }
 
-void freeMemory(void)
-{
-  free(memory);
-}
+void freeMemory(void) { free(memory); }
 
 void installRom(uint8_t *mem, const uint16_t start_page, const uint16_t end_page)
 {
@@ -213,23 +220,32 @@ void buildLanguageCard(unsigned int dst_bank, unsigned int src_bank)
 
   for (page = 0xC1; page <= 0xCF; page++) {
     mapRead(dst_bank | page, 0xFF00 | page);
-    write_map[dst_bank | page] = unwriteable;
+    mapUnwriteable(dst_bank|page);
   }
 
   unsigned int offset = sw_lcbank2 ? 0 : 0x10;
 
   for (page = 0xD0; page <= 0xDF; page++) {
-    mapRead(
-        dst_bank | page, sw_lcread ? src_bank | (page - offset) : 0xFF00 | page
-    );
-    mapWrite(
-        dst_bank | page, sw_lcwrite ? src_bank | (page - offset) : 0xFF00 | page
-    );
-  }
+    if (sw_lcread)
+      mapRead(dst_bank | page, src_bank | (page - offset));
+    else
+     mapLanguageCardRom(dst_bank | page);
 
+    if (sw_lcwrite)
+      mapWrite(dst_bank | page, src_bank | (page - offset));
+    else
+      mapUnwriteable(dst_bank|page);
+  }
   for (page = 0xE0; page <= 0xFF; page++) {
-    mapRead(dst_bank | page, sw_lcread ? src_bank | page : 0xFF00 | page);
-    mapWrite(dst_bank | page, sw_lcwrite ? src_bank | page : 0xFF00 | page);
+    if (sw_lcread)
+      mapRead(dst_bank | page, src_bank | (page - offset));
+    else
+     mapLanguageCardRom(dst_bank | page);
+
+    if (sw_lcwrite)
+      mapWrite(dst_bank | page, src_bank | page);
+    else
+      mapUnwriteable(dst_bank|page);
   }
 }
 
