@@ -224,7 +224,6 @@ static uint8_t set_c08x(const uint8_t offset, const uint8_t _v)
       sw_lcwrite = true;
       last_offset = 0xFF;
     } else {
-      sw_lcwrite = false;
       last_offset = offset;
     }
   }
@@ -320,6 +319,22 @@ void start()
   setIoWriteHandler(0x41, set_vbl_mask);
   setIoWriteHandler(0x47, clear_vbl_int);
   setIoWriteHandler(0x68, set_state_reg);
+  setIoWriteHandler(0x80, set_c08x);
+  setIoWriteHandler(0x81, set_c08x);
+  setIoWriteHandler(0x82, set_c08x);
+  setIoWriteHandler(0x83, set_c08x);
+  setIoWriteHandler(0x84, set_c08x);
+  setIoWriteHandler(0x85, set_c08x);
+  setIoWriteHandler(0x86, set_c08x);
+  setIoWriteHandler(0x87, set_c08x);
+  setIoWriteHandler(0x88, set_c08x);
+  setIoWriteHandler(0x89, set_c08x);
+  setIoWriteHandler(0x8A, set_c08x);
+  setIoWriteHandler(0x8B, set_c08x);
+  setIoWriteHandler(0x8C, set_c08x);
+  setIoWriteHandler(0x8D, set_c08x);
+  setIoWriteHandler(0x8E, set_c08x);
+  setIoWriteHandler(0x8F, set_c08x);
 }
 
 void stop(void) {}
